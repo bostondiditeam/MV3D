@@ -1,5 +1,4 @@
 src/net/utility/__pycache__
-*.so
 *.pyc
 src/net/processing/build/temp.linux-x86_64-3.5
 .DS_Store
