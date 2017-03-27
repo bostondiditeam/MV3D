@@ -42,6 +42,7 @@ if __name__ == '__main__':
     sess.run(tf.global_variables_initializer())
 
     for iter in range(500):
+        print("sth")
         _,ls = sess.run([optimizer_step,loss])
 
 

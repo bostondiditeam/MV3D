@@ -11,6 +11,7 @@ from tensorflow.python.framework import ops
 
 print ('running init code of roi pooling')
 filename = os.path .join(os.path .dirname(__file__), 'roi_pooling.so')
+print("file name is here: ", filename)
 _roi_pooling_module = tf.load_op_library(filename)
 roi_pool      = _roi_pooling_module.roi_pool
 roi_pool_grad = _roi_pooling_module.roi_pool_grad
