@@ -44,7 +44,9 @@ def load_dummy_data():
 
 def load_dummy_datas():
 
-    num_frames = 154
+    # doto : num_frames modify
+    # num_frames = 154
+    num_frames =1
     rgbs      =[]
     lidars    =[]
     tops      =[]
@@ -55,7 +57,7 @@ def load_dummy_datas():
     top_images  =[]
     front_images=[]
 
-    fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
+    # fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
     for n in range(num_frames):
         print(n)
 
@@ -92,17 +94,17 @@ def load_dummy_datas():
             imshow('rgb',rgb1)
             imshow('top_image',top_image1)
 
-            mlab.clf(fig)
-            draw_lidar(lidar, fig=fig)
-            draw_gt_boxes3d(gt_box3d, fig=fig)
-            mlab.show(1)
+            # mlab.clf(fig)
+            # draw_lidar(lidar, fig=fig)
+            # draw_gt_boxes3d(gt_box3d, fig=fig)
+            # mlab.show(1)
             cv2.waitKey(1)
 
             pass
 
 
     ##exit(0)
-    mlab.close(all=True)
+    # mlab.close(all=True)
     return  rgbs, tops, fronts, gt_labels, gt_boxes3d, top_images, front_images, lidars
 
 
@@ -169,12 +171,12 @@ def run_train():
 
         #-----------------------
         #check data
-        if 0:
-            fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
-            draw_lidar(lidars[0], fig=fig)
-            draw_gt_boxes3d(gt_boxes3d[0], fig=fig)
-            mlab.show(1)
-            cv2.waitKey(1)
+        # if 0:
+        #     fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
+        #     draw_lidar(lidars[0], fig=fig)
+        #     draw_gt_boxes3d(gt_boxes3d[0], fig=fig)
+        #     mlab.show(1)
+        #     cv2.waitKey(1)
 
 
 

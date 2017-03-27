@@ -1,4 +1,22 @@
+# num libs
+import math
+import random
+import numpy as np
+#----------------------------------
+import matplotlib
+matplotlib.use('TkAgg')
+#matplotlib.use('Qt4Agg')
+#matplotlib.use('Qt5Agg')
+#----------------------------------
+
+import cv2
+import matplotlib.pyplot as plt
+
+
+
 SEED = 202
+random.seed(SEED)
+np.random.seed(SEED)
 
 #### kitti dataset orijection from lidar to top, front and rgb ####
 
@@ -25,15 +43,7 @@ MATRIX_Kt = ([[ 721.5377,    0.    ,    0.    ],
               [ 609.5593,  172.854 ,    1.    ]])
 
 
-#----------------------------------
 
-import matplotlib
-matplotlib.use('TkAgg')
-#matplotlib.use('Qt4Agg')
-#matplotlib.use('Qt5Agg')
-
-
-#----------------------------------
 
 # std libs
 import os
@@ -66,21 +76,6 @@ tf.set_random_seed(SEED)
 # from keras.optimizers import Adam, SGD
 # from keras.regularizers import l2
 # from keras.callbacks import LearningRateScheduler
-
-
-
-
-# num libs
-import math
-import random
-import numpy as np
-random.seed(SEED)
-np.random.seed(SEED)
-
-
-import cv2
-import matplotlib.pyplot as plt
-import mayavi.mlab as mlab
 
 
 # my libs
