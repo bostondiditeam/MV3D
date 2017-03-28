@@ -112,9 +112,9 @@ def box3d_to_top_projections(boxes3d):
     return projections
 
 
-def draw_rgb_projections(image, projections, color=(255,255,255), thickness=2, darker=0.7):
+def draw_rgb_projections(image, projections, color=(255,0,255), thickness=2, darker=0.7):
 
-    img = image.copy()*darker
+    img = (image.copy()*darker).astype(np.uint8)
     num=len(projections)
     for n in range(num):
         qs = projections[n]

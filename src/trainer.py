@@ -148,7 +148,7 @@ def run_train():
     makedirs(out_dir +'/check_points')
     log = Logger(out_dir+'/log.txt',mode='a')
 
-    #lidar data -----------------
+    # lidar data -----------------
     if 1:
         ratios=np.array([0.5,1,2], dtype=np.float32)
         scales=np.array([1,2,3],   dtype=np.float32)
@@ -189,7 +189,7 @@ def run_train():
     print('num_frames=%d'%num_frames)
 
 
-    #load model ####################################################################################################
+    # load model ####################################################################################################
     top_anchors     = tf.placeholder(shape=[None, 4], dtype=tf.int32,   name ='anchors'    )
     top_inside_inds = tf.placeholder(shape=[None   ], dtype=tf.int32,   name ='inside_inds')
 
@@ -227,7 +227,7 @@ def run_train():
     fuse_cls_loss, fuse_reg_loss = rcnn_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
 
 
-    #solver
+    # solver
     l2 = l2_regulariser(decay=0.0005)
     learning_rate = tf.placeholder(tf.float32, shape=[])
     solver = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=0.9)

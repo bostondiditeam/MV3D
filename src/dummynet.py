@@ -145,7 +145,7 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
     with tf.variable_scope('fuse-block-1') as scope:
         block = linear_bn_relu(input, num_hiddens=512, name='1')
         block = linear_bn_relu(block, num_hiddens=512, name='2')
-        block = linear_bn_relu(input, num_hiddens=512, name='3')
+        block = linear_bn_relu(block, num_hiddens=512, name='3')
         block = linear_bn_relu(block, num_hiddens=512, name='4')
 
     #include background class

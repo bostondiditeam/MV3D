@@ -3,6 +3,7 @@ from net.configuration import *
 from net.processing.boxes import *
 from net.processing.boxes3d import *
 from net.utility.draw import *
+import numpy as np
 
 
 
@@ -37,11 +38,11 @@ def draw_rcnn(image, probs,  deltas, rois, rois3d, threshold=0.8, darker=0.7):
 
 
 
-def draw_rcnn_nms(rgb, boxes3d, probs, darker=0.7):
+def draw_rcnn_nms(rgb, boxes3d, probs, darker=1):
 
-    img_rcnn_nms = rgb.copy()*darker
+    img_rcnn_nms = (rgb.copy()*darker).astype(np.uint8)
     projections = box3d_to_rgb_projections(boxes3d)
-    img_rcnn_nms = draw_rgb_projections(img_rcnn_nms,  projections, color=(255,255,255), thickness=1)
+    img_rcnn_nms = draw_rgb_projections(img_rcnn_nms,  projections, color=(255,0,255), thickness=1)
 
     return img_rcnn_nms
 
