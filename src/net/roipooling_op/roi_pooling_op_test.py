@@ -1,6 +1,10 @@
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = ''
+
 import tensorflow as tf
 import numpy as np
-from net.roipooling_op import *
+import os
+import net.roipooling_op as roip
 
 
 def weight_variable(shape):
@@ -22,7 +26,7 @@ if __name__ == '__main__':
     #dummy net
     W = weight_variable([3, 3, 3, 1])
     h = conv2d(data, W)
-    y, argmax = roi_pool(h, rois, 6, 6, 1.0/3)
+    y, argmax = roip.roi_pool(h, rois, 6, 6, 1.0/3)
 
 
     #loss
@@ -38,8 +42,9 @@ if __name__ == '__main__':
 
 
     #start training here! ---------------------------------
-    sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
-    sess.run(tf.global_variables_initializer())
+    # sess = tf.Session(config=tf.ConfigProto(log_device_placement=True))
+    sess = tf.Session()
+    sess.run(tf.initialize_all_variables())
 
     for iter in range(500):
         print("sth")

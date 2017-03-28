@@ -213,7 +213,7 @@ if __name__ == '__main__':
 
     basedir = dummy_data_dir
     date  = '2011_09_26'
-    drive = '0048'
+    drive = '0005'
 
     # The range argument is optional - default is None, which loads the whole dataset
     dataset = pykitti.raw(basedir, date, drive) #, range(0, 50, 5))
@@ -234,7 +234,7 @@ if __name__ == '__main__':
     ############# convert   ###########################
     os.makedirs(dummy_data_dir + '/seg',exist_ok=True)
 
-    if 0:  ## rgb images --------------------
+    if 1:  ## rgb images --------------------
         os.makedirs(dummy_data_dir + '/seg/rgb',exist_ok=True)
 
         for n in range(num_frames):
@@ -246,7 +246,7 @@ if __name__ == '__main__':
         print('rgb image save done\n')
 
 
-    if 0:  ## top view --------------------
+    if 1:  ## top view --------------------
         os.makedirs(dummy_data_dir + '/seg/lidar',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top_image',exist_ok=True)

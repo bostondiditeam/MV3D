@@ -1,8 +1,8 @@
-from net.common import *
-from net.utility.file import *
-from net.processing.boxes import *
-from net.processing.boxes3d import *
-from net.utility.draw import *
+# from net.common import *
+# from net.utility.file import *
+# from net.processing.boxes import *
+# from net.processing.boxes3d import *
+import net.utility.draw  as nud
 
 from dummynet import *
 from data import *
@@ -85,14 +85,14 @@ def load_dummy_datas():
 
         # explore dataset:
 
-        print (gt_box3d)
+        print(gt_box3d)
         if 0:
             projections=box3d_to_rgb_projections(gt_box3d)
             rgb1 = draw_rgb_projections(rgb, projections, color=(255,255,255), thickness=2)
             top_image1 = draw_box3d_on_top(top_image, gt_box3d, color=(255,255,255), thickness=2)
 
-            imshow('rgb',rgb1)
-            imshow('top_image',top_image1)
+            nud.imsave('rgb', rgb1)
+            nud.imsave('top_image', top_image1)
 
             # mlab.clf(fig)
             # draw_lidar(lidar, fig=fig)
@@ -132,6 +132,7 @@ def project_to_rgb_roi(rois3d):
     return rois
 
 
+# todo: finished project_to_front_roi
 def  project_to_front_roi(rois3d):
     num  = len(rois3d)
     rois = np.zeros((num,5),dtype=np.int32)
@@ -153,7 +154,7 @@ def run_train():
         scales=np.array([1,2,3],   dtype=np.float32)
         bases = make_bases(
             base_size = 16,
-            ratios=ratios,
+            ratios=ratios,  #aspect ratio
             scales=scales
         )
         num_bases = len(bases)
@@ -184,8 +185,8 @@ def run_train():
     num_class = 2 #incude background
     anchors, inside_inds =  make_anchors(bases, stride, top_shape[0:2], top_feature_shape[0:2])
     inside_inds = np.arange(0,len(anchors),dtype=np.int32)  #use all  #<todo>
-    print ('out_shape=%s'%str(out_shape))
-    print ('num_frames=%d'%num_frames)
+    print('out_shape=%s'%str(out_shape))
+    print('num_frames=%d'%num_frames)
 
 
     #load model ####################################################################################################
@@ -242,7 +243,7 @@ def run_train():
 
     num_ratios=len(ratios)
     num_scales=len(scales)
-    fig, axs = plt.subplots(num_ratios,num_scales)
+    # fig, axs = plt.subplots(num_ratios,num_scales)
 
     sess = tf.InteractiveSession()
     with sess.as_default():
@@ -270,7 +271,7 @@ def run_train():
             batch_gt_top_boxes = box3d_to_top_box(batch_gt_boxes3d)
 
 
-			## run propsal generation ------------
+            ## run propsal generation ------------
             fd1={
                 top_images:      batch_top_images,
                 top_anchors:     anchors,
@@ -301,20 +302,20 @@ def run_train():
                 img_gt     = draw_rpn_gt(top_image, batch_gt_top_boxes, batch_gt_labels)
                 img_label  = draw_rpn_labels (top_image, anchors, batch_top_inds, batch_top_labels )
                 img_target = draw_rpn_targets(top_image, anchors, batch_top_pos_inds, batch_top_targets)
-                #imshow('img_rpn_gt',img_gt)
-                #imshow('img_rpn_label',img_label)
-                #imshow('img_rpn_target',img_target)
+                nud.imsave('img_rpn_gt', img_gt)
+                nud.imsave('img_rpn_label', img_label)
+                nud.imsave('img_rpn_target', img_target)
 
                 img_label  = draw_rcnn_labels (top_image, batch_top_rois, batch_fuse_labels )
                 img_target = draw_rcnn_targets(top_image, batch_top_rois, batch_fuse_labels, batch_fuse_targets)
-                #imshow('img_rcnn_label',img_label)
-                imshow('img_rcnn_target',img_target)
+                nud.imsave('img_rcnn_label', img_label)
+                nud.imsave('img_rcnn_target', img_target)
 
 
                 img_rgb_rois = draw_boxes(rgb, batch_rgb_rois[:,1:5], color=(255,0,255), thickness=1)
-                imshow('img_rgb_rois',img_rgb_rois)
+                nud.imsave('img_rgb_rois', img_rgb_rois)
 
-                cv2.waitKey(1)
+                # cv2.waitKey(1)
 
             ## run classification and regression loss -----------
             fd2={
@@ -347,8 +348,7 @@ def run_train():
 
 
 
-            #print('ok')
-            # debug: ------------------------------------
+            #debug: ------------------------------------
 
             if iter%iter_debug==0:
                 top_image = top_imgs[idx]
@@ -366,27 +366,27 @@ def run_train():
 
                 ## show rpn score maps
                 p = batch_top_probs.reshape( *(top_feature_shape[0:2]), 2*num_bases)
-                for n in range(num_bases):
-                    r=n%num_scales
-                    s=n//num_scales
-                    pn = p[:,:,2*n+1]*255
-                    axs[s,r].cla()
-                    axs[s,r].imshow(pn, cmap='gray', vmin=0, vmax=255)
-                plt.pause(0.01)
+                # for n in range(num_bases):
+                #     r=n%num_scales
+                #     s=n//num_scales
+                #     pn = p[:,:,2*n+1]*255
+                #     axs[s,r].cla()
+                #     axs[s,r].imshow(pn, cmap='gray', vmin=0, vmax=255)
+                # plt.pause(0.01)
 
-				## show rpn(top) nms
-                img_rpn     = draw_rpn    (top_image, batch_top_probs, batch_top_deltas, anchors, inside_inds)
+                # show rpn(top) nms
+                img_rpn     = draw_rpn(top_image, batch_top_probs, batch_top_deltas, anchors, inside_inds)
                 img_rpn_nms = draw_rpn_nms(top_image, batch_proposals, batch_proposal_scores)
-                #imshow('img_rpn',img_rpn)
-                imshow('img_rpn_nms',img_rpn_nms)
-                cv2.waitKey(1)
+                nud.imsave('img_rpn', img_rpn)
+                nud.imsave('img_rpn_nms', img_rpn_nms)
+                # cv2.waitKey(1)
 
                 ## show rcnn(fuse) nms
                 img_rcnn     = draw_rcnn (top_image, batch_fuse_probs, batch_fuse_deltas, batch_top_rois, batch_rois3d,darker=1)
                 img_rcnn_nms = draw_rcnn_nms(rgb, boxes3d, probs)
-                imshow('img_rcnn',img_rcnn)
-                imshow('img_rcnn_nms',img_rcnn_nms)
-                cv2.waitKey(1)
+                nud.imsave('img_rcnn', img_rcnn)
+                nud.imsave('img_rcnn_nms', img_rcnn_nms)
+                # cv2.waitKey(1)
 
             # save: ------------------------------------
             if iter%500==0:

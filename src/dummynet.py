@@ -4,11 +4,15 @@ from net.rpn_nms_op import tf_rpn_nms
 from net.roipooling_op import roi_pool as tf_roipooling
 
 
-
-# temporary net for debugging only. may not follow the paper exactly ....
 def top_feature_net(input, anchors, inds_inside, num_bases):
-
-
+    """temporary net for debugging only. may not follow the paper exactly .... 
+    :param input: 
+    :param anchors: 
+    :param inds_inside: 
+    :param num_bases: 
+    :return: 
+            top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores
+    """
     stride=1.
     #with tf.variable_scope('top-preprocess') as scope:
     #    input = input
@@ -112,8 +116,11 @@ def front_feature_net(input):
     feature = None
     return feature
 
-
-#------------------------------------------------------------------------------
+# feature_list:
+# ( [top_features,     top_rois,     6,6,1./stride],
+#   [front_features,   front_rois,   0,0,1./stride],  #disable by 0,0
+#   [rgb_features,     rgb_rois,     6,6,1./stride],)
+#
 def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
     num=len(feature_list)

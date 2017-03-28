@@ -158,8 +158,8 @@ def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1, darken=0.
     return  img
 
 def draw_boxes(image, boxes, color=(0,255,255), thickness=1, darken=0.7):
-
-    img = image.copy()*darken
+    #img = image.copy() * darken
+    img = (image.copy()*darken).astype(np.uint8)
     num =len(boxes)
     for n in range(num):
         b = boxes[n]
