@@ -22,6 +22,20 @@
 
 # How to run
 *After Tensorflow-GPU could work*
+If you are not using Nvidia K520 GPU, you need to change "arch=sm_30" in src/net/lib/setup.py and src/lib/make.sh in order to compiler *.so file right. 
+Here is  short list for arch values for different architecture. 
+Which CUDA capabilities do we want to pre-build for?
+ https://developer.nvidia.com/cuda-gpus
+   Compute/shader model   Cards
+   6.1		      P4, P40, Titan X so CUDA_MODEL = 61
+   6.0                    P100 so CUDA_MODEL = 60
+   5.2                    M40
+   3.7                    K80
+   3.5                    K40, K20
+   3.0                    K10, Grid K520 (AWS G2)
+   Other Nvidia shader models should work, but they will require extra startup
+   time as the code is pre-optimized for them.
+CUDA_MODELS=30 35 37 52 60 61
 
 Test your Tensorflow-GPU is running by"
 ```
