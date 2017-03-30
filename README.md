@@ -22,7 +22,7 @@
 
 # How to run
 *After Tensorflow-GPU could work*
-If you are not using Nvidia K520 GPU, you need to change "arch=sm_30" in src/net/lib/setup.py and src/lib/make.sh in order to compiler *.so file right. 
+If you are not using Nvidia K520 GPU, you need to change "arch=sm_30" to other value in src/net/lib/setup.py and src/lib/make.sh in order to compiler *.so file right. 
 Here is  short list for arch values for different architecture. 
 
 ```
