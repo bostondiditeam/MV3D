@@ -27,8 +27,9 @@ Test your Tensorflow-GPU is running by"
 ```
 import tensorflow as tf
 sess = tf.Session()
+print(tf.__version__) # version more than v1. 
 ```
-It runs without error message and show it opens cuda libraries. 
+It runs without error message and show　＂successfully opened CUDA library libcublas.so.8.0 locally＂, then it is in CUDA successfully.
 ```
 cd src
 source activate didi
