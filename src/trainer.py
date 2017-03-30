@@ -140,7 +140,7 @@ def  project_to_front_roi(rois3d):
     return rois
 
 
-def run_train():
+def run_train(max_iter=10000):
 
     # output dir, etc
     out_dir = '../out/didi/xxx'
@@ -148,7 +148,6 @@ def run_train():
     makedirs(out_dir +'/check_points')
     log = Logger(out_dir+'/log.txt',mode='a')
 
-    # lidar data -----------------
     if 1:
         ratios=np.array([0.5,1,2], dtype=np.float32)
         scales=np.array([1,2,3],   dtype=np.float32)
@@ -206,21 +205,23 @@ def run_train():
     front_features = front_feature_net(front_images)
     rgb_features   = rgb_feature_net(rgb_images)
 
-    fuse_scores, fuse_probs, fuse_deltas = \
-        fusion_net(
-			( [top_features,     top_rois,     6,6,1./stride],
-			  [front_features,   front_rois,   0,0,1./stride],  #disable by 0,0
-			  [rgb_features,     rgb_rois,     6,6,1./stride],),
-            num_class, out_shape) #<todo>  add non max suppression
 
 
-
-    #loss ########################################################################################################
+    # RRN
     top_inds     = tf.placeholder(shape=[None   ], dtype=tf.int32,   name='top_ind'    )
     top_pos_inds = tf.placeholder(shape=[None   ], dtype=tf.int32,   name='top_pos_ind')
     top_labels   = tf.placeholder(shape=[None   ], dtype=tf.int32,   name='top_label'  )
     top_targets  = tf.placeholder(shape=[None, 4], dtype=tf.float32, name='top_target' )
     top_cls_loss, top_reg_loss = rpn_loss(top_scores, top_deltas, top_inds, top_pos_inds, top_labels, top_targets)
+
+
+    # RCNN
+    fuse_scores, fuse_probs, fuse_deltas = \
+        fusion_net(
+            ([top_features, top_rois, 6, 6, 1. / stride],
+             [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
+             [rgb_features, rgb_rois, 6, 6, 1. / stride],),
+            num_class, out_shape)  # <todo>  add non max suppression
 
     fuse_labels  = tf.placeholder(shape=[None            ], dtype=tf.int32,   name='fuse_label' )
     fuse_targets = tf.placeholder(shape=[None, *out_shape], dtype=tf.float32, name='fuse_target')
@@ -234,7 +235,6 @@ def run_train():
     #solver_step = solver.minimize(top_cls_loss+top_reg_loss+l2)
     solver_step = solver.minimize(top_cls_loss+top_reg_loss+fuse_cls_loss+0.1*fuse_reg_loss+l2)
 
-    max_iter = 10000
     iter_debug=8
 
     # start training here  #########################################################################################
@@ -362,6 +362,11 @@ def run_train():
 
                 #batch_fuse_deltas=0*batch_fuse_deltas #disable 3d box prediction
                 probs, boxes3d = rcnn_nms(batch_fuse_probs, batch_fuse_deltas, batch_rois3d, threshold=0.5)
+                nud.npsave('probs', probs)
+                nud.npsave('boxes3d', boxes3d)
+                nud.npsave('batch_fuse_probs', batch_fuse_probs)
+                nud.npsave('batch_fuse_deltas', batch_fuse_deltas)
+                nud.npsave('batch_rois3d',batch_rois3d)
 
 
                 ## show rpn score maps
@@ -384,6 +389,8 @@ def run_train():
                 ## show rcnn(fuse) nms
                 img_rcnn     = draw_rcnn (top_image, batch_fuse_probs, batch_fuse_deltas, batch_top_rois, batch_rois3d,darker=1)
                 img_rcnn_nms = draw_rcnn_nms(rgb, boxes3d, probs)
+
+                nud.npsave('rgb',rgb)
                 nud.imsave('img_rcnn', img_rcnn)
                 nud.imsave('img_rcnn_nms', img_rcnn_nms)
                 # cv2.waitKey(1)
@@ -394,12 +401,5 @@ def run_train():
                 saver.save(sess, out_dir + '/check_points/snap.ckpt')  #iter
 
 
-
-
-
-
-## main function ##########################################################################
-
-if __name__ == '__main__':
-    print( '%s: calling main function ... ' % os.path.basename(__file__))
-    run_train()
+def predic():
+    pass #todo :finished it

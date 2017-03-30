@@ -58,7 +58,7 @@ def rcnn_nms( probs,  deltas,  rois3d,  threshold = 0.75):
 
     cls=1  # do for class-one only
     probs = probs[:,cls] #see only class-1
-    idx = np.where(probs>0.8)[0]
+    idx = np.where(probs>threshold)[0]
 
     #post processing
     rois3d = rois3d[idx]

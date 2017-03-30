@@ -19,3 +19,6 @@ def normalise(image, limit=255.0):
 
 def imsave(name, image):
     plt.imsave(image_sava_dir+name,image)
+
+def npsave(name,numpy_array):
+    np.save(image_sava_dir+name,numpy_array)
