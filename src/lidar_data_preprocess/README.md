@@ -1,8 +1,10 @@
 # Description
 
-This is lidar point cloud data preprocessing for MV3D.
+This is lidar point cloud data preprocessing for MV3D. 
 
 The delay between successive LiDAR frames is currently set as 1 second (1000ms) in a global variable named "delay". This can be altered to slow down or speed up the data playback.
+
+The Kiti dataset import prototype is based on s-nepal 's work on https://github.com/bostondiditeam/kitti/tree/master/kitti_velodyne_reader
 
 ## Requirements:
 
