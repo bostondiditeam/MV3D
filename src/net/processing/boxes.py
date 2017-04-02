@@ -2,7 +2,7 @@ from net.configuration import CFG
 
 from net.processing.cython_bbox import bbox_overlaps as box_overlaps
 #from net.processing.cython_box import box_vote
-#from net.processing.gpu_nms import gpu_nms as nms   ##unknown bug ???
+# from net.processing.gpu_nms import gpu_nms as nms   ##unknown bug ???
 from net.processing.cpu_nms import cpu_nms as nms
 
 import numpy as np

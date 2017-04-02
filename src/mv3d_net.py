@@ -2,6 +2,8 @@ from net.utility.file import *
 from net.blocks import *
 from net.rpn_nms_op import tf_rpn_nms
 from net.roipooling_op import roi_pool as tf_roipooling
+import net.rpn_loss_op as rpnloss
+import net.rcnn_loss_op as rcnnloss
 
 
 def top_feature_net(input, anchors, inds_inside, num_bases):
@@ -159,24 +161,95 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
     return  scores, probs, deltas
 
 
+def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
+    top_anchors = tf.placeholder(shape=[None, 4], dtype=tf.int32, name='anchors')
+    top_inside_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='inside_inds')
+
+    top_images = tf.placeholder(shape=[None, *top_shape], dtype=tf.float32, name='top')
+    front_images = tf.placeholder(shape=[None, *front_shape], dtype=tf.float32, name='front')
+    rgb_images = tf.placeholder(shape=[None, *rgb_shape], dtype=tf.float32, name='rgb')
+    top_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='top_rois')  # <todo> change to int32???
+    front_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='front_rois')
+    rgb_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='rgb_rois')
+
+    # load model ####################################################################################################
+
+    top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores = \
+        top_feature_net(top_images, top_anchors, top_inside_inds, len_bases)
+
+    # RRN
+    top_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='top_ind')
+    top_pos_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='top_pos_ind')
+    top_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='top_label')
+    top_targets = tf.placeholder(shape=[None, 4], dtype=tf.float32, name='top_target')
+    top_cls_loss, top_reg_loss = rpnloss.rpn_loss(top_scores, top_deltas, top_inds, top_pos_inds, top_labels, top_targets)
+
+    # RCNN
+    out_shape = (8, 3)
+    stride = 8
+
+    front_features = front_feature_net(front_images)
+    rgb_features = rgb_feature_net(rgb_images)
+    fuse_scores, fuse_probs, fuse_deltas = \
+        fusion_net(
+            ([top_features, top_rois, 6, 6, 1. / stride],
+             [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
+             [rgb_features, rgb_rois, 6, 6, 1. / stride],),
+            num_class, out_shape)  # <todo>  add non max suppression
+
+    fuse_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='fuse_label')
+    fuse_targets = tf.placeholder(shape=[None, *out_shape], dtype=tf.float32, name='fuse_target')
+    fuse_cls_loss, fuse_reg_loss = rcnnloss.rcnn_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
+
+    return {
+        'top_anchors':top_anchors,
+        'top_inside_inds':top_inside_inds,
+        'top_images':top_images,
+        'front_images':front_images,
+        'rgb_images':rgb_images,
+        'top_rois':top_rois,
+        'front_rois':front_rois,
+        'rgb_rois': rgb_rois,
+
+        'top_cls_loss': top_cls_loss,
+        'top_reg_loss': top_reg_loss,
+        'fuse_cls_loss': fuse_cls_loss,
+        'fuse_reg_loss': fuse_reg_loss,
+
+        'top_features': top_features,
+        'top_scores': top_scores,
+        'top_probs': top_probs,
+        'top_deltas': top_deltas,
+        'proposals': proposals,
+        'proposal_scores': proposal_scores,
+
+        'top_inds': top_inds,
+        'top_pos_inds':top_pos_inds,
+
+        'top_labels':top_labels,
+        'top_targets' :top_targets,
+
+        'fuse_labels':fuse_labels,
+        'fuse_targets':fuse_targets
+    }
 
 
-# main ###########################################################################
-# to start in tensorboard:
-#    /opt/anaconda3/bin
-#    ./python tensorboard --logdir /root/share/out/didi/tf
-#     http://http://localhost:6006/
-
-if __name__ == '__main__':
-    print( '%s: calling main function ... ' % os.path.basename(__file__))
-    out_dir='/root/share/out/didi/tf'
-    log = Logger('/root/share/out/udacity/00/xxx_log.txt', mode='a')  # log file
-
-
-    # draw graph to check connections
-    with tf.Session()  as sess:
-        tf.global_variables_initializer().run(feed_dict={IS_TRAIN_PHASE:True})
-        summary_writer = tf.summary.FileWriter(out_dir, sess.graph)
-
-        print_macs_to_file(log)
-    print ('sucess!')
+# # main ###########################################################################
+# # to start in tensorboard:
+# #    /opt/anaconda3/bin
+# #    ./python tensorboard --logdir /root/share/out/didi/tf
+# #     http://http://localhost:6006/
+#
+# if __name__ == '__main__':
+#     print( '%s: calling main function ... ' % os.path.basename(__file__))
+#     out_dir='/root/share/out/didi/tf'
+#     log = Logger('/root/share/out/udacity/00/xxx_log.txt', mode='a')  # log file
+#
+#
+#     # draw graph to check connections
+#     with tf.Session()  as sess:
+#         tf.global_variables_initializer().run(feed_dict={IS_TRAIN_PHASE:True})
+#         summary_writer = tf.summary.FileWriter(out_dir, sess.graph)
+#
+#         print_macs_to_file(log)
+#     print ('sucess!')

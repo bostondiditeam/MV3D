@@ -1,4 +1,4 @@
-from net.common import *
+import tensorflow as tf
 
 
 

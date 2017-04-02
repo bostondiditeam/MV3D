@@ -1,4 +1,5 @@
-from net.common import *
+import tensorflow as tf
+import numpy as np
 
 def rcnn_loss(scores, deltas, rcnn_labels, rcnn_targets):
 

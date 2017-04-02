@@ -23,7 +23,7 @@ h = conv2d(data, W)
 [y, argmax] = roi_pooling_op.roi_pool(h, rois, 6, 6, 1.0/3)
 pdb.set_trace()
 y_data = tf.convert_to_tensor(np.ones((2, 6, 6, 1)), dtype=tf.float32)
-print y_data, y, argmax
+print (y_data, y, argmax)
 
 # Minimize the mean squared errors.
 loss = tf.reduce_mean(tf.square(y - y_data))

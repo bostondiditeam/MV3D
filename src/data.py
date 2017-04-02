@@ -2,16 +2,14 @@ from kitti_data import pykitti
 from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
 from kitti_data.draw import *
 from kitti_data.io import *
-
 #from net.utility.draw import *
 from net.processing.boxes3d import *
 import numpy
+from config import cfg
+import os
 
 
 # run functions --------------------------------------------------------------------------
-
-
-dummy_data_dir='../data/kitti/dummy'
 
 
 ## objs to gt boxes ##
@@ -34,6 +32,104 @@ def obj_to_gt_boxes3d(objs):
 
 ## lidar to top ##
 def lidar_to_top(lidar):
+
+    idx = np.where (lidar[:,0]>TOP_X_MIN)
+    lidar = lidar[idx]
+    idx = np.where (lidar[:,0]<TOP_X_MAX)
+    lidar = lidar[idx]
+
+    idx = np.where (lidar[:,1]>TOP_Y_MIN)
+    lidar = lidar[idx]
+    idx = np.where (lidar[:,1]<TOP_Y_MAX)
+    lidar = lidar[idx]
+
+    idx = np.where (lidar[:,2]>TOP_Z_MIN)
+    lidar = lidar[idx]
+    idx = np.where (lidar[:,2]<TOP_Z_MAX)
+    lidar = lidar[idx]
+
+
+    pxs=lidar[:,0]
+    pys=lidar[:,1]
+    pzs=lidar[:,2]
+    prs=lidar[:,3]
+    qxs=((pxs-TOP_X_MIN)//TOP_X_DIVISION).astype(np.int32)
+    qys=((pys-TOP_Y_MIN)//TOP_Y_DIVISION).astype(np.int32)
+    qzs=((pzs-TOP_Z_MIN)//TOP_Z_DIVISION).astype(np.int32)
+    quantized = np.dstack((qxs,qys,qzs,prs)).squeeze()
+
+    X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
+    Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
+    Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)//TOP_Z_DIVISION)+1
+    height  = Yn - Y0
+    width   = Xn - X0
+    channel = Zn - Z0  + 2
+    print('height,width,channel=%d,%d,%d'%(height,width,channel))
+    top = np.zeros(shape=(height,width,channel), dtype=np.float32)
+
+
+    # histogram = Bin(channel, 0, Zn, "z", Bin(height, 0, Yn, "y", Bin(width, 0, Xn, "x", Maximize("intensity"))))
+    # histogram.fill.numpy({"x": qxs, "y": qys, "z": qzs, "intensity": prs})
+
+    if 1:  #new method
+        for z in range(Zn):
+            iz = np.where (quantized[:,2]==z)
+            quantized_z = quantized[iz]
+
+            for y in range(Yn):
+                iy  = np.where (quantized_z[:,1]==y)
+                quantized_zy = quantized_z[iy]
+
+                for x in range(Xn):
+                    ix  = np.where (quantized_zy[:,0]==x)
+                    quantized_zyx = quantized_zy[ix]
+                    if len(quantized_zyx)>0:
+                        yy,xx,zz = -x,-y, z
+
+                        #height per slice
+                        max_height = max(0,np.max(quantized_zyx[:,2])-TOP_Z_MIN)
+                        top[yy,xx,zz]=max_height
+
+                        #intensity
+                        max_intensity = np.max(quantized_zyx[:,3])
+                        top[yy,xx,Zn]=max_intensity
+
+                        #density
+                        count = len(idx)
+                        top[yy,xx,Zn+1]+=count
+
+                    pass
+                pass
+            pass
+
+    top[:,:,Zn+1] = np.log(top[:,:,Zn+1]+1)/math.log(64)
+
+    if 1:
+        top_image = np.sum(top,axis=2)
+        top_image = top_image-np.min(top_image)
+        top_image = (top_image/np.max(top_image)*255)
+        top_image = np.dstack((top_image, top_image, top_image)).astype(np.uint8)
+
+
+    if 0: #unprocess
+        top_image = np.zeros((height,width,3),dtype=np.float32)
+
+        num = len(lidar)
+        for n in range(num):
+            x,y = qxs[n],qys[n]
+            if x>=0 and x <width and y>0 and y<height:
+                top_image[y,x,:] += 1
+
+        max_value=np.max(np.log(top_image+0.001))
+        top_image = top_image/max_value *255
+        top_image=top_image.astype(dtype=np.uint8)
+
+
+    return top, top_image
+
+
+## lidar to top ##
+def lidar_to_top_old(lidar):
 
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
@@ -111,6 +207,34 @@ def lidar_to_top(lidar):
 
 
     return top, top_image
+
+
+def load(indexs):
+
+    # fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
+
+    data_dir=cfg.DATA_SETS_DIR
+    train_rgbs=[cv2.imread(os.path.join(data_dir,'seg/rgb/rgb_%05d.png' % n),1) for n in indexs]
+    train_tops=[np.load(os.path.join(data_dir,'seg/top/top_%05d.npy' % n)) for n in indexs]
+    train_fronts=[np.zeros((1, 1), dtype=np.float32) for n in indexs]
+    train_gt_labels=[np.load(os.path.join(data_dir,'seg/gt_labels/gt_labels_%05d.npy' % n)) for n in indexs]
+    train_gt_boxes3d=[np.load(os.path.join(data_dir, 'seg/gt_boxes3d/gt_boxes3d_%05d.npy' % n)) for n in indexs]
+
+    return train_rgbs,train_tops,train_fronts,train_gt_labels,train_gt_boxes3d
+
+def getTopFeatureShape(top_shape,stride):
+    return (top_shape[0]//stride, top_shape[1]//stride)
+
+def getTopImages(indexs):
+    data_dir = cfg.DATA_SETS_DIR
+    return [ cv2.imread(os.path.join(data_dir, 'seg/top_image/top_image_%05d.png' % n), 1) for n in indexs]
+
+def getLidarDatas(indexs):
+    data_dir = cfg.DATA_SETS_DIR
+    return [ np.load(os.path.join(data_dir, 'seg/lidar/lidar_%05d.npy' % n)) for n in indexs ]
+
+def flat(np_array):
+    return np_array.reshape(1, *(np_array.shape))
 
 
 # ## drawing ####
@@ -211,6 +335,7 @@ def lidar_to_top(lidar):
 if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
 
+    dummy_data_dir=cfg.DATA_SETS_DIR
     basedir = dummy_data_dir
     date  = '2011_09_26'
     drive = '0005'
@@ -234,7 +359,7 @@ if __name__ == '__main__':
     ############# convert   ###########################
     os.makedirs(dummy_data_dir + '/seg',exist_ok=True)
 
-    if 1:  ## rgb images --------------------
+    if 0:  ## rgb images --------------------
         os.makedirs(dummy_data_dir + '/seg/rgb',exist_ok=True)
 
         for n in range(num_frames):
@@ -264,7 +389,7 @@ if __name__ == '__main__':
 
 
 
-    if 1:  ## boxes3d  --------------------
+    if 0:  ## boxes3d  --------------------
         os.makedirs(dummy_data_dir + '/seg/gt_boxes3d',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/gt_labels',exist_ok=True)
         for n in range(num_frames):

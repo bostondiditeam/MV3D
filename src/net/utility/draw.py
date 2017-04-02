@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import cv2
 import os
 
-image_sava_dir='/home/ubuntu/zxf/Development/MV3D/data/image_output/'
+image_sava_dir='/home/stu/Development/MV3D/data/image_output/'
 os.makedirs(image_sava_dir ,exist_ok=True)
 
 def imshow(name, image, resize=1):
