@@ -12,9 +12,6 @@ The Kiti dataset import prototype is based on s-nepal 's work on https://github.
 
 --> PCL 1.2 or higher
 
---> Boost
-
-
 ## To compile the code:
 
 --> Run cmake .
@@ -41,6 +38,3 @@ list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
 Press "R" on the keyboard once the PCL window appears in order to normalize the camera view angle. Otherwise, simply zoom out using the mouse roller.
 
-### To install boost library, use the following command on an Ubuntu terminal
-
-sudo apt-get install libboost-dev

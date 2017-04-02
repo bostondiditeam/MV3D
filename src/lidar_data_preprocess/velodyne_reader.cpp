@@ -13,7 +13,6 @@
 #include <pcl/visualization/cloud_viewer.h>
 
 #include <pcl/console/time.h>
-#include <boost/chrono.hpp>
 
 #include <iostream>
 #include <pcl/io/io.h>
@@ -96,8 +95,8 @@ int getZ(float z)
 
 int main()
 {
-	boost::shared_ptr<pcl::PointCloud<PointT> > cloud (new pcl::PointCloud<PointT>);
-	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("PCL Cloud"));
+	pcl::PointCloud<PointT>::Ptr cloud (new pcl::PointCloud<PointT>);
+	pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("PCL Cloud"));
 	pcl::visualization::PointCloudColorHandlerGenericField<PointT> handler ("intensity"); 
 
 	pcl::console::TicToc tt;
@@ -110,7 +109,7 @@ int main()
 
 	while (!viewer->wasStopped ())
 	{ 
-	    std::cerr << "LiDAR Data Load Start ...\n", tt.tic ();
+	    std::cerr << "=== LiDAR Data Load Start ===\n", tt.tic ();
 
 	    int32_t num = 1000000;
 	    float *data = (float*)malloc(num*sizeof(float));
@@ -122,7 +121,6 @@ int main()
 
 		ostringstream velo_filename;
 		velo_filename << setfill('0') << setw(10) << frame_counter << ".bin";
-		frame_counter++;
 
 		string velo_path = velo_dir + velo_filename.str();
 
@@ -130,8 +128,8 @@ int main()
 		fp = fopen (x, "rb");
 
 		if(fp == NULL){
-		  cout << x << " not found. Ensure that the file path is correct." << endl;
-		  return 0;
+			cout << x << " not found. Ensure that the file path is correct." << endl;
+			return 0;
 		}
 
 		num = fread(data,sizeof(float),num,fp)/4;
@@ -184,9 +182,12 @@ int main()
 	
 		// use point cloud as data structure to store feature map for visualization
 		// need to be stored into image later ...
-		boost::shared_ptr<pcl::PointCloud<PointT> > height_cloud (new pcl::PointCloud<PointT>);
-		boost::shared_ptr<pcl::PointCloud<PointT> > intensity_cloud (new pcl::PointCloud<PointT>);
-		boost::shared_ptr<pcl::PointCloud<PointT> > density_cloud (new pcl::PointCloud<PointT>);
+		//boost::shared_ptr<pcl::PointCloud<PointT> > test_cloud_ptr(new pcl::PointCloud<PointT>);
+		std::vector<pcl::PointCloud<PointT> > height_cloud_vec;
+		height_cloud_vec.resize(Z_SIZE);
+		//pcl::PointCloud<PointT>::Ptr height_cloud (new pcl::PointCloud<PointT>);
+		pcl::PointCloud<PointT>::Ptr intensity_cloud (new pcl::PointCloud<PointT>);
+		pcl::PointCloud<PointT>::Ptr density_cloud (new pcl::PointCloud<PointT>);
 
 		for (int32_t i=0; i<num; i++) {
 
@@ -213,15 +214,12 @@ int main()
 					//std::cout<<X<<","<<Y<<","<<Z<<std::endl;
 					height_maps[X][Y][Z] = point.z;
 				
-					if (Z==5)	//NHERE only choose one height layer!!!!
-					{
-						PointT grid_point;
-						grid_point.x = X;
-						grid_point.y = Y;
-						grid_point.z = 0;
-						grid_point.intensity = point.z;
-						height_cloud->push_back(grid_point);
-					}				
+					PointT grid_point;
+					grid_point.x = X;
+					grid_point.y = Y;
+					grid_point.z = 0;
+					grid_point.intensity = point.z;
+					height_cloud_vec[Z].push_back(grid_point);
 				}
 			
 				if (point.z > max_height_map[X][Y])
@@ -254,23 +252,41 @@ int main()
 			for (int Y=0; Y<Y_SIZE; Y++)
 				density_map[X][Y] = log(density_map[X][Y]+1)/log(64);
 				
-		boost::shared_ptr<pcl::PointCloud<PointT> > cloud_demo (new pcl::PointCloud<PointT>);
+		pcl::PointCloud<PointT>::Ptr cloud_demo (new pcl::PointCloud<PointT>);
 
-		std::cerr << "LiDAR Preprocess Done : "<< tt.toc ()<<" ms \n"; 
+		std::cerr << "=== LiDAR Preprocess Done "<< tt.toc ()<<" ms === \n"; 
 
-		//*cloud_demo=*height_cloud;
-		//*cloud_demo=*density_cloud;
-		*cloud_demo=*intensity_cloud;
-		//*cloud_demo=*cloud;
+		std::cout <<"Frame # : "<< frame_counter <<std::endl;
+		std::cout <<"Show height_map ... "<< std::endl;
+		for (int k = 0; k<Z_SIZE; k++)
+		{
+			*cloud_demo=height_cloud_vec[k];
+			std::cout<< "- Layer " << k << std::endl;
+	 		//std::cout<<cloud_demo->size()<<std::endl;
 
-	 	std::cout<<cloud_demo->size()<<std::endl;
+		  	handler.setInputCloud (cloud_demo);
+			if (!viewer->updatePointCloud (cloud_demo, handler, "demo"))
+				viewer->addPointCloud (cloud_demo, handler, "demo");
+			viewer->spinOnce (delay/2);
+		}
 
-	  	handler.setInputCloud (cloud_demo);
+		std::cout <<"Show density map ... "<< std::endl;
+		*cloud_demo=*density_cloud;
+		handler.setInputCloud (cloud_demo);
 		if (!viewer->updatePointCloud (cloud_demo, handler, "demo"))
 			viewer->addPointCloud (cloud_demo, handler, "demo");
-		viewer->spinOnce (delay);
+		viewer->spinOnce (delay * 2);
 
-	
+		std::cout <<"Show intensity map ... "<< std::endl;
+		*cloud_demo=*intensity_cloud;
+		handler.setInputCloud (cloud_demo);
+		if (!viewer->updatePointCloud (cloud_demo, handler, "demo"))
+			viewer->addPointCloud (cloud_demo, handler, "demo");
+		viewer->spinOnce (delay * 2);
+
+		//update frame counter
+		frame_counter++;		
+
 		fclose(fp);
 
 		cloud->points.clear();
