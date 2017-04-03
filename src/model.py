@@ -13,6 +13,7 @@ from net.rcnn_nms_op    import rcnn_nms, draw_rcnn_nms, draw_rcnn
 from net.rpn_target_op  import draw_rpn_gt, draw_rpn_targets, draw_rpn_labels
 from net.rcnn_target_op import draw_rcnn_targets, draw_rcnn_labels
 import net.utility.file as utilfile
+from config import cfg
 
 
 dummy_data_dir='../data/kitti/dummy/'
@@ -54,7 +55,6 @@ class MV3D(object):
 
     def __init__(self):
 
-        out_dir=self.out_dir = '../out/didi/xxx'
         self.stride=8
         self.num_class = 2  # incude background
 
@@ -67,10 +67,11 @@ class MV3D(object):
         )
 
         # output dir, etc
-        self.out_dir = '../out/didi/xxx'
-        utilfile.makedirs(out_dir + '/tf')
-        utilfile.makedirs(out_dir + '/check_points')
-        self.log = utilfile.Logger(out_dir + '/log.txt', mode='a')
+        utilfile.makedirs(cfg.CHECKPOINT_DIR)
+        self.log = utilfile.Logger(cfg.LOG_DIR+'/log.txt', mode='a')
+
+    def proposal(self):
+        pass
 
 
     def train(self, max_iter=10000):
@@ -86,7 +87,7 @@ class MV3D(object):
         #     cv2.waitKey(1)
 
 
-        load_indexs=[1]
+        load_indexs=[0,1]
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs)
         top_shape=train_tops[0].shape
         front_shape=train_fronts[0].shape
@@ -116,11 +117,8 @@ class MV3D(object):
         with sess.as_default():
             sess.run( tf.global_variables_initializer(), { blocks.IS_TRAIN_PHASE : True } )
 
-            saver  = tf.train.Saver()
+            saver  = tf.train.Saver(keep_checkpoint_every_n_hours=0.2,max_to_keep=10)
 
-            top_images=net['top_images']
-            top_anchors=net['top_anchors']
-            top_inside_inds=net['top_inside_inds']
 
             proposals=net['proposals']
             proposal_scores=net['proposal_scores']
@@ -131,8 +129,8 @@ class MV3D(object):
             # set anchor boxes
             top_shape=train_tops[0].shape
             top_feature_shape=data.getTopFeatureShape(top_shape,self.stride)
-            anchors, inside_inds = make_anchors(self.bases, self.stride, top_shape[0:2],top_feature_shape[0:2])
-            inside_inds = np.arange(0, len(anchors), dtype=np.int32)  # use all  #<todo>
+            top_view_anchors, inside_inds = make_anchors(self.bases, self.stride, top_shape[0:2],top_feature_shape[0:2])
+            inside_inds = np.arange(0, len(top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
             for iter in range(max_iter):
                 epoch=1.0*iter
@@ -141,9 +139,9 @@ class MV3D(object):
 
                 ## generate train image -------------
                 idx = np.random.choice(num_frames)     #*10   #num_frames)  #0
-                batch_top_images    = flat(train_tops[idx])
-                batch_front_images  = flat(train_fronts[idx])
-                batch_rgb_images    = flat(train_rgbs[idx])
+                batch_top_view    = flat(train_tops[idx])
+                batch_front_view  = flat(train_fronts[idx])
+                batch_rgb_images  = flat(train_rgbs[idx])
 
                 batch_gt_labels    = train_gt_labels[idx]
                 batch_gt_boxes3d   = train_gt_boxes3d[idx]
@@ -152,9 +150,9 @@ class MV3D(object):
 
                 ## run propsal generation ----/home/stu/Development/MV3D/src/net/lib/roi_pooling_layer/--------
                 fd1={
-                    top_images:      batch_top_images,
-                    top_anchors:     anchors,
-                    top_inside_inds: inside_inds,
+                    net['top_view']: batch_top_view,
+                    net['top_anchors']:top_view_anchors,
+                    net['top_inside_inds']: inside_inds,
 
                     learning_rate:   rate,
                     blocks.IS_TRAIN_PHASE:  True
@@ -164,7 +162,7 @@ class MV3D(object):
 
                 ## generate  train rois  ------------
                 batch_top_inds, batch_top_pos_inds, batch_top_labels, batch_top_targets  = \
-                    rpn_target ( anchors, inside_inds, batch_gt_labels,  batch_gt_top_boxes)
+                    rpn_target ( top_view_anchors, inside_inds, batch_gt_labels,  batch_gt_top_boxes)
 
                 batch_top_rois, batch_fuse_labels, batch_fuse_targets  = \
                      rcnn_target(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
@@ -180,8 +178,8 @@ class MV3D(object):
                 #     rgb       = train_rgbs[idx]
                 #
                 #     img_gt     = draw_rpn_gt(top_image, batch_gt_top_boxes, batch_gt_labels)
-                #     img_label  = draw_rpn_labels (top_image, self.anchors, batch_top_inds, batch_top_labels )
-                #     img_target = draw_rpn_targets(top_image, self.anchors, batch_top_pos_inds, batch_top_targets)
+                #     img_label  = draw_rpn_labels (top_image, self.top_view_anchors, batch_top_inds, batch_top_labels )
+                #     img_target = draw_rpn_targets(top_image, self.top_view_anchors, batch_top_pos_inds, batch_top_targets)
                 #     nud.imsave('img_rpn_gt', img_gt)
                 #     nud.imsave('img_rpn_label', img_label)
                 #     nud.imsave('img_rpn_target', img_target)
@@ -201,8 +199,8 @@ class MV3D(object):
                 fd2={
                     **fd1,
 
-                    net['top_images']: batch_top_images,
-                    net['front_images']: batch_front_images,
+                    net['top_view']: batch_top_view,
+                    net['front_view']: batch_front_view,
                     net['rgb_images']: batch_rgb_images,
 
                     net['top_rois']:   batch_top_rois,
@@ -222,6 +220,9 @@ class MV3D(object):
 
                 _, batch_top_cls_loss, batch_top_reg_loss, batch_fuse_cls_loss, batch_fuse_reg_loss = \
                    sess.run([solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss],fd2)
+
+                if iter%20==0:
+                    saver.save(sess, os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap'))
 
                 self.log.write('%3.1f   %d   %0.4f   |   %0.5f   %0.5f   |   %0.5f   %0.5f  \n' %\
                     (epoch, iter, rate, batch_top_cls_loss, batch_top_reg_loss, batch_fuse_cls_loss, batch_fuse_reg_loss))
@@ -260,7 +261,7 @@ class MV3D(object):
                 #     # plt.pause(0.01)
                 #
                 #     # show rpn(top) nms
-                #     img_rpn     = draw_rpn(top_image, batch_top_probs, batch_top_deltas, self.anchors, self.inside_inds)
+                #     img_rpn     = draw_rpn(top_image, batch_top_probs, batch_top_deltas, self.top_view_anchors, self.inside_inds)
                 #     img_rpn_nms = draw_rpn_nms(top_image, batch_proposals, batch_proposal_scores)
                 #     nud.imsave('img_rpn', img_rpn)
                 #     nud.imsave('img_rpn_nms', img_rpn_nms)
@@ -275,10 +276,87 @@ class MV3D(object):
                 #     nud.imsave('img_rcnn_nms', img_rcnn_nms)
 
                 # save: ------------------------------------
-                if iter%500==0:
-                    #saver.save(sess, out_dir + '/check_points/%06d.ckpt'%iter)  #iter
-                    saver.save(sess, self.out_dir + '/check_points/snap.ckpt')  #iter
 
 
-    def detction(self):
-        pass
+
+    # def detction(self,top_view,front_view,):
+    #     """
+    #     :param top_img: for visualization
+    #     :return:
+    #     """
+    #     sess = tf.InteractiveSession()
+    #     with sess.as_default():
+    #
+    #         saver = tf.train.Saver.restore(sess,tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
+    #         net = mv3d_net.load(top_view.shape, front_shape, rgb_shape, self.num_class, len(self.bases))
+    #
+    #         fd1 = {
+    #             net['top_view']: top_view,
+    #             net['top_anchors']: top_view_anchors,
+    #             net['top_inside_inds']: inside_inds,
+    #
+    #             blocks.IS_TRAIN_PHASE: True
+    #         }
+    #
+    #         fd2 = {
+    #             **fd1,
+    #
+    #             net[''['top_images']: batch_top_images,
+    #             net['front_images']: batch_front_images,
+    #             net['rgb_images']: batch_rgb_images,
+    #
+    #             net['top_rois']: batch_top_rois,
+    #             net['front_rois']: batch_front_rois,
+    #             net['rgb_rois']: batch_rgb_rois,
+    #
+    #             net['top_inds']: batch_top_inds,
+    #             net['top_pos_inds']: batch_top_pos_inds,
+    #             net['top_labels']: batch_top_labels,
+    #             net['top_targets']: batch_top_targets,
+    #
+    #             net['fuse_labels']: batch_fuse_labels,
+    #             net['fuse_targets']: batch_fuse_targets,
+    #         }
+    #
+    #         top_image = top_imgs[idx]
+    #         rgb       = self.train_rgbs[idx]
+    #
+    #         batch_top_probs, batch_top_scores, batch_top_deltas  = \
+    #             sess.run([ self.top_probs, self.top_scores, self.top_deltas ],fd2)
+    #
+    #         batch_fuse_probs, batch_fuse_deltas = \
+    #             sess.run([ fuse_probs, fuse_deltas ],fd2)
+    #
+    #         #batch_fuse_deltas=0*batch_fuse_deltas #disable 3d box prediction
+    #         probs, boxes3d = rcnn_nms(batch_fuse_probs, batch_fuse_deltas, batch_rois3d, threshold=0.5)
+    #         nud.npsave('probs', probs)
+    #         nud.npsave('boxes3d', boxes3d)
+    #         nud.npsave('batch_fuse_probs', batch_fuse_probs)
+    #         nud.npsave('batch_fuse_deltas', batch_fuse_deltas)
+    #         nud.npsave('batch_rois3d',batch_rois3d)
+    #
+    #
+    #         ## show rpn score maps
+    #         p = batch_top_probs.reshape( *(self.top_feature_shape[0:2]), 2*self.num_bases)
+    #         # for n in range(num_bases):
+    #         #     r=n%num_scales
+    #         #     s=n//num_scales
+    #         #     pn = p[:,:,2*n+1]*255
+    #         #     axs[s,r].cla()
+    #         #     axs[s,r].imshow(pn, cmap='gray', vmin=0, vmax=255)
+    #         # plt.pause(0.01)
+    #
+    #         # show rpn(top) nms
+    #         img_rpn     = draw_rpn(top_image, batch_top_probs, batch_top_deltas, self.top_view_anchors, self.inside_inds)
+    #         img_rpn_nms = draw_rpn_nms(top_image, batch_proposals, batch_proposal_scores)
+    #         nud.imsave('img_rpn', img_rpn)
+    #         nud.imsave('img_rpn_nms', img_rpn_nms)
+    #         # cv2.waitKey(1)
+    #
+    #         ## show rcnn(fuse) nms
+    #         img_rcnn     = draw_rcnn (top_image, batch_fuse_probs, batch_fuse_deltas, batch_top_rois, batch_rois3d,darker=1)
+    #         img_rcnn_nms = draw_rcnn_nms(rgb, boxes3d, probs)
+    #
+    #         nud.npsave('rgb',rgb)
+    #         nud.imsave('img_rcnn', img_rcnn)
+    #         nud.imsave('img_rcnn_nms', img_rcnn_nms)

@@ -2,9 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import cv2
 import os
+import net.utility.file as file
+from config import cfg
 
-image_sava_dir='/home/stu/Development/MV3D/data/image_output/'
-os.makedirs(image_sava_dir ,exist_ok=True)
+
+file.makedirs(cfg.LOG_DIR)
 
 def imshow(name, image, resize=1):
     H,W,_ = image.shape
@@ -19,7 +21,7 @@ def normalise(image, limit=255.0):
     return image
 
 def imsave(name, image):
-    plt.imsave(image_sava_dir+name,image)
+    plt.imsave(os.path.join(cfg.LOG_DIR,name) ,image)
 
 def npsave(name,numpy_array):
-    np.save(image_sava_dir+name,numpy_array)
+    np.save(os.path.join(cfg.LOG_DIR,name),numpy_array)

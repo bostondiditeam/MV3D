@@ -165,8 +165,8 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     top_anchors = tf.placeholder(shape=[None, 4], dtype=tf.int32, name='anchors')
     top_inside_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='inside_inds')
 
-    top_images = tf.placeholder(shape=[None, *top_shape], dtype=tf.float32, name='top')
-    front_images = tf.placeholder(shape=[None, *front_shape], dtype=tf.float32, name='front')
+    top_view = tf.placeholder(shape=[None, *top_shape], dtype=tf.float32, name='top')
+    front_view = tf.placeholder(shape=[None, *front_shape], dtype=tf.float32, name='front')
     rgb_images = tf.placeholder(shape=[None, *rgb_shape], dtype=tf.float32, name='rgb')
     top_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='top_rois')  # <todo> change to int32???
     front_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='front_rois')
@@ -175,7 +175,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     # load model ####################################################################################################
 
     top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores = \
-        top_feature_net(top_images, top_anchors, top_inside_inds, len_bases)
+        top_feature_net(top_view, top_anchors, top_inside_inds, len_bases)
 
     # RRN
     top_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='top_ind')
@@ -188,7 +188,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     out_shape = (8, 3)
     stride = 8
 
-    front_features = front_feature_net(front_images)
+    front_features = front_feature_net(front_view)
     rgb_features = rgb_feature_net(rgb_images)
     fuse_scores, fuse_probs, fuse_deltas = \
         fusion_net(
@@ -204,8 +204,8 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     return {
         'top_anchors':top_anchors,
         'top_inside_inds':top_inside_inds,
-        'top_images':top_images,
-        'front_images':front_images,
+        'top_view':top_view,
+        'front_view':front_view,
         'rgb_images':rgb_images,
         'top_rois':top_rois,
         'front_rois':front_rois,

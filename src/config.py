@@ -27,6 +27,8 @@ __C.TEST_KEY=11
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
 __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data/kitti/dummy')
+__C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
+__C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 
 
 

@@ -85,6 +85,8 @@ def make_bases(
 
 def make_anchors(bases, stride, image_shape, feature_shape, allowed_border=0):
     """ Refrence "Faster R-CNN: Towards Real-Time ObjectDetection with Region Proposal Networks"  Figure 3:Left
+        :return 
+            inside_inds: indexes of inside anchors
     """
 
     H, W                  = feature_shape
