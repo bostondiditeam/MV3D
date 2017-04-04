@@ -18,6 +18,11 @@
 #include <pcl/io/io.h>
 #include <pcl/io/pcd_io.h>
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/highgui/highgui.hpp>
+
+using namespace cv ;
+
 using namespace std;
 
 typedef pcl::PointXYZI PointT;
@@ -67,7 +72,7 @@ const float x_MIN = 0.0;
 const float x_MAX = 40.0;
 const float y_MIN =-20.0;
 const float y_MAX = 20.0;
-const float z_MIN = -2.0;
+const float z_MIN = -2.0;	////TODO : to be determined ....
 const float z_MAX = 0.4;
 const float x_DIVISION = 0.1;
 const float y_DIVISION = 0.1;
@@ -170,22 +175,19 @@ int main()
 				
 				//initialization for height_maps
 				for (int k=0; k<Z_SIZE; k++)
-					height_maps[i][j][k] = -100;
+					height_maps[i][j][k] = 0;	//value stored inside always >= 0 (relative to z_MIN, unit : m)
 			
 				//initialization for density_map, max_height_map, intensity_map
-				density_map[i][j] = 0;
-				max_height_map[i][j] = -100;
-				intensity_map[i][j] = -100;
+				density_map[i][j] = 0;	//value stored inside always >= 0, usually < 1 ( log(count#+1)/log(64), no unit )
+				max_height_map[i][j] = 0;	//value stored inside always >= 0  (relative to z_MIN, unit : m)
+				intensity_map[i][j] = 0;	//value stored inside always >= 0 && <=255 (range=0~255, no unit)
 			}
 		}
 
-	
-		// use point cloud as data structure to store feature map for visualization
-		// need to be stored into image later ...
-		//boost::shared_ptr<pcl::PointCloud<PointT> > test_cloud_ptr(new pcl::PointCloud<PointT>);
+
+		//allocate point cloud for temporally data visualization (only used for validation)
 		std::vector<pcl::PointCloud<PointT> > height_cloud_vec;
 		height_cloud_vec.resize(Z_SIZE);
-		//pcl::PointCloud<PointT>::Ptr height_cloud (new pcl::PointCloud<PointT>);
 		pcl::PointCloud<PointT>::Ptr intensity_cloud (new pcl::PointCloud<PointT>);
 		pcl::PointCloud<PointT>::Ptr density_cloud (new pcl::PointCloud<PointT>);
 
@@ -195,7 +197,7 @@ int main()
 		    point.x = *px;
 		    point.y = *py;
 		    point.z = *pz;
-			point.intensity = *pr;
+			point.intensity = (*pr) * 255;	//TODO : check if original Kitti data normalized between 0 and 1 ?
 
 			X = getX(point.x);
 			Y = getY(point.y);
@@ -207,29 +209,30 @@ int main()
 				//showPoint(point);
 				//std::cout<< X <<","<<Y<<","<<Z<<std::endl;
 				//updateCloudBoundary(cloud_boundary, point);
-			
+
 				//For every point in predefined 3D grid box.....
-				if (point.z > height_maps[X][Y][Z])
+				if ((point.z - z_MIN) > height_maps[X][Y][Z])
 				{	
-					//std::cout<<X<<","<<Y<<","<<Z<<std::endl;
-					height_maps[X][Y][Z] = point.z;
-				
+					height_maps[X][Y][Z] = point.z - z_MIN;
+					
+					//Save to point cloud for visualization -----				
 					PointT grid_point;
 					grid_point.x = X;
 					grid_point.y = Y;
 					grid_point.z = 0;
-					grid_point.intensity = point.z;
+					grid_point.intensity = point.z - z_MIN;
 					height_cloud_vec[Z].push_back(grid_point);
 				}
 			
-				if (point.z > max_height_map[X][Y])
+				if ((point.z - z_MIN) > max_height_map[X][Y])
 				{
-					max_height_map[X][Y] = point.z;
+					max_height_map[X][Y] = point.z - z_MIN;
 					intensity_map[X][Y] = point.intensity;
-					density_map[X][Y]++;	// update count, need to be normalized afterwards
+					density_map[X][Y]++;	// update count#, need to be normalized afterwards
 
 					//std::cout<<point.z <<","<<max_height_map[X][Y]<<","<<density_map[X][Y]<<std::endl;
 
+					//Save to point cloud for visualization -----
 					PointT grid_point;
 					grid_point.x = X;
 					grid_point.y = Y;
@@ -239,7 +242,7 @@ int main()
 				
 					grid_point.intensity = density_map[X][Y];
 					density_cloud->points.push_back(grid_point);
-				
+
 				}
 		
 		    	cloud->points.push_back(point);
@@ -247,11 +250,99 @@ int main()
 		    px+=4; py+=4; pz+=4; pr+=4;
 		}
 
-		//normalize density map
+
+		//normalize density map & normalized for image to be saved
+		//TODO : check LiDAR vs. camera coord. corresponding...
+		cv::Mat intensity_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
+		cv::Mat density_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
+		std::vector< cv::Mat > height_images;
+		cv::Mat height_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR		
+		for (int k=0; k<Z_SIZE; k++)
+			height_images.push_back(height_image);
+		
+
 		for (int X=0; X<X_SIZE; X++)
 			for (int Y=0; Y<Y_SIZE; Y++)
+			{
 				density_map[X][Y] = log(density_map[X][Y]+1)/log(64);
-				
+
+				density_image.at<cv::Vec3b> (X,Y)[0] = (int)((density_map[X][Y]-0)/1 *255);
+				density_image.at<cv::Vec3b> (X,Y)[1] = (int)((density_map[X][Y]-0)/1 *255);
+				density_image.at<cv::Vec3b> (X,Y)[2] = (int)((density_map[X][Y]-0)/1 *255);
+
+				intensity_image.at<cv::Vec3b> (X,Y)[0] = (int)((intensity_map[X][Y]-0)/255 *255);
+				intensity_image.at<cv::Vec3b> (X,Y)[1] = (int)((intensity_map[X][Y]-0)/255 *255);
+				intensity_image.at<cv::Vec3b> (X,Y)[2] = (int)((intensity_map[X][Y]-0)/255 *255);
+			}	
+
+		//Show image ---
+		//cv::imshow("Density", density_image) ;
+		//cv::waitKey(2000) ;
+		//cv::destroyWindow("Density");
+		//cv::imshow("Intensity", intensity_image) ;
+    	//cv::waitKey(2000) ;
+    	//cv::destroyWindow("Intensity");
+
+		//Save image ---   TODO : HERE only save intensity map ....
+		ostringstream str_frame_id;
+		str_frame_id << frame_counter ;
+		string full_str = "seg/top_image/top_image_";
+		full_str=full_str + str_frame_id.str() + ".png";
+		imwrite(full_str.c_str(),intensity_image);
+
+		for (int Z=0; Z<Z_SIZE; Z++)
+		{
+			for (int X=0; X<X_SIZE; X++)
+			{
+				for (int Y=0; Y<Y_SIZE; Y++)
+				{
+					height_images[Z].at<cv::Vec3b> (X,Y)[0] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
+					height_images[Z].at<cv::Vec3b> (X,Y)[1] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
+					height_images[Z].at<cv::Vec3b> (X,Y)[2] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
+				}
+			}
+			//cv::imshow("Height", height_images[Z]) ;
+			//cv::waitKey(500) ;
+			//cv::destroyWindow("Height");
+		}
+
+
+		//release image data
+		density_image.release();
+    	intensity_image.release();
+    	for (int Z=0; Z<Z_SIZE; Z++)
+    		height_images[Z].release();
+
+
+/*
+		float min_value = 0;
+		float max_value = 255;
+		//Get MIN and MAX (dynamic min and max ...)
+		for (int X=0; X<X_SIZE; X++)
+		{
+			for (int Y=0; Y<Y_SIZE; Y++)
+			{
+				if (density_map[X][Y] > max_value)
+					max_value = density_map[X][Y];
+				if (density_map[X][Y] < min_value)
+					min_value = density_map[X][Y];
+				if (intensity_map[X][Y] > max_value)
+					max_value = intensity_map[X][Y];
+				if (intensity_map[X][Y] < min_value)
+					min_value = intensity_map[X][Y];
+				for (int Z=0; Z<Z_SIZE; Z++)
+				{
+					if (height_maps[X][Y][Z] > max_value)
+						max_value = height_maps[X][Y][Z];
+					if (height_maps[X][Y][Z] < min_value)
+						min_value = height_maps[X][Y][Z];
+				}	
+			}
+		}
+		std::cout <<"MAX : "<<max_value<<"MIN : "<<min_value<<std::endl;
+*/
+
+
 		pcl::PointCloud<PointT>::Ptr cloud_demo (new pcl::PointCloud<PointT>);
 
 		std::cerr << "=== LiDAR Preprocess Done "<< tt.toc ()<<" ms === \n"; 
