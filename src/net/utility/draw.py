@@ -1,4 +1,6 @@
 import numpy as np
+import matplotlib
+matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 import cv2
 import os
@@ -21,7 +23,7 @@ def normalise(image, limit=255.0):
     return image
 
 def imsave(name, image):
-    plt.imsave(os.path.join(cfg.LOG_DIR,name) ,image)
+    plt.imsave(os.path.join(cfg.LOG_DIR,name)+'.jpg' ,image)
 
 def npsave(name,numpy_array):
     np.save(os.path.join(cfg.LOG_DIR,name),numpy_array)
