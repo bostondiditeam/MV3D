@@ -21,7 +21,6 @@ def rpn_loss(scores, deltas, inds, pos_inds, rpn_labels, rpn_targets):
 
         return smooth_l1
 
-
     scores1      = tf.reshape(scores,[-1,2])
     rpn_scores   = tf.gather(scores1,inds)  # remove ignore label
     rpn_cls_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rpn_scores, labels=rpn_labels))
@@ -30,5 +29,4 @@ def rpn_loss(scores, deltas, inds, pos_inds, rpn_labels, rpn_targets):
     rpn_deltas    = tf.gather(deltas1, pos_inds)  # remove ignore label
     rpn_smooth_l1 = modified_smooth_l1(rpn_deltas, rpn_targets, sigma=3.0)
     rpn_reg_loss  = tf.reduce_mean(tf.reduce_sum(rpn_smooth_l1, axis=1))
-
     return rpn_cls_loss, rpn_reg_loss

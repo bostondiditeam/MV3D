@@ -160,19 +160,40 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
     return  scores, probs, deltas
 
+import tensorflow as tf
+import numpy as np
+
+def rcnn_predict(scores, deltas):
+
+    _, num_class = scores.get_shape().as_list()
+    dim = np.prod(deltas.get_shape().as_list()[1:])//num_class
+
+    rcnn_scores   = tf.reshape(scores,[-1, num_class])
+    class_probability= tf.nn.softmax(rcnn_scores)
+
+    num = tf.shape(deltas)[0]
+    idx = tf.range(num)*num_class + class_probability
+    deltas1      = tf.reshape(deltas,[-1, dim])
+    rcnn_deltas  = tf.gather(deltas1,  idx)  # remove ignore label
+
+    return class_probability, rcnn_deltas
+
 
 def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
+    out_shape = (8, 3)
+    stride = 8
+
     top_anchors = tf.placeholder(shape=[None, 4], dtype=tf.int32, name='anchors')
     top_inside_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='inside_inds')
 
     top_view = tf.placeholder(shape=[None, *top_shape], dtype=tf.float32, name='top')
     front_view = tf.placeholder(shape=[None, *front_shape], dtype=tf.float32, name='front')
     rgb_images = tf.placeholder(shape=[None, *rgb_shape], dtype=tf.float32, name='rgb')
-    top_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='top_rois')  # <todo> change to int32???
+    top_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='top_rois')  # todo: change to int32???
     front_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='front_rois')
     rgb_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='rgb_rois')
 
-    # load model ####################################################################################################
+    # top feature
 
     top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores = \
         top_feature_net(top_view, top_anchors, top_inside_inds, len_bases)
@@ -184,22 +205,25 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     top_targets = tf.placeholder(shape=[None, 4], dtype=tf.float32, name='top_target')
     top_cls_loss, top_reg_loss = rpnloss.rpn_loss(top_scores, top_deltas, top_inds, top_pos_inds, top_labels, top_targets)
 
-    # RCNN
-    out_shape = (8, 3)
-    stride = 8
+
 
     front_features = front_feature_net(front_view)
     rgb_features = rgb_feature_net(rgb_images)
+
+    # fusion todo: Add NMS
     fuse_scores, fuse_probs, fuse_deltas = \
         fusion_net(
             ([top_features, top_rois, 6, 6, 1. / stride],
              [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
              [rgb_features, rgb_rois, 6, 6, 1. / stride],),
-            num_class, out_shape)  # <todo>  add non max suppression
+            num_class, out_shape)
 
     fuse_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='fuse_label')
     fuse_targets = tf.placeholder(shape=[None, *out_shape], dtype=tf.float32, name='fuse_target')
     fuse_cls_loss, fuse_reg_loss = rcnnloss.rcnn_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
+
+    # predict
+    # predict_scores, predict_deltas=rcnn_predict(fuse_scores,fuse_deltas)
 
     return {
         'top_anchors':top_anchors,
@@ -230,7 +254,14 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
         'top_targets' :top_targets,
 
         'fuse_labels':fuse_labels,
-        'fuse_targets':fuse_targets
+        'fuse_targets':fuse_targets,
+
+        'fuse_probs':fuse_probs,
+        'fuse_scores':fuse_scores,
+        'fuse_deltas':fuse_deltas
+
+        # 'predict_scores':predict_scores,
+        # 'predict_deltas':predict_deltas
     }
 
 

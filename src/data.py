@@ -22,7 +22,9 @@ def obj_to_gt_boxes3d(objs):
     for n in range(num):
         obj = objs[n]
         b   = obj.box
-        label = 1 #<todo>
+        label=0
+        if obj.type=='Van':
+            label = 1 #<todo>
 
         gt_labels [n]=label
         gt_boxes3d[n]=b
@@ -233,9 +235,6 @@ def getLidarDatas(indexs):
     data_dir = cfg.DATA_SETS_DIR
     return [ np.load(os.path.join(data_dir, 'seg/lidar/lidar_%05d.npy' % n)) for n in indexs ]
 
-def flat(np_array):
-    return np_array.reshape(1, *(np_array.shape))
-
 
 # ## drawing ####
 #
@@ -371,7 +370,7 @@ if __name__ == '__main__':
         print('rgb image save done\n')
 
 
-    if 1:  ## top view --------------------
+    if 0:  ## top view --------------------
         os.makedirs(dummy_data_dir + '/seg/lidar',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top_image',exist_ok=True)
@@ -389,7 +388,7 @@ if __name__ == '__main__':
 
 
 
-    if 0:  ## boxes3d  --------------------
+    if 1:  ## boxes3d  --------------------
         os.makedirs(dummy_data_dir + '/seg/gt_boxes3d',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/gt_labels',exist_ok=True)
         for n in range(num_frames):

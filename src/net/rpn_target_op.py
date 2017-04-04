@@ -1,6 +1,7 @@
 from net.common import *
 from net.configuration import *
-from net.processing.boxes import *
+import net.processing.boxes as boxes
+from net.processing.cython_bbox import bbox_overlaps as box_overlaps
 from net.blocks import *
 from net.utility.draw import *
 
@@ -117,10 +118,24 @@ def make_anchors(bases, stride, image_shape, feature_shape, allowed_border=0):
 
 
 
-
-# gt_boxes : (x1, y1, x2, y2)
 def rpn_target( anchors, inside_inds, gt_labels,  gt_boxes):
+    """
+    For training RPNs, we assign a binary class  label(of  being  an object  or  not)  to  each  anchor. We assign a 
+    positive label to two  kinds  of  anchors:  (i) the anchor/anchors with  the  highest  Intersection-over-Union 
+    (IoU) overlap with a ground-truth box, or (ii) an anchor  that  has  an  IoU  overlap  higher  than  0.7  with any
+    ground-truth box. Note that a single ground-truth box  may  assign  positive  labels  to  multiple  anchors.
+    Usually the second condition is sufficient to determine the  positive samples; but we still adopt the first 
+    condition  for  the  reason  that  in some  rare  cases  the second  condition  may  find  no  positive  sample. 
+    We assign a negative label to a non-positive anchor if it’s IoU ratio is lower than 0.3 for all ground-truth 
+    boxes.Anchors that are neither positive nor negative do not contribute to the training objective.
 
+
+    :return: 
+             pos_neg_inds : positive and negative samples
+             pos_inds : positive samples
+             labels: pos_neg_inds's labels
+             targets:  positive samples's bias to ground truth (top view bounding box regression targets)
+    """
     inside_anchors = anchors[inside_inds, :]
 
     # label: 1 is positive, 0 is negative, -1 is dont care
@@ -160,15 +175,15 @@ def rpn_target( anchors, inside_inds, gt_labels,  gt_boxes):
     idx_label  = np.where(labels != -1)[0]
     idx_target = np.where(labels ==  1)[0]
 
-    inds   = inside_inds[idx_label]
+    pos_neg_inds   = inside_inds[idx_label]
     labels = labels[idx_label]
 
     pos_inds = inside_inds[idx_target]
     pos_anchors  = inside_anchors[idx_target]
     pos_gt_boxes = (gt_boxes[argmax_overlaps])[idx_target]
-    targets = box_transform(pos_anchors, pos_gt_boxes)
+    targets = boxes.box_transform(pos_anchors, pos_gt_boxes)
 
-    return inds, pos_inds, labels, targets
+    return pos_neg_inds, pos_inds, labels, targets
 
 
 
@@ -184,10 +199,10 @@ def rpn_target( anchors, inside_inds, gt_labels,  gt_boxes):
 
 
 ## unit test ##---
-def draw_rpn_gt(image, gt_boxes, gt_labels=None, darken=0.7):
+def draw_rpn_gt(image, gt_boxes, gt_labels=None):
 
     ## gt
-    img_gt = image.copy()*darken
+    img_gt = image.copy()
     num =len(gt_boxes)
     for n in range(num):
         b = gt_boxes[n]
@@ -196,7 +211,7 @@ def draw_rpn_gt(image, gt_boxes, gt_labels=None, darken=0.7):
     return img_gt
 
 
-def draw_rpn_labels(image, anchors, inds, labels, darken=0.7):
+def draw_rpn_labels(image, anchors, inds, labels):
 
     is_print=0
     ## yellow (thick): gt
@@ -215,7 +230,7 @@ def draw_rpn_labels(image, anchors, inds, labels, darken=0.7):
     num_neg_label = len(bg_label_inds)
     if is_print: print ('rpn label : num_pos=%d num_neg=%d,  all = %d'  %(num_pos_label, num_neg_label,num_pos_label+num_neg_label))
 
-    img_label = image.copy()*darken
+    img_label = image.copy()
     for i in bg_label_inds:
         a = anchors[i]
         cv2.rectangle(img_label,(a[0], a[1]), (a[2], a[3]), (32,32,32), 1)
@@ -231,7 +246,7 @@ def draw_rpn_labels(image, anchors, inds, labels, darken=0.7):
 
 
 
-def draw_rpn_targets(image, anchors, pos_inds, targets, darken=0.7):
+def draw_rpn_targets(image, anchors, pos_inds, targets):
     is_print=0
 
     #draw +ve targets ......
@@ -239,11 +254,11 @@ def draw_rpn_targets(image, anchors, pos_inds, targets, darken=0.7):
     num_pos_target = len(fg_target_inds)
     if is_print: print ('rpn target : num_pos=%d'  %(num_pos_target))
 
-    img_target = image.copy()*darken
+    img_target = image.copy()
     for n,i in enumerate(fg_target_inds):
         a = anchors[i]
         t = targets[n]
-        b = box_transform_inv(a.reshape(1,4), t.reshape(1,4))
+        b = boxes.box_transform_inv(a.reshape(1,4), t.reshape(1,4))
         b = b.reshape(-1).astype(np.int32)
 
         cv2.rectangle(img_target,(a[0], a[1]), (a[2], a[3]), (0,0,255), 1)

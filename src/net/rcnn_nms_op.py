@@ -7,9 +7,9 @@ import numpy as np
 
 
 
-def draw_rcnn(image, probs,  deltas, rois, rois3d, threshold=0.8, darker=0.7):
+def draw_rcnn(image, probs,  deltas, rois, rois3d, threshold=0.8):
 
-    img_rcnn = image.copy()*darker
+    img_rcnn = image.copy()
     cls=1  # do for class-one only
     probs = probs[:,cls] #see only class-1
     idx = np.where(probs>threshold)[0]
