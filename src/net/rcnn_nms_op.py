@@ -38,7 +38,7 @@ def draw_rcnn(image, probs,  deltas, rois, rois3d, threshold=0.8):
 
 
 
-def draw_rcnn_nms(rgb, boxes3d, probs,):
+def draw_rcnn_nms(rgb, boxes3d, probs):
 
     img_rcnn_nms = rgb.copy()
     projections = box3d_to_rgb_projections(boxes3d)

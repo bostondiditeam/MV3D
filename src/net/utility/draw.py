@@ -6,6 +6,7 @@ import cv2
 import os
 import net.utility.file as file
 from config import cfg
+import net.processing.boxes3d as box3d
 
 
 file.makedirs(cfg.LOG_DIR)
@@ -27,3 +28,8 @@ def imsave(name, image):
 
 def npsave(name,numpy_array):
     np.save(os.path.join(cfg.LOG_DIR,name),numpy_array)
+
+def draw_boxed3d_to_rgb(rgb, boxes3d):
+    projections = box3d.box3d_to_rgb_projections(boxes3d)
+    rgb = box3d.draw_rgb_projections(rgb, projections, color=(255, 0, 255), thickness=1)
+    return rgb

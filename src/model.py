@@ -75,7 +75,7 @@ class MV3D(object):
         pass
 
 
-    def train(self, max_iter=10000,pre_trained=True):
+    def train(self, max_iter=100000,pre_trained=True):
 
 
         #-----------------------
@@ -89,7 +89,12 @@ class MV3D(object):
 
 
         #load_indexs=(np.random.rand(10)*153).astype(np.int)
-        load_indexs=[ 0,  99, 23, 135]
+        # load_indexs=[ 0,  99, 23, 135]
+        load_indexs=[ 26,   6,  23,  53,  83,  13,  48,  60, 123,  38, 115,  27,  79,
+       120, 123,   8,  26, 140,  25, 120,  67, 109, 131,  58,  26,  43,
+       111,  16, 121, 101,  80,  32,  42, 142,  38,  67,  13,   1, 143,
+        47,  45,  74, 121,  58,  91,  25,   3,  96,  41,  71]
+
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs)
         top_images = data.getTopImages(load_indexs)
         # todo: support other class
@@ -118,7 +123,7 @@ class MV3D(object):
         # solver_step = solver.minimize( fuse_cls_loss +  fuse_reg_loss)
         # solver_step = solver.minimize(fuse_reg_loss)
 
-        iter_debug=8
+        iter_debug=20
 
         # start training here  #########################################################################################
         self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
@@ -148,7 +153,7 @@ class MV3D(object):
 
             for iter in range(max_iter):
                 epoch=1.0*iter
-                rate=0.05
+                rate=0.01
 
 
                 ## generate train image -------------
@@ -169,7 +174,7 @@ class MV3D(object):
                     net['top_inside_inds']: inside_inds,
 
                     learning_rate:   rate,
-                    blocks.IS_TRAIN_PHASE:  True
+                    blocks.IS_TRAIN_PHASE:  False
                 }
                 batch_proposals, batch_proposal_scores, batch_top_features = \
                     sess.run([proposals, proposal_scores, top_features],fd1)
@@ -245,7 +250,6 @@ class MV3D(object):
 
                     # cv2.waitKey(1)
 
-                if iter%iter_debug==0:
                     # top_image = top_imgs[idx]
                     rgb       = train_rgbs[idx]
 
@@ -307,13 +311,6 @@ class MV3D(object):
                         net['front_rois']: batch_front_rois_2,
                         net['rgb_rois']: batch_rgb_rois_2,
 
-                        net['top_inds']: batch_top_inds,
-                        # net['top_pos_inds']: batch_top_pos_inds,
-                        # net['top_labels']: batch_top_labels,
-                        # net['top_targets']: batch_top_targets,
-                        #
-                        # net['fuse_labels']: batch_fuse_labels,
-                        # net['fuse_targets']: batch_fuse_targets,
                     }
 
 
@@ -327,65 +324,57 @@ class MV3D(object):
 
 
 
+    def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):
+        # set anchor boxes
+        top_feature_shape=data.getTopFeatureShape(top_view_shape,self.stride)
+        self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.stride, top_view_shape[0:2],top_feature_shape[0:2])
+        self.anchors_inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
+        self.net = mv3d_net.load(top_view_shape, front_view_shape, rgb_image_shape, self.num_class, len(self.bases))
+
+        self.tracking_sess = tf.Session()
+        saver = tf.train.Saver()
+        saver.restore(self.tracking_sess,tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
 
 
 
     def tacking(self, top_view, front_view, rgb_image):
-        """
-        :param top_img: for visualization
-        :return:
-        """
-        net = mv3d_net.load(top_view.shape, front_view.shape, rgb_image.shape, self.num_class, len(self.bases))
+
         np_reshape = lambda np_array: np_array.reshape(1, *(np_array.shape))
         top_view=np_reshape(top_view)
         front_view=np_reshape(front_view)
         rgb_image=np_reshape(rgb_image)
 
 
-        sess = tf.InteractiveSession()
-        saver = tf.train.Saver()
-        with sess.as_default():
-            saver.restore(sess,tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
-            # set anchor boxes
-            top_shape=top_view[0].shape
-            top_feature_shape=data.getTopFeatureShape(top_shape,self.stride)
-            top_view_anchors, inside_inds = make_anchors(self.bases, self.stride, top_shape[0:2],top_feature_shape[0:2])
-            inside_inds = np.arange(0, len(top_view_anchors), dtype=np.int32)  # use all  #<todo>
+        fd1 = {
+            self.net['top_view']: top_view,
+            self.net['top_anchors']: self.top_view_anchors,
+            self.net['top_inside_inds']: self.anchors_inside_inds,
+            blocks.IS_TRAIN_PHASE: False
+        }
 
-            fd1 = {
-                net['top_view']: top_view,
-                net['top_anchors']: top_view_anchors,
-                net['top_inside_inds']: inside_inds,
+        top_view_proposals, batch_proposal_scores = \
+            self.tracking_sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
 
-                blocks.IS_TRAIN_PHASE: True
-            }
-
-            top_view_proposals, batch_proposal_scores, batch_top_features = \
-                sess.run([net['proposals'], net['proposal_scores'], net['top_features']], fd1)
+        top_rois=top_view_proposals[batch_proposal_scores>0.75,:]
+        rois3d = project_to_roi3d(top_rois)
+        front_rois = project_to_front_roi(rois3d)
+        rgb_rois = project_to_rgb_roi(rois3d)
 
 
-            rois3d = project_to_roi3d(top_view_proposals[batch_proposal_scores>0.75,:])
-            front_rois = project_to_front_roi(rois3d)
-            rgb_rois = project_to_rgb_roi(rois3d)
+        fd2 = {
+            **fd1,
+            self.net['front_view']: front_view,
+            self.net['rgb_images']: rgb_image,
 
+            self.net['top_rois']: top_rois,
+            self.net['front_rois']: front_rois,
+            self.net['rgb_rois']: rgb_rois,
 
-            fd2 = {
-                **fd1,
+        }
 
-                net['top_view']: top_view,
-                net['front_view']: front_view,
-                net['rgb_images']: rgb_image,
+        fuse_probs, fuse_deltas = \
+            self.tracking_sess.run([ self.net['fuse_probs'], self.net['fuse_deltas'] ],fd2)
 
-                net['top_rois']: top_view_proposals,
-                net['front_rois']: front_rois,
-                net['rgb_rois']: rgb_rois,
-
-            }
-
-            fuse_probs, fuse_deltas = \
-                sess.run([ net['fuse_probs'], net['fuse_deltas'] ],fd2)
-
-            probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, threshold=0.8)
-            img_rcnn_nms = draw_rcnn_nms(rgb_image[0], boxes3d, probs)
-            return boxes3d,probs,img_rcnn_nms
+        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, threshold=0.5)
+        return boxes3d,probs
