@@ -9,7 +9,7 @@ import net.processing.boxes3d  as boxes3d_plot
 from net.rpn_target_op import make_bases, make_anchors, rpn_target
 from net.rcnn_target_op import rcnn_target
 from net.rpn_nms_op     import draw_rpn_nms, draw_rpn
-from net.rcnn_nms_op    import rcnn_nms, draw_rcnn_nms, draw_rcnn
+from net.rcnn_nms_op    import rcnn_nms, draw_rcnn_nms, draw_rcnn,draw_rcnn_nms_with_gt
 from net.rpn_target_op  import draw_rpn_gt, draw_rpn_targets, draw_rpn_labels
 from net.rcnn_target_op import draw_rcnn_targets, draw_rcnn_labels
 import net.utility.file as utilfile
@@ -68,13 +68,14 @@ class MV3D(object):
 
         # output dir, etc
         utilfile.makedirs(cfg.CHECKPOINT_DIR)
+        utilfile.makedirs(os.path.join(cfg.CHECKPOINT_DIR,'reg'))
         self.log = utilfile.Logger(cfg.LOG_DIR+'/log.txt', mode='a')
 
     def proposal(self):
         pass
 
 
-    def train(self, max_iter=10000):
+    def train(self, max_iter=10000,pre_trained=True):
 
 
         #-----------------------
@@ -87,8 +88,15 @@ class MV3D(object):
         #     cv2.waitKey(1)
 
 
-        load_indexs=[0]
+        #load_indexs=(np.random.rand(10)*153).astype(np.int)
+        load_indexs=[ 0,  99, 23, 135]
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs)
+        top_images = data.getTopImages(load_indexs)
+        # todo: support other class
+
+        train_gt_boxes3d=[train_gt_boxes3d[n][train_gt_labels[n] > 0] for n in range(len(load_indexs))]
+        train_gt_labels=[train_gt_labels[n][train_gt_labels[n] > 0] for n in range(len(load_indexs))]
+
         top_shape=train_tops[0].shape
         front_shape=train_fronts[0].shape
         rgb_shape=train_rgbs[0].shape
@@ -103,22 +111,27 @@ class MV3D(object):
         l2 = blocks.l2_regulariser(decay=0.0005)
         learning_rate = tf.placeholder(tf.float32, shape=[])
         solver = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=0.9)
+        # solver = tf.train.AdamOptimizer(learning_rate=0.0001)
         #solver_step = solver.minimize(top_cls_loss+top_reg_loss+l2)
+        # solver_step = solver.minimize(top_cls_loss + 10*top_reg_loss)
         solver_step = solver.minimize(top_cls_loss+top_reg_loss+fuse_cls_loss+0.1*fuse_reg_loss+l2)
+        # solver_step = solver.minimize( fuse_cls_loss +  fuse_reg_loss)
+        # solver_step = solver.minimize(fuse_reg_loss)
 
         iter_debug=8
 
         # start training here  #########################################################################################
-        self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  |  \n')
+        self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
         self.log.write('-------------------------------------------------------------------------------------\n')
 
 
         sess = tf.InteractiveSession()
+        saver = tf.train.Saver(keep_checkpoint_every_n_hours=0.2, max_to_keep=10)
         with sess.as_default():
-            sess.run( tf.global_variables_initializer(), { blocks.IS_TRAIN_PHASE : True } )
-
-            saver  = tf.train.Saver(keep_checkpoint_every_n_hours=0.2,max_to_keep=10)
-
+            if(pre_trained==True):
+                saver.restore(sess, tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
+            else:
+                sess.run( tf.global_variables_initializer(), { blocks.IS_TRAIN_PHASE : True } )
 
             proposals=net['proposals']
             proposal_scores=net['proposal_scores']
@@ -173,29 +186,6 @@ class MV3D(object):
                 batch_rgb_rois   = project_to_rgb_roi  (batch_rois3d  )
 
 
-                ##debug gt generation
-                if 1 and iter%iter_debug==0:
-                    top_image = data.getTopImages([idx])[0] #self.top_imgs[idx]
-                    rgb       = train_rgbs[idx]
-
-                    img_gt     = draw_rpn_gt(top_image, batch_gt_top_boxes, batch_gt_labels)
-                    img_label  = draw_rpn_labels (top_image, top_view_anchors, batch_top_inds, batch_top_labels )
-                    img_target = draw_rpn_targets(top_image, top_view_anchors, batch_top_pos_inds, batch_top_targets)
-                    nud.imsave('img_rpn_gt', img_gt)
-                    nud.imsave('img_rpn_label', img_label)
-                    nud.imsave('img_rpn_target', img_target)
-
-                    img_label  = draw_rcnn_labels (top_image, batch_top_rois, batch_fuse_labels )
-                    img_target = draw_rcnn_targets(top_image, batch_top_rois, batch_fuse_labels, batch_fuse_targets)
-                    nud.imsave('img_rcnn_label', img_label)
-                    nud.imsave('img_rcnn_target', img_target)
-
-
-                    img_rgb_rois = boxes3d_plot.draw_boxes(rgb, batch_rgb_rois[:,1:5], color=(255,0,255), thickness=1)
-                    nud.imsave('img_rgb_rois', img_rgb_rois)
-
-                    # cv2.waitKey(1)
-
                 ## run classification and regression loss -----------
                 fd2={
                     **fd1,
@@ -225,12 +215,35 @@ class MV3D(object):
                 if iter%20==0:
                     saver.save(sess, os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt'))
 
-                self.log.write('%3.1f   %d   %0.4f   |   %0.5f   %0.5f   |   %0.5f   %0.5f  \n' %\
-                    (epoch, iter, rate, batch_top_cls_loss, batch_top_reg_loss, batch_fuse_cls_loss, batch_fuse_reg_loss))
+                self.log.write('%3.1f   %d   %0.4f   |   %0.5f   %0.5f   |   %0.5f   %0.5f \n' %\
+                    (epoch, iter, rate, batch_top_cls_loss, batch_top_reg_loss,
+                     batch_fuse_cls_loss, batch_fuse_reg_loss))
 
 
 
                 #debug: ------------------------------------
+                ##debug gt generation
+                if 1 and iter%iter_debug==0:
+                    top_image=top_images[idx]
+                    rgb       = train_rgbs[idx]
+
+                    img_gt     = draw_rpn_gt(top_image, batch_gt_top_boxes, batch_gt_labels)
+                    img_label  = draw_rpn_labels (top_image, top_view_anchors, batch_top_inds, batch_top_labels )
+                    img_target = draw_rpn_targets(top_image, top_view_anchors, batch_top_pos_inds, batch_top_targets)
+                    nud.imsave('img_rpn_gt', img_gt)
+                    nud.imsave('img_rpn_label', img_label)
+                    nud.imsave('img_rpn_target', img_target)
+
+                    img_label  = draw_rcnn_labels (top_image, batch_top_rois, batch_fuse_labels )
+                    img_target = draw_rcnn_targets(top_image, batch_top_rois, batch_fuse_labels, batch_fuse_targets)
+                    nud.imsave('img_rcnn_label', img_label)
+                    nud.imsave('img_rcnn_target', img_target)
+
+
+                    img_rgb_rois = boxes3d_plot.draw_boxes(rgb, batch_rgb_rois[:,1:5], color=(255,0,255), thickness=1)
+                    nud.imsave('img_rgb_rois', img_rgb_rois)
+
+                    # cv2.waitKey(1)
 
                 if iter%iter_debug==0:
                     # top_image = top_imgs[idx]
@@ -279,8 +292,8 @@ class MV3D(object):
                     nud.imsave('img_rcnn_nms', img_rcnn_nms)
 
                     ## test 2----------------------------
-                    batch_top_rois_2 = batch_proposals
-                    batch_rois3d_2 = project_to_roi3d(batch_proposals)
+                    batch_top_rois_2 = batch_proposals[batch_proposal_scores>0.75,:]
+                    batch_rois3d_2 = project_to_roi3d(batch_top_rois_2)
                     batch_front_rois_2 = project_to_front_roi(batch_rois3d_2)
                     batch_rgb_rois_2 = project_to_rgb_roi(batch_rois3d_2)
                     fd2_2 = {
@@ -295,21 +308,21 @@ class MV3D(object):
                         net['rgb_rois']: batch_rgb_rois_2,
 
                         net['top_inds']: batch_top_inds,
-                        net['top_pos_inds']: batch_top_pos_inds,
-                        net['top_labels']: batch_top_labels,
-                        net['top_targets']: batch_top_targets,
-
-                        net['fuse_labels']: batch_fuse_labels,
-                        net['fuse_targets']: batch_fuse_targets,
+                        # net['top_pos_inds']: batch_top_pos_inds,
+                        # net['top_labels']: batch_top_labels,
+                        # net['top_targets']: batch_top_targets,
+                        #
+                        # net['fuse_labels']: batch_fuse_labels,
+                        # net['fuse_targets']: batch_fuse_targets,
                     }
 
 
                     batch_fuse_probs_2, batch_fuse_deltas_2 = \
                         sess.run([net['fuse_probs'], net['fuse_deltas']], fd2_2)
-                    probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2, threshold=0.5)
+                    probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2, threshold=0.8)
 
-                    img_rcnn_nms_2 = draw_rcnn_nms(rgb, boxes3d_2, probs_2)
-                    nud.imsave('img_rcnn_nms_2', img_rcnn_nms_2)
+                    img_rcnn_nms_2 = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
+                    nud.imsave('img_rcnn_nms_2_{}'.format(idx), img_rcnn_nms_2)
 
 
 
@@ -352,7 +365,7 @@ class MV3D(object):
                 sess.run([net['proposals'], net['proposal_scores'], net['top_features']], fd1)
 
 
-            rois3d = project_to_roi3d(top_view_proposals)
+            rois3d = project_to_roi3d(top_view_proposals[batch_proposal_scores>0.75,:])
             front_rois = project_to_front_roi(rois3d)
             rgb_rois = project_to_rgb_roi(rois3d)
 
@@ -373,8 +386,6 @@ class MV3D(object):
             fuse_probs, fuse_deltas = \
                 sess.run([ net['fuse_probs'], net['fuse_deltas'] ],fd2)
 
-            probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, threshold=0.5)
+            probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, threshold=0.8)
             img_rcnn_nms = draw_rcnn_nms(rgb_image[0], boxes3d, probs)
-            nud.imsave('tacking_img_rcnn_nms', img_rcnn_nms)
-
-            print('fuse_probs= {} \nfuse_deltas= {}'.format(fuse_probs,fuse_deltas))
+            return boxes3d,probs,img_rcnn_nms

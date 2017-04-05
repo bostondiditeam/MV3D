@@ -38,11 +38,22 @@ def draw_rcnn(image, probs,  deltas, rois, rois3d, threshold=0.8):
 
 
 
-def draw_rcnn_nms(rgb, boxes3d, probs, darker=1):
+def draw_rcnn_nms(rgb, boxes3d, probs,):
 
-    img_rcnn_nms = (rgb.copy()*darker).astype(np.uint8)
+    img_rcnn_nms = rgb.copy()
     projections = box3d_to_rgb_projections(boxes3d)
     img_rcnn_nms = draw_rgb_projections(img_rcnn_nms,  projections, color=(255,0,255), thickness=1)
+
+    return img_rcnn_nms
+
+def draw_rcnn_nms_with_gt(rgb, boxes3d,gt_boxes3d):
+
+    img_rcnn_nms = rgb.copy()
+    projections = box3d_to_rgb_projections(boxes3d)
+    img_rcnn_nms = draw_rgb_projections(img_rcnn_nms,  projections, color=(255,0,255), thickness=1)
+    # gt boxes
+    projections_gt = box3d_to_rgb_projections(gt_boxes3d)
+    img_rcnn_nms = draw_rgb_projections(img_rcnn_nms,  projections_gt, color=(255,255,255), thickness=1)
 
     return img_rcnn_nms
 

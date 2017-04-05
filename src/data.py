@@ -23,8 +23,8 @@ def obj_to_gt_boxes3d(objs):
         obj = objs[n]
         b   = obj.box
         label=0
-        if obj.type=='Van':
-            label = 1 #<todo>
+        if obj.type=='Van' or obj.type=='Truck' or obj.type=='Car' or obj.type=='Tram':# todo : only  support 'Van'
+            label = 1
 
         gt_labels [n]=label
         gt_boxes3d[n]=b

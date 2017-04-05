@@ -206,7 +206,10 @@ def draw_rpn_gt(image, gt_boxes, gt_labels=None):
     num =len(gt_boxes)
     for n in range(num):
         b = gt_boxes[n]
-        cv2.rectangle(img_gt,(b[0],b[1]),(b[2],b[3]),(0,255,255),2)
+        if gt_labels[n]==1:
+            cv2.rectangle(img_gt,(b[0],b[1]),(b[2],b[3]),(255,0,0),2)
+        elif gt_labels[n]==0:
+            cv2.rectangle(img_gt, (b[0], b[1]), (b[2], b[3]), (0, 255, 255), 2)
 
     return img_gt
 

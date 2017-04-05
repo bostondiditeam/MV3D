@@ -1,3 +1,3 @@
 import model as mod
 m3=mod.MV3D()
-m3.train()
+m3.train(pre_trained=True)
