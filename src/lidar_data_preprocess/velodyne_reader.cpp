@@ -65,7 +65,6 @@ void updateCloudBoundary(CloudBoundaryT& cb, PointT& p)
 		cb.z_max = p.z;
 }
 
-
 int delay = 1000; // delay between successive LiDAR frames in ms
 
 const float x_MIN = 0.0;
@@ -76,11 +75,22 @@ const float z_MIN = -2.0;	////TODO : to be determined ....
 const float z_MAX = 0.4;
 const float x_DIVISION = 0.1;
 const float y_DIVISION = 0.1;
-const float z_DIVISION = 0.2;
+const float z_DIVISION = 0.4;
 
-int X_SIZE = (int)((x_MAX-x_MIN)/x_DIVISION)+1;
-int Y_SIZE = (int)((y_MAX-y_MIN)/y_DIVISION)+1;
-int Z_SIZE = (int)((z_MAX-z_MIN)/z_DIVISION)+1;
+const float delta_PHI = 0.1;//0.4; //vertical resolution (deg)
+const float delta_THETA = 0.2;//0.08; //horizontal resolution	(deg)		
+const float RAD_TO_DEG = 180/3.141596;
+
+int X_SIZE = (int)((x_MAX-x_MIN)/x_DIVISION)+1;	//meter/meter = grid #
+int Y_SIZE = (int)((y_MAX-y_MIN)/y_DIVISION)+1;	//meter/meter = grid #
+int Z_SIZE = (int)((z_MAX-z_MIN)/z_DIVISION)+1;	//meter/meter = grid #
+
+int C_SIZE = (int)(190 / delta_THETA);	// deg/deg = grid #   horizontal -
+int R_SIZE = (int)(50 / delta_PHI);	// deg/deg = grid #   vertical |
+
+int FV_CENTER_C = C_SIZE/2;	//-
+int FV_CENTER_R = R_SIZE/2;	//|
+
 
 int getX(float x)
 {
@@ -95,6 +105,17 @@ int getY(float y)
 int getZ(float z)
 {
 	return (int)((z-z_MIN)/z_DIVISION);
+}
+
+int getC(float x, float y, float delta_THETA)
+{
+	return (int)(atan2(y, x) * RAD_TO_DEG / delta_THETA);
+}
+
+int getR(float x, float y, float z, float delta_PHI)
+{
+	return (int)(- atan2(z, sqrt(pow(x,2)+pow(y,2))) * RAD_TO_DEG / delta_PHI );
+	// note "-" is used for conversion between LiDAR and Camera coordinate (LiDAR +Z = Camera -R)
 }
 
 
@@ -181,15 +202,28 @@ int main()
 				density_map[i][j] = 0;	//value stored inside always >= 0, usually < 1 ( log(count#+1)/log(64), no unit )
 				max_height_map[i][j] = 0;	//value stored inside always >= 0  (relative to z_MIN, unit : m)
 				intensity_map[i][j] = 0;	//value stored inside always >= 0 && <=255 (range=0~255, no unit)
+
 			}
 		}
 
-
-		//allocate point cloud for temporally data visualization (only used for validation)
+		//Allocate point cloud for temporally data visualization (only used for validation)
 		std::vector<pcl::PointCloud<PointT> > height_cloud_vec;
 		height_cloud_vec.resize(Z_SIZE);
 		pcl::PointCloud<PointT>::Ptr intensity_cloud (new pcl::PointCloud<PointT>);
 		pcl::PointCloud<PointT>::Ptr density_cloud (new pcl::PointCloud<PointT>);
+
+		//Allocate top view feature images (intensity feature, density feature, height features)
+		cv::Mat TV_intensity_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
+		cv::Mat TV_density_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
+		std::vector< cv::Mat > TV_height_images;
+		cv::Mat TV_height_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR		
+		for (int k=0; k<Z_SIZE; k++)
+			TV_height_images.push_back(TV_height_image.clone());	//Note : clone() to prevent reference of single image in OpenCV
+
+		//Allocate front view feature images (height, distance, intensity)
+		cv::Mat FV_height_image(R_SIZE,C_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR		
+		cv::Mat FV_distance_image(R_SIZE,C_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR		
+		cv::Mat FV_intensity_image(R_SIZE,C_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
 
 		for (int32_t i=0; i<num; i++) {
 
@@ -244,51 +278,95 @@ int main()
 					density_cloud->points.push_back(grid_point);
 
 				}
-		
+
+				int R = getR(point.x, point.y, point.z, delta_PHI);
+				int C = getC(point.x, point.y, delta_THETA);
+
+				if ((R+FV_CENTER_R) <= R_SIZE && (C+FV_CENTER_C) <= C_SIZE && (R+FV_CENTER_R) >=0 && (C+FV_CENTER_C) >=0)
+				{
+					//Front view - height feature
+					FV_height_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[0] = (int)((point.z-z_MIN)/(z_MAX-z_MIN) *255);
+					FV_height_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[1] = (int)((point.z-z_MIN)/(z_MAX-z_MIN) *255);
+					FV_height_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[2] = (int)((point.z-z_MIN)/(z_MAX-z_MIN) *255);
+					//Front view - distance feature
+					FV_distance_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[0] = (int)(sqrt(pow(point.x,2)+pow(point.y,2))/120 *255);
+					FV_distance_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[1] = (int)(sqrt(pow(point.x,2)+pow(point.y,2))/120 *255);
+					FV_distance_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[2] = (int)(sqrt(pow(point.x,2)+pow(point.y,2))/120 *255);
+					//Front view - intensity feature
+					FV_intensity_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[0] = (int)((point.intensity-0)/255 *255);
+					FV_intensity_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[1] = (int)((point.intensity-0)/255 *255);
+					FV_intensity_image.at<cv::Vec3b> (R+FV_CENTER_R,C+FV_CENTER_C)[2] = (int)((point.intensity-0)/255 *255);
+				}
+				else
+				{
+					std::cout<< "R_SIZE (Vertical) :"<<R_SIZE <<",C_SIZE (Horizontal) :" << C_SIZE<<std::endl;
+					std::cout<< "FV_CENTER_R:"<<FV_CENTER_R  <<",FV_CENTER_C:" << FV_CENTER_R <<std::endl;
+					std::cout<< "R:"<< R <<",C:" << C <<std::endl;
+					std::cout<< "R+FV_CENTER_R:"<<R+FV_CENTER_R <<",C+FV_CENTER_C:" << C+FV_CENTER_C <<std::endl;
+					std::cout<< "Data is out of image range"<<std::endl;
+				}
+				
 		    	cloud->points.push_back(point);
 			}
 		    px+=4; py+=4; pz+=4; pr+=4;
 		}
 
+		cv::imshow("Front View - Height feature image", FV_height_image) ;
+		cv::imshow("Front View - Distance feature image", FV_distance_image) ;
+		cv::imshow("Front View - Intensity feature image", FV_intensity_image) ;
+		//cv::waitKey(delay) ;
+		//cv::destroyWindow("Front View - Height feature image");
+		//cv::destroyWindow("Front View - Distance feature image");
+		//cv::destroyWindow("Front View - Intensity feature image");
 
-		//normalize density map & normalized for image to be saved
+		//Save front view (FV) feature images
+		ostringstream str_frame_id;
+		str_frame_id << frame_counter ;
+
+		string full_str = "seg/front_image/front_height_image_";
+		full_str=full_str + str_frame_id.str() + ".png";
+		imwrite(full_str.c_str(),FV_height_image);
+		full_str = "seg/front_image/front_distance_image_";
+		full_str=full_str + str_frame_id.str() + ".png";
+		imwrite(full_str.c_str(),FV_distance_image);
+		full_str = "seg/front_image/front_intensity_image_";
+		full_str=full_str + str_frame_id.str() + ".png";
+		imwrite(full_str.c_str(),FV_intensity_image);
+
+
+		//normalize density map & normalized for top view images to be saved
 		//TODO : check LiDAR vs. camera coord. corresponding...
-		cv::Mat intensity_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
-		cv::Mat density_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
-		std::vector< cv::Mat > height_images;
-		cv::Mat height_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR		
-		for (int k=0; k<Z_SIZE; k++)
-			height_images.push_back(height_image);
-		
-
 		for (int X=0; X<X_SIZE; X++)
 			for (int Y=0; Y<Y_SIZE; Y++)
 			{
 				density_map[X][Y] = log(density_map[X][Y]+1)/log(64);
 
-				density_image.at<cv::Vec3b> (X,Y)[0] = (int)((density_map[X][Y]-0)/1 *255);
-				density_image.at<cv::Vec3b> (X,Y)[1] = (int)((density_map[X][Y]-0)/1 *255);
-				density_image.at<cv::Vec3b> (X,Y)[2] = (int)((density_map[X][Y]-0)/1 *255);
+				TV_density_image.at<cv::Vec3b> (X,Y)[0] = (int)((density_map[X][Y]-0)/1 *255);
+				TV_density_image.at<cv::Vec3b> (X,Y)[1] = (int)((density_map[X][Y]-0)/1 *255);
+				TV_density_image.at<cv::Vec3b> (X,Y)[2] = (int)((density_map[X][Y]-0)/1 *255);
 
-				intensity_image.at<cv::Vec3b> (X,Y)[0] = (int)((intensity_map[X][Y]-0)/255 *255);
-				intensity_image.at<cv::Vec3b> (X,Y)[1] = (int)((intensity_map[X][Y]-0)/255 *255);
-				intensity_image.at<cv::Vec3b> (X,Y)[2] = (int)((intensity_map[X][Y]-0)/255 *255);
+				TV_intensity_image.at<cv::Vec3b> (X,Y)[0] = (int)((intensity_map[X][Y]-0)/255 *255);
+				TV_intensity_image.at<cv::Vec3b> (X,Y)[1] = (int)((intensity_map[X][Y]-0)/255 *255);
+				TV_intensity_image.at<cv::Vec3b> (X,Y)[2] = (int)((intensity_map[X][Y]-0)/255 *255);
 			}	
 
 		//Show image ---
-		//cv::imshow("Density", density_image) ;
-		//cv::waitKey(2000) ;
-		//cv::destroyWindow("Density");
-		//cv::imshow("Intensity", intensity_image) ;
-    	//cv::waitKey(2000) ;
-    	//cv::destroyWindow("Intensity");
+		cv::imshow("Top View - Density feature image", TV_density_image) ;
+		cv::imshow("Top View - Intensity feature image", TV_intensity_image) ;
+    	//cv::waitKey(delay) ;
+		//cv::destroyWindow("Top View - Density feature image");
+    	//cv::destroyWindow("Top View - Intensity feature image");
 
-		//Save image ---   TODO : HERE only save intensity map ....
-		ostringstream str_frame_id;
-		str_frame_id << frame_counter ;
-		string full_str = "seg/top_image/top_image_";
+
+		////Save top view (TV) feature images
+		
+		full_str = "seg/top_image/top_intensity_image_";
 		full_str=full_str + str_frame_id.str() + ".png";
-		imwrite(full_str.c_str(),intensity_image);
+		imwrite(full_str.c_str(),TV_intensity_image);
+
+		full_str = "seg/top_image/top_density_image_";
+		full_str=full_str + str_frame_id.str() + ".png";
+		imwrite(full_str.c_str(),TV_density_image);		
 
 		for (int Z=0; Z<Z_SIZE; Z++)
 		{
@@ -296,23 +374,31 @@ int main()
 			{
 				for (int Y=0; Y<Y_SIZE; Y++)
 				{
-					height_images[Z].at<cv::Vec3b> (X,Y)[0] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
-					height_images[Z].at<cv::Vec3b> (X,Y)[1] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
-					height_images[Z].at<cv::Vec3b> (X,Y)[2] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
+					TV_height_images[Z].at<cv::Vec3b> (X,Y)[0] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
+					TV_height_images[Z].at<cv::Vec3b> (X,Y)[1] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
+					TV_height_images[Z].at<cv::Vec3b> (X,Y)[2] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
 				}
 			}
-			//cv::imshow("Height", height_images[Z]) ;
-			//cv::waitKey(500) ;
-			//cv::destroyWindow("Height");
+			cv::imshow("Top View - Height feature image", TV_height_images[Z]) ;
+			cv::waitKey(delay/2) ;
+			//cv::destroyWindow("Top View - Height feature image");
+
+			ostringstream str_height_layer_id;
+			str_height_layer_id << Z ;
+			full_str = "seg/top_image/top_height_image_";
+			full_str=full_str + str_frame_id.str() + "-" + str_height_layer_id.str() +".png";
+			imwrite(full_str.c_str(),TV_height_images[Z]);
 		}
 
-
 		//release image data
-		density_image.release();
-    	intensity_image.release();
-    	for (int Z=0; Z<Z_SIZE; Z++)
-    		height_images[Z].release();
+		FV_height_image.release();
+		FV_distance_image.release();
+		FV_intensity_image.release();
 
+		TV_density_image.release();
+    	TV_intensity_image.release();
+    	for (int Z=0; Z<Z_SIZE; Z++)
+    		TV_height_images[Z].release();
 
 /*
 		float min_value = 0;
@@ -342,11 +428,10 @@ int main()
 		std::cout <<"MAX : "<<max_value<<"MIN : "<<min_value<<std::endl;
 */
 
-
-		pcl::PointCloud<PointT>::Ptr cloud_demo (new pcl::PointCloud<PointT>);
-
 		std::cerr << "=== LiDAR Preprocess Done "<< tt.toc ()<<" ms === \n"; 
 
+		pcl::PointCloud<PointT>::Ptr cloud_demo (new pcl::PointCloud<PointT>);
+		viewer->addCoordinateSystem(1.0);
 		std::cout <<"Frame # : "<< frame_counter <<std::endl;
 		std::cout <<"Show height_map ... "<< std::endl;
 		for (int k = 0; k<Z_SIZE; k++)
@@ -358,7 +443,7 @@ int main()
 		  	handler.setInputCloud (cloud_demo);
 			if (!viewer->updatePointCloud (cloud_demo, handler, "demo"))
 				viewer->addPointCloud (cloud_demo, handler, "demo");
-			viewer->spinOnce (delay/2);
+//			viewer->spinOnce (delay/2);
 		}
 
 		std::cout <<"Show density map ... "<< std::endl;
@@ -366,14 +451,14 @@ int main()
 		handler.setInputCloud (cloud_demo);
 		if (!viewer->updatePointCloud (cloud_demo, handler, "demo"))
 			viewer->addPointCloud (cloud_demo, handler, "demo");
-		viewer->spinOnce (delay * 2);
+//		viewer->spinOnce (delay * 2);
 
 		std::cout <<"Show intensity map ... "<< std::endl;
 		*cloud_demo=*intensity_cloud;
 		handler.setInputCloud (cloud_demo);
 		if (!viewer->updatePointCloud (cloud_demo, handler, "demo"))
 			viewer->addPointCloud (cloud_demo, handler, "demo");
-		viewer->spinOnce (delay * 2);
+//		viewer->spinOnce (delay * 2);
 
 		//update frame counter
 		frame_counter++;		
