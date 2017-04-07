@@ -24,7 +24,7 @@ def rcnn_target(rois, gt_labels, gt_boxes, gt_boxes3d):
     fg_rois_per_image = np.round(CFG.TRAIN.RCNN_FG_FRACTION * rois_per_image)
 
     # overlaps: (rois x gt_boxes)
-    overlaps = box_overlaps(
+    overlaps = bbox_overlaps(
         np.ascontiguousarray(extended_rois[:,1:5], dtype=np.float),
         np.ascontiguousarray(gt_boxes, dtype=np.float)
     )

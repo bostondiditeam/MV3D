@@ -4,7 +4,7 @@ import random
 import numpy as np
 #----------------------------------
 import matplotlib
-# matplotlib.use('TkAgg')
+matplotlib.use('AGG')
 #matplotlib.use('Qt4Agg')
 #matplotlib.use('Qt5Agg')
 #----------------------------------

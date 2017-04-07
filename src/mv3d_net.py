@@ -4,6 +4,7 @@ from net.rpn_nms_op import tf_rpn_nms
 from net.roipooling_op import roi_pool as tf_roipooling
 import net.rpn_loss_op as rpnloss
 import net.rcnn_loss_op as rcnnloss
+from config import cfg
 
 
 def top_feature_net(input, anchors, inds_inside, num_bases):
@@ -160,23 +161,6 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
     return  scores, probs, deltas
 
-import tensorflow as tf
-import numpy as np
-
-def rcnn_predict(scores, deltas):
-
-    _, num_class = scores.get_shape().as_list()
-    dim = np.prod(deltas.get_shape().as_list()[1:])//num_class
-
-    rcnn_scores   = tf.reshape(scores,[-1, num_class])
-    class_probability= tf.nn.softmax(rcnn_scores)
-
-    num = tf.shape(deltas)[0]
-    idx = tf.range(num)*num_class + class_probability
-    deltas1      = tf.reshape(deltas,[-1, dim])
-    rcnn_deltas  = tf.gather(deltas1,  idx)  # remove ignore label
-
-    return class_probability, rcnn_deltas
 
 
 def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
@@ -210,7 +194,6 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     front_features = front_feature_net(front_view)
     rgb_features = rgb_feature_net(rgb_images)
 
-    # fusion todo: Add NMS
     fuse_scores, fuse_probs, fuse_deltas = \
         fusion_net(
             ([top_features, top_rois, 6, 6, 1. / stride],
@@ -222,8 +205,6 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     fuse_targets = tf.placeholder(shape=[None, *out_shape], dtype=tf.float32, name='fuse_target')
     fuse_cls_loss, fuse_reg_loss = rcnnloss.rcnn_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
 
-    # predict
-    # predict_scores, predict_deltas=rcnn_predict(fuse_scores,fuse_deltas)
 
     return {
         'top_anchors':top_anchors,
@@ -260,27 +241,24 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
         'fuse_scores':fuse_scores,
         'fuse_deltas':fuse_deltas
 
-        # 'predict_scores':predict_scores,
-        # 'predict_deltas':predict_deltas
     }
 
 
-# # main ###########################################################################
-# # to start in tensorboard:
-# #    /opt/anaconda3/bin
-# #    ./python tensorboard --logdir /root/share/out/didi/tf
-# #     http://http://localhost:6006/
-#
-# if __name__ == '__main__':
-#     print( '%s: calling main function ... ' % os.path.basename(__file__))
-#     out_dir='/root/share/out/didi/tf'
-#     log = Logger('/root/share/out/udacity/00/xxx_log.txt', mode='a')  # log file
-#
-#
-#     # draw graph to check connections
-#     with tf.Session()  as sess:
-#         tf.global_variables_initializer().run(feed_dict={IS_TRAIN_PHASE:True})
-#         summary_writer = tf.summary.FileWriter(out_dir, sess.graph)
-#
-#         print_macs_to_file(log)
-#     print ('sucess!')
+# main ###########################################################################
+# to start in tensorboard:
+#    /opt/anaconda3/bin
+#    ./python tensorboard --logdir /root/share/out/didi/tf
+#     http://http://localhost:6006/
+
+if __name__ == '__main__':
+    print( '%s: calling main function ... ' % os.path.basename(__file__))
+
+
+    # draw graph to check connections
+    with tf.Session()  as sess:
+        tf.global_variables_initializer().run(feed_dict={IS_TRAIN_PHASE:True})
+        summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR,'graph'), sess.graph)
+        summary_writer.close()
+
+        # print_macs_to_file(log)
+    print ('sucess!')

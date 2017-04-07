@@ -1,7 +1,7 @@
 from net.common import *
 from net.configuration import *
 import net.processing.boxes as boxes
-from net.processing.cython_bbox import bbox_overlaps as box_overlaps
+from net.lib.utils.bbox import bbox_overlaps as box_overlaps
 from net.blocks import *
 from net.utility.draw import *
 

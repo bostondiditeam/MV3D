@@ -14,6 +14,7 @@ from net.rpn_target_op  import draw_rpn_gt, draw_rpn_targets, draw_rpn_labels
 from net.rcnn_target_op import draw_rcnn_targets, draw_rcnn_labels
 import net.utility.file as utilfile
 from config import cfg
+from net.processing.boxes import non_max_suppress
 
 
 dummy_data_dir='../data/kitti/dummy/'
@@ -24,7 +25,7 @@ dummy_data_dir='../data/kitti/dummy/'
 
 def project_to_roi3d(top_rois):
     num = len(top_rois)
-    rois3d = np.zeros((num,8,3))
+    # rois3d = np.zeros((num,8,3))
     rois3d = boxes3d_plot.top_box_to_box3d(top_rois[:,1:5])
     return rois3d
 
@@ -119,11 +120,11 @@ class MV3D(object):
         # solver = tf.train.AdamOptimizer(learning_rate=0.0001)
         #solver_step = solver.minimize(top_cls_loss+top_reg_loss+l2)
         # solver_step = solver.minimize(top_cls_loss + 10*top_reg_loss)
-        solver_step = solver.minimize(top_cls_loss+top_reg_loss+fuse_cls_loss+0.1*fuse_reg_loss+l2)
+        solver_step = solver.minimize(top_cls_loss+top_reg_loss+fuse_cls_loss+0.05*fuse_reg_loss+l2)
         # solver_step = solver.minimize( fuse_cls_loss +  fuse_reg_loss)
         # solver_step = solver.minimize(fuse_reg_loss)
 
-        iter_debug=20
+        iter_debug=40
 
         # start training here  #########################################################################################
         self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
@@ -220,6 +221,9 @@ class MV3D(object):
                 if iter%20==0:
                     saver.save(sess, os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt'))
 
+                summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'graph'), sess.graph)
+                summary_writer.close()
+
                 self.log.write('%3.1f   %d   %0.4f   |   %0.5f   %0.5f   |   %0.5f   %0.5f \n' %\
                     (epoch, iter, rate, batch_top_cls_loss, batch_top_reg_loss,
                      batch_fuse_cls_loss, batch_fuse_reg_loss))
@@ -253,8 +257,8 @@ class MV3D(object):
                     # top_image = top_imgs[idx]
                     rgb       = train_rgbs[idx]
 
-                    batch_top_probs, batch_top_scores, batch_top_deltas  = \
-                        sess.run([ net['top_probs'], net['top_scores'], net['top_deltas'] ],fd2)
+                    batch_top_probs, batch_top_deltas  = \
+                        sess.run([ net['top_probs'], net['top_deltas'] ],fd2)
 
                     batch_fuse_probs, batch_fuse_deltas = \
                         sess.run([ net['fuse_probs'], net['fuse_deltas'] ],fd2)
@@ -282,8 +286,8 @@ class MV3D(object):
 
                     img_rpn     = draw_rpn(top_image, batch_top_probs, batch_top_deltas, top_view_anchors, inside_inds)
                     img_rpn_nms = draw_rpn_nms(top_image, batch_proposals, batch_proposal_scores)
-                    nud.imsave('img_rpn', img_rpn)
-                    nud.imsave('img_rpn_nms', img_rpn_nms)
+                    nud.imsave('img_rpn_proposal', img_rpn)
+                    nud.imsave('img_rpn_proposal_nms', img_rpn_nms)
                     # cv2.waitKey(1)
 
                     ## show rcnn(fuse) nms
@@ -356,7 +360,7 @@ class MV3D(object):
         top_view_proposals, batch_proposal_scores = \
             self.tracking_sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
 
-        top_rois=top_view_proposals[batch_proposal_scores>0.75,:]
+        top_rois=top_view_proposals[batch_proposal_scores>0.1,:]
         rois3d = project_to_roi3d(top_rois)
         front_rois = project_to_front_roi(rois3d)
         rgb_rois = project_to_rgb_roi(rois3d)
@@ -375,6 +379,7 @@ class MV3D(object):
 
         fuse_probs, fuse_deltas = \
             self.tracking_sess.run([ self.net['fuse_probs'], self.net['fuse_deltas'] ],fd2)
+        # non_max_suppress(fuse_deltas,fuse_probs)
 
         probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, threshold=0.5)
         return boxes3d,probs

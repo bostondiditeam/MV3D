@@ -1,9 +1,8 @@
 from net.configuration import CFG
 
-from net.processing.cython_bbox import bbox_overlaps as box_overlaps
-#from net.processing.cython_box import box_vote
+from net.lib.utils.bbox import bbox_overlaps
 # from net.processing.gpu_nms import gpu_nms as nms   ##unknown bug ???
-from net.processing.cpu_nms import cpu_nms as nms
+from net.lib.nms.cpu_nms import cpu_nms as nms
 
 import numpy as np
 
@@ -94,8 +93,8 @@ def non_max_suppress(boxes, scores, num_classes,
                                        # else set high number for faster speed at inference
  
     #non-max suppression 
-    nms_boxes = [[]for _ in xrange(num_classes)]
-    for j in xrange(1, num_classes): #skip background
+    nms_boxes = [[]for _ in range(num_classes)]
+    for j in range(1, num_classes): #skip background
         inds = np.where(scores[:, j] > nms_before_score_thesh)[0]
          
         cls_scores = scores[inds, j]
@@ -116,10 +115,10 @@ def non_max_suppress(boxes, scores, num_classes,
 
     ##Limit to MAX_PER_IMAGE detections over all classes
     if max_per_image > 0:
-        image_scores = np.hstack([nms_boxes[j][:, -1] for j in xrange(1, num_classes)])
+        image_scores = np.hstack([nms_boxes[j][:, -1] for j in range(1, num_classes)])
         if len(image_scores) > max_per_image:
             image_thresh = np.sort(image_scores)[-max_per_image]
-            for j in xrange(1, num_classes):
+            for j in range(1, num_classes):
                 keep = np.where(nms_boxes[j][:, -1] >= image_thresh)[0]
                 nms_boxes[j] = nms_boxes[j][keep, :]
 
