@@ -239,3 +239,25 @@ def regularise_box3d(boxes3d):
             b[j]=corners[k]+dis/2*np.array([0,0,1])
 
     return reg_boxes3d
+
+def boxes3d_for_evaluation(boxes3d):
+
+    # translation
+    T_x = np.sum(boxes3d[:, 0:4, 0], 1) / 4.0
+    T_y = np.sum(boxes3d[:, 0:4, 1], 1) / 4.0
+    T_z = np.sum(boxes3d[:, 0:4, 2], 1) / 4.0
+
+    dis1=np.sum((boxes3d[:,0,0:2]-boxes3d[:,1,0:2])**2,1)**0.5
+    dis2=np.sum((boxes3d[:,1,0:2]-boxes3d[:,2,0:2])**2,1)**0.5
+
+    #length width heigth
+    L=np.maximum(dis1,dis2)
+    W=np.minimum(dis1,dis2)
+    H=np.sum((boxes3d[:,0,0:3]-boxes3d[:,4,0:3])**2,1)**0.5
+    return T_x,T_y,T_z,L,W,H
+
+if __name__ == '__main__':
+    # test boxes3d_for_evaluation
+    gt_boxes3d=np.load('gt_boxes3d_135.npy')
+    T_x, T_y, T_z, L, W, H =boxes3d_for_evaluation(gt_boxes3d[0])
+    print(T_x, T_y, T_z, L, W, H)
