@@ -51,6 +51,12 @@ def read_objects(tracklet_file, num_frames):
             o.box = cornerPosInVelo.transpose()
             o.type = tracklet.objectType
             o.tracklet_id = n
+
+            if o.type == 'Van' or o.type == 'Truck' or o.type == 'Car' or o.type == 'Tram':  # todo : only  support 'Van'
+                o.translation=translation
+                o.rotation=rotation
+                o.size=tracklet.size
+
             objects[t].append(o)
             t = t+1
 

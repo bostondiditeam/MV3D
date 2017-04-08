@@ -1,4 +1,5 @@
 from net.common import *
+import math
 
 
 ##extension for 3d
@@ -247,17 +248,35 @@ def boxes3d_for_evaluation(boxes3d):
     T_y = np.sum(boxes3d[:, 0:4, 1], 1) / 4.0
     T_z = np.sum(boxes3d[:, 0:4, 2], 1) / 4.0
 
-    dis1=np.sum((boxes3d[:,0,0:2]-boxes3d[:,1,0:2])**2,1)**0.5
-    dis2=np.sum((boxes3d[:,1,0:2]-boxes3d[:,2,0:2])**2,1)**0.5
+    Points0 = boxes3d[:, 0, 0:2]
+    Points1 = boxes3d[:, 1, 0:2]
+    Points2 = boxes3d[:, 2, 0:2]
+
+    dis1=np.sum((Points0-Points1)**2,1)**0.5
+    dis2=np.sum((Points1-Points2)**2,1)**0.5
+
+    dis1_is_max=dis1>dis2
 
     #length width heigth
     L=np.maximum(dis1,dis2)
     W=np.minimum(dis1,dis2)
     H=np.sum((boxes3d[:,0,0:3]-boxes3d[:,4,0:3])**2,1)**0.5
-    return T_x,T_y,T_z,L,W,H
+
+    # rotation
+    yaw=lambda p1,p2,dis: math.atan2(p2[1]-p1[1],p2[0]-p1[0])
+    R_x = np.zeros(len(boxes3d))
+    R_y = np.zeros(len(boxes3d))
+    R_z = [yaw(Points0[i],Points1[i],dis1[i]) if is_max else  yaw(Points1[i],Points2[i],dis2[i])
+           for is_max,i in zip(dis1_is_max,range(len(dis1_is_max)))]
+    R_z=np.array(R_z)
+
+    translation = np.c_[T_x,T_y,T_z]
+    size = np.c_[H,W,L]
+    rotation= np.c_[H,R_y,R_z]
+    return translation,size,rotation
 
 if __name__ == '__main__':
     # test boxes3d_for_evaluation
     gt_boxes3d=np.load('gt_boxes3d_135.npy')
-    T_x, T_y, T_z, L, W, H =boxes3d_for_evaluation(gt_boxes3d[0])
-    print(T_x, T_y, T_z, L, W, H)
+    translation, size, rotation =boxes3d_for_evaluation(gt_boxes3d[0])
+    print(translation,size,rotation)
