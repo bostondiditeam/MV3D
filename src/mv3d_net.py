@@ -198,7 +198,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores = \
         top_feature_net(top_view, top_anchors, top_inside_inds, len_bases)
 
-    # RRN
+    # RPN
     top_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='top_ind')
     top_pos_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='top_pos_ind')
     top_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='top_label')

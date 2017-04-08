@@ -1,3 +1,10 @@
+# this is for solving cannot connect to X server problem.
+# #Follow here to install pyvirtualdisplay
+# https://pypi.python.org/pypi/PyVirtualDisplay
+from pyvirtualdisplay import Display
+display = Display(visible=0, size=(1024, 768))
+display.start()
+
 from kitti_data import pykitti
 from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
 from kitti_data.draw import *
@@ -113,7 +120,7 @@ def lidar_to_top(lidar):
         top_image = np.dstack((top_image, top_image, top_image)).astype(np.uint8)
 
 
-    if 0: #unprocess
+    if 1: #unprocess
         top_image = np.zeros((height,width,3),dtype=np.float32)
 
         num = len(lidar)
@@ -340,6 +347,7 @@ if __name__ == '__main__':
     drive = '0005'
 
     # The range argument is optional - default is None, which loads the whole dataset
+    print("here")
     dataset = pykitti.raw(basedir, date, drive) #, range(0, 50, 5))
 
     # Load some data
@@ -370,7 +378,7 @@ if __name__ == '__main__':
         print('rgb image save done\n')
 
 
-    if 0:  ## top view --------------------
+    if 1:  ## top view --------------------
         os.makedirs(dummy_data_dir + '/seg/lidar',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top_image',exist_ok=True)
