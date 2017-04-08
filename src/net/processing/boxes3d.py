@@ -272,7 +272,7 @@ def boxes3d_for_evaluation(boxes3d):
 
     translation = np.c_[T_x,T_y,T_z]
     size = np.c_[H,W,L]
-    rotation= np.c_[H,R_y,R_z]
+    rotation= np.c_[R_x,R_y,R_z]
     return translation,size,rotation
 
 if __name__ == '__main__':
