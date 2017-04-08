@@ -343,7 +343,7 @@ class MV3D(object):
 
 
     def tacking(self, top_view, front_view, rgb_image):
-
+        lables=[] #todo add lables output
         np_reshape = lambda np_array: np_array.reshape(1, *(np_array.shape))
         top_view=np_reshape(top_view)
         front_view=np_reshape(front_view)
@@ -379,7 +379,10 @@ class MV3D(object):
 
         fuse_probs, fuse_deltas = \
             self.tracking_sess.run([ self.net['fuse_probs'], self.net['fuse_deltas'] ],fd2)
-        # non_max_suppress(fuse_deltas,fuse_probs)
 
         probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, threshold=0.5)
-        return boxes3d,probs
+
+        #debug
+        predicted_bbox = nud.draw_boxed3d_to_rgb(rgb_image[0], boxes3d)
+        nud.imsave('predicted_bbox',predicted_bbox)
+        return boxes3d,lables

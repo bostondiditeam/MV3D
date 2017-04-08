@@ -215,7 +215,7 @@ def box3d_transform_inv(et_boxes3d, deltas):
     return boxes3d
 
 
-##<todo> refine this regularisation later
+
 def regularise_box3d(boxes3d):
 
     num = len(boxes3d)

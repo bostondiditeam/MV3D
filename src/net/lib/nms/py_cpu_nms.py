@@ -36,3 +36,15 @@ def py_cpu_nms(dets, thresh):
         order = order[inds + 1]
 
     return keep
+
+if __name__ == '__main__':
+    """
+    test py_cpu_nms
+    """
+    dets=np.array([ [0,   0, 1,  1, 0.9],
+                    [0.1, 0, 1,  1, 0.3],
+                    [0, 0.6, 1,  1, 0.6],
+                    [2, 2.6, 3, 3,  0.6]])
+
+    keep=py_cpu_nms(dets,0.5)
+    print(keep)

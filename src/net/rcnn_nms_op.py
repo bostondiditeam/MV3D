@@ -4,6 +4,7 @@ from net.processing.boxes import *
 from net.processing.boxes3d import *
 from net.utility.draw import *
 import numpy as np
+from data import box3d_to_top_box
 
 
 
@@ -38,7 +39,7 @@ def draw_rcnn(image, probs,  deltas, rois, rois3d, threshold=0.8):
 
 
 
-def draw_rcnn_nms(rgb, boxes3d, probs):
+def draw_rcnn_nms(rgb, boxes3d, probs=None):
 
     img_rcnn_nms = rgb.copy()
     projections = box3d_to_rgb_projections(boxes3d)
@@ -59,11 +60,6 @@ def draw_rcnn_nms_with_gt(rgb, boxes3d,gt_boxes3d):
 
 
 
-
-## temporay post-processing ....
-## <todo> to be updated
-
-
 def rcnn_nms( probs,  deltas,  rois3d,  threshold = 0.75):
 
 
@@ -76,13 +72,14 @@ def rcnn_nms( probs,  deltas,  rois3d,  threshold = 0.75):
     deltas = deltas[idx,cls]
     probs  = probs [idx]
 
-    if deltas.shape[1:]==(4,):
-        boxes = box_transform_inv(priors,deltas)
-        return probs,boxes
-
 
     if deltas.shape[1:]==(8,3):
         boxes3d  = box3d_transform_inv(rois3d, deltas)
         boxes3d  = regularise_box3d(boxes3d)
-
-        return probs, boxes3d
+        boxes=box3d_to_top_box(boxes3d)
+        # dets = np.c_[boxes3d[:, 1, 0], boxes3d[:, 1, 1], boxes3d[:, 3, 0], boxes3d[:, 3, 1], probs]
+        dets = np.c_[boxes, probs]
+        # keep=np.logical_and((dets[:,0]<dets[:,2]),(dets[:,1]<dets[:,3]))
+        # dets=dets[keep]
+        keep = nms(dets, 0.05)
+        return probs[keep], boxes3d[keep]

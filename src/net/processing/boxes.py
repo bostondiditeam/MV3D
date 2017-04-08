@@ -1,9 +1,6 @@
 from net.configuration import CFG
-
-from net.lib.utils.bbox import bbox_overlaps
-# from net.processing.gpu_nms import gpu_nms as nms   ##unknown bug ???
-from net.lib.nms.cpu_nms import cpu_nms as nms
-
+from net.lib.utils.bbox import bbox_overlaps ,box_vote
+from net.lib.nms.gpu_nms import gpu_nms as nms
 import numpy as np
 
 #     roi  : i, x1,y1,x2,y2  i=image_index  
