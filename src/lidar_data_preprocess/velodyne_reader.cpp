@@ -350,6 +350,11 @@ int main()
 				TV_intensity_image.at<cv::Vec3b> (X,Y)[2] = (int)((intensity_map[X][Y]-0)/255 *255);
 			}	
 
+		//normalize density cloud 
+		for (int i=0; i < density_cloud->size(); i++)
+			density_cloud->at(i).intensity = log(density_cloud->at(i).intensity+1)/log(64);
+
+
 		//Show image ---
 		cv::imshow("Top View - Density feature image", TV_density_image) ;
 		cv::imshow("Top View - Intensity feature image", TV_intensity_image) ;
