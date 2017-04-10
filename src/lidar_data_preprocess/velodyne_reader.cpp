@@ -213,10 +213,10 @@ int main()
 		pcl::PointCloud<PointT>::Ptr density_cloud (new pcl::PointCloud<PointT>);
 
 		//Allocate top view feature images (intensity feature, density feature, height features)
-		cv::Mat TV_intensity_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
-		cv::Mat TV_density_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
+		cv::Mat TV_intensity_image(Y_SIZE,X_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
+		cv::Mat TV_density_image(Y_SIZE,X_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR
 		std::vector< cv::Mat > TV_height_images;
-		cv::Mat TV_height_image(X_SIZE,Y_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR		
+		cv::Mat TV_height_image(Y_SIZE,X_SIZE, CV_8UC3, Scalar(0,0,0));	//BGR		
 		for (int k=0; k<Z_SIZE; k++)
 			TV_height_images.push_back(TV_height_image.clone());	//Note : clone() to prevent reference of single image in OpenCV
 
@@ -335,19 +335,39 @@ int main()
 
 
 		//normalize density map & normalized for top view images to be saved
-		//TODO : check LiDAR vs. camera coord. corresponding...
+		for (int Y=0; Y<Y_SIZE; Y++)
+			for (int X=0; X<X_SIZE; X++)
+				density_map[X][Y] = log(density_map[X][Y]+1)/log(64);
+
+		float density_MIN=0;	//0;
+		float density_MAX=0;	//1;
+		float intensity_MIN=0;	//0;
+		float intensity_MAX=0;	//255;
 		for (int X=0; X<X_SIZE; X++)
 			for (int Y=0; Y<Y_SIZE; Y++)
 			{
-				density_map[X][Y] = log(density_map[X][Y]+1)/log(64);
+				if ( density_map[X][Y] < density_MIN )
+					density_MIN = density_map[X][Y];
+				if ( density_map[X][Y] > density_MAX )
+					density_MAX = density_map[X][Y];
+				if ( intensity_map[X][Y] < intensity_MIN )
+					intensity_MIN = intensity_map[X][Y];
+				if ( intensity_map[X][Y] > intensity_MAX )
+					intensity_MAX = intensity_map[X][Y];
+			}
+		std::cout <<"density_min:"<<density_MIN <<", density_max:"<<density_MAX<<std::endl;
+		std::cout <<"intensity_min:"<<intensity_MIN <<", intensity_max:"<<intensity_MAX<<std::endl;
 
-				TV_density_image.at<cv::Vec3b> (X,Y)[0] = (int)((density_map[X][Y]-0)/1 *255);
-				TV_density_image.at<cv::Vec3b> (X,Y)[1] = (int)((density_map[X][Y]-0)/1 *255);
-				TV_density_image.at<cv::Vec3b> (X,Y)[2] = (int)((density_map[X][Y]-0)/1 *255);
+		for (int Y=0; Y<Y_SIZE; Y++)
+			for (int X=0; X<X_SIZE; X++)
+			{
+				TV_density_image.at<cv::Vec3b> (Y,X)[0] = (int)((density_map[X][Y]-density_MIN)/density_MAX *255);
+				TV_density_image.at<cv::Vec3b> (Y,X)[1] = (int)((density_map[X][Y]-density_MIN)/density_MAX *255);
+				TV_density_image.at<cv::Vec3b> (Y,X)[2] = (int)((density_map[X][Y]-density_MIN)/density_MAX *255);
 
-				TV_intensity_image.at<cv::Vec3b> (X,Y)[0] = (int)((intensity_map[X][Y]-0)/255 *255);
-				TV_intensity_image.at<cv::Vec3b> (X,Y)[1] = (int)((intensity_map[X][Y]-0)/255 *255);
-				TV_intensity_image.at<cv::Vec3b> (X,Y)[2] = (int)((intensity_map[X][Y]-0)/255 *255);
+				TV_intensity_image.at<cv::Vec3b> (Y,X)[0] = (int)((intensity_map[X][Y]-intensity_MIN)/intensity_MAX *255);
+				TV_intensity_image.at<cv::Vec3b> (Y,X)[1] = (int)((intensity_map[X][Y]-intensity_MIN)/intensity_MAX *255);
+				TV_intensity_image.at<cv::Vec3b> (Y,X)[2] = (int)((intensity_map[X][Y]-intensity_MIN)/intensity_MAX *255);
 			}	
 
 		//normalize density cloud 
@@ -358,13 +378,11 @@ int main()
 		//Show image ---
 		cv::imshow("Top View - Density feature image", TV_density_image) ;
 		cv::imshow("Top View - Intensity feature image", TV_intensity_image) ;
-    	//cv::waitKey(delay) ;
+    	cv::waitKey(delay) ;
 		//cv::destroyWindow("Top View - Density feature image");
     	//cv::destroyWindow("Top View - Intensity feature image");
 
-
-		////Save top view (TV) feature images
-		
+		////Save top view (TV) feature images		
 		full_str = "seg/top_image/top_intensity_image_";
 		full_str=full_str + str_frame_id.str() + ".png";
 		imwrite(full_str.c_str(),TV_intensity_image);
@@ -373,15 +391,37 @@ int main()
 		full_str=full_str + str_frame_id.str() + ".png";
 		imwrite(full_str.c_str(),TV_density_image);		
 
+
+		vector <float> height_MIN;
+		vector <float> height_MAX;
+		height_MIN.resize(Z_SIZE);
+		height_MAX.resize(Z_SIZE);
+
 		for (int Z=0; Z<Z_SIZE; Z++)
 		{
 			for (int X=0; X<X_SIZE; X++)
 			{
 				for (int Y=0; Y<Y_SIZE; Y++)
 				{
-					TV_height_images[Z].at<cv::Vec3b> (X,Y)[0] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
-					TV_height_images[Z].at<cv::Vec3b> (X,Y)[1] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
-					TV_height_images[Z].at<cv::Vec3b> (X,Y)[2] =  (int)(height_maps[X][Y][Z]/(z_MAX-z_MIN) *255);
+					if ( height_maps[X][Y][Z] < height_MIN[Z] )
+						height_MIN[Z] = height_maps[X][Y][Z];
+					if ( height_maps[X][Y][Z] > height_MAX[Z] )
+						height_MAX[Z] = height_maps[X][Y][Z];
+				}
+			}
+			std::cout<<"Z:"<<Z<<", "<<"height_MIN[Z]:"<<height_MIN[Z]<<", height_MAX[Z]:"<<height_MAX[Z]<<std::endl;
+		}		
+			
+
+		for (int Z=0; Z<Z_SIZE; Z++)
+		{
+			for (int Y=0; Y<Y_SIZE; Y++)
+			{
+				for (int X=0; X<X_SIZE; X++)
+				{
+					TV_height_images[Z].at<cv::Vec3b> (Y,X)[0] =  (int)((height_maps[X][Y][Z]-height_MIN[Z])/height_MAX[Z] *255);
+					TV_height_images[Z].at<cv::Vec3b> (Y,X)[1] =  (int)((height_maps[X][Y][Z]-height_MIN[Z])/height_MAX[Z] *255);
+					TV_height_images[Z].at<cv::Vec3b> (Y,X)[2] =  (int)((height_maps[X][Y][Z]-height_MIN[Z])/height_MAX[Z] *255);
 				}
 			}
 			cv::imshow("Top View - Height feature image", TV_height_images[Z]) ;
