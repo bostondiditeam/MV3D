@@ -155,16 +155,13 @@ def parse_xml(tracklet_file):
                 if is_finished:
                     raise ValueError('More info on element after finished!')
                 if info.tag == 'objectType':
-                    # notice: Lance changed this to all Car type, for round 2, this line need to be changed back,
-                    # since we will have multiple types.
-                    # new_track.object_type = info.text
-                    new_track.object_type = 'Car'
+                    new_track.object_type = info.text
                 elif info.tag == 'h':
-                    new_track.size[0] = float(info.text)
+                    new_track.size[0] = round(float(info.text), 3)
                 elif info.tag == 'w':
-                    new_track.size[1] = float(info.text)
+                    new_track.size[1] = round(float(info.text), 3)
                 elif info.tag == 'l':
-                    new_track.size[2] = float(info.text)
+                    new_track.size[2] = round(float(info.text), 3)
                 elif info.tag == 'first_frame':
                     new_track.first_frame = int(info.text)
                 elif info.tag == 'poses':
@@ -192,17 +189,17 @@ def parse_xml(tracklet_file):
                                 raise ValueError('Pose item came before number of poses!')
                             for poseInfo in pose:
                                 if poseInfo.tag == 'tx':
-                                    new_track.trans[frame_idx, 0] = float(poseInfo.text)
+                                    new_track.trans[frame_idx, 0] = round(float(poseInfo.text), 3)
                                 elif poseInfo.tag == 'ty':
-                                    new_track.trans[frame_idx, 1] = float(poseInfo.text)
+                                    new_track.trans[frame_idx, 1] = round(float(poseInfo.text), 3)
                                 elif poseInfo.tag == 'tz':
-                                    new_track.trans[frame_idx, 2] = float(poseInfo.text)
+                                    new_track.trans[frame_idx, 2] = round(float(poseInfo.text), 3)
                                 elif poseInfo.tag == 'rx':
-                                    new_track.rots[frame_idx, 0] = float(poseInfo.text)
+                                    new_track.rots[frame_idx, 0] = round(float(poseInfo.text), 3)
                                 elif poseInfo.tag == 'ry':
-                                    new_track.rots[frame_idx, 1] = float(poseInfo.text)
+                                    new_track.rots[frame_idx, 1] = round(float(poseInfo.text), 3)
                                 elif poseInfo.tag == 'rz':
-                                    new_track.rots[frame_idx, 2] = float(poseInfo.text)
+                                    new_track.rots[frame_idx, 2] = round(float(poseInfo.text), 3)
                                 elif poseInfo.tag == 'state':
                                     new_track.states[frame_idx] = stateFromText[poseInfo.text]
                                 elif poseInfo.tag == 'occlusion':

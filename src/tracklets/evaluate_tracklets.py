@@ -11,7 +11,7 @@ import os
 import sys
 import yaml
 
-from parse_tracklet import *
+from tracklets.parse_tracklet import *
 
 
 def lwh_to_box(l, w, h):
@@ -154,25 +154,11 @@ def generate_boxes(tracklets):
             frame_idx += 1
 
 
-def main():
-    parser = argparse.ArgumentParser(description='Evaluate two tracklet files.')
-    parser.add_argument('prediction', type=str, nargs='?', default='tracklet_labels.xml',
-        help='Predicted tracklet label filename')
-    parser.add_argument('groundtruth', type=str, nargs='?', default='tracklet_labels_gt.xml',
-        help='Groundtruth tracklet label filename')
-    parser.add_argument('-o', '--outdir', type=str, nargs='?', default=None,
-        help='Output folder')
-    parser.add_argument('-d', dest='debug', action='store_true', help='Debug print enable')
-    parser.set_defaults(debug=False)
-    args = parser.parse_args()
-    output_dir = args.outdir
-
-    pred_file = args.prediction
+def tracklet_score(pred_file, gt_file, output_dir = None):
     if not os.path.exists(pred_file):
         sys.stderr.write('Error: Prediction file %s not found.\n' % pred_file)
         exit(-1)
 
-    gt_file = args.groundtruth
     if not os.path.exists(gt_file):
         sys.stderr.write('Error: Ground-truth file %s not found.\n' % gt_file)
         exit(-1)
@@ -225,6 +211,8 @@ def main():
             intersection_count,
             union_count,
             pr_at_ious)
+        # print('the frame id is here: ', frame_idx, ' pr_at_ious is: ', pr_at_ious)
+
 
     results_table = {'iou_per_obj': {}, 'pr_per_iou': {}}
 
@@ -260,6 +248,4 @@ def main():
             [f.write('{0},{1},{2}\n'.format(k, v['precision'], v['recall']))
              for k, v in sorted(results_table['pr_per_iou'].items(), key=lambda x: x[0])]
 
-
-if __name__ == '__main__':
-    main()
+# tracklet_score(pred_file="test/tracklet_labels_pred.xml", gt_file="test/tracklet_labels_ori.xml", output_dir="test/")

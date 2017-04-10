@@ -16,7 +16,7 @@ import sys
 class Tracklet_saver():
     def __init__(self, dir_path):
         # check if the tracklet file already exist, if yes, exit and print error message.
-        file_path = os.path.join(dir_path, 'tracklet_labels.xml')
+        file_path = os.path.join(dir_path, 'tracklet_labels_pred.xml')
         if os.path.isfile(file_path):
             sys.stderr.write("Error: The tracklet file %s already exists, change file name before prediction.\n" % file_path)
             exit(-1)
@@ -35,7 +35,7 @@ class Tracklet_saver():
     # for add new tracklets
     # size is [h, w, l]
     def add_tracklet(self, first_frame_nb, size, transition, rotation):
-        obs_tracklet = Tracklet(object_type='car', l=size[2], w=size[1], h=size[0], first_frame=first_frame_nb)
+        obs_tracklet = Tracklet(object_type='Car', l=size[2], w=size[1], h=size[0], first_frame=first_frame_nb)
         self.add_tracklet_pose(obs_tracklet, transition, rotation)
         self.collection.tracklets.append(obs_tracklet)
 

@@ -20,18 +20,18 @@ class Tracklet(object):
         self.poses = []
 
     def write_xml(self, f, class_id, tab_level=0):
-        writeln(f, '<item class_id="%d" tracking_level="0" version="1">' % class_id, tab_level)
+        writeln(f, '<item class_id="{:d}" tracking_level="0" version="1">'.format(class_id), tab_level)
         tab_level += 1
         class_id += 1
-        writeln(f, '<objectType>%s</objectType>' % self.object_type, tab_level)
-        writeln(f, '<h>%f</h>' % self.h, tab_level)
-        writeln(f, '<w>%f</w>' % self.w, tab_level)
-        writeln(f, '<l>%f</l>' % self.l, tab_level)
-        writeln(f, '<first_frame>%d</first_frame>' % self.first_frame, tab_level)
-        writeln(f, '<poses class_id="%d" tracking_level="0" version="0">' % class_id, tab_level)
+        writeln(f, '<objectType>{:s}</objectType>'.format(self.object_type), tab_level)
+        writeln(f, '<h>{:.16f}</h>'.format(self.h), tab_level)
+        writeln(f, '<w>{:.16f}</w>'.format(self.w), tab_level)
+        writeln(f, '<l>{:.16f}</l>'.format(self.l), tab_level)
+        writeln(f, '<first_frame>{:d}</first_frame>'.format(self.first_frame), tab_level)
+        writeln(f, '<poses class_id="{:d}" tracking_level="0" version="0">'.format(class_id), tab_level)
         class_id += 1
         tab_level += 1
-        writeln(f, '<count>%d</count>' % len(self.poses), tab_level)
+        writeln(f, '<count>{:d}</count>'.format(len(self.poses)), tab_level)
         writeln(f, '<item_version>2</item_version>', tab_level)
         first_pose = True
         for p in self.poses:
@@ -42,12 +42,12 @@ class Tracklet(object):
                 writeln(f, '<item>', tab_level)
             tab_level += 1
             class_id += 1
-            writeln(f, '<tx>%f</tx>' % p['tx'], tab_level)
-            writeln(f, '<ty>%f</ty>' % p['ty'], tab_level)
-            writeln(f, '<tz>%f</tz>' % p['tz'], tab_level)
-            writeln(f, '<rx>%f</rx>' % p['rx'], tab_level)
-            writeln(f, '<ry>%f</ry>' % p['ry'], tab_level)
-            writeln(f, '<rz>%f</rz>' % p['rz'], tab_level)
+            writeln(f, '<tx>{:.16f}</tx>'.format(p['tx']), tab_level)
+            writeln(f, '<ty>{:.16f}</ty>'.format(p['ty']), tab_level)
+            writeln(f, '<tz>{:.16f}</tz>'.format(p['tz']), tab_level)
+            writeln(f, '<rx>{:.16f}</rx>'.format(p['rx']), tab_level)
+            writeln(f, '<ry>{:.16f}</ry>'.format(p['ry']), tab_level)
+            writeln(f, '<rz>{:.16f}</rz>'.format(p['rz']), tab_level)
             writeln(f, '<state>1</state>', tab_level)  # INTERP = 1
             writeln(f, '<occlusion>-1</occlusion>', tab_level) # UNSET = -1
             writeln(f, '<occlusion_kf>-1</occlusion_kf>', tab_level)
