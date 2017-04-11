@@ -5,3 +5,4 @@ src/net/processing/build/temp.linux-x86_64-3.5
 src/.idea
 data/image_output
 src/.ipynb_checkpoints
+ros/.idea
