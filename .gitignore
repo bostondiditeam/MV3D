@@ -6,3 +6,7 @@ src/.idea
 data/image_output
 src/.ipynb_checkpoints
 ros/.idea
+bag_to_kiiti/lidar/.idea
+bag_to_kiiti/lidar/.vscode-upload.json
+bag_to_kiiti/lidar/.vscode/c_cpp_properties.json
+bag_to_kiiti/lidar/.vscode/settings.json
