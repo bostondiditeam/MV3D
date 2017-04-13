@@ -29,6 +29,7 @@ __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
 __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data/kitti/dummy')
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
+__C.DATA_SETS_TYPE='didi20170401'       #['didi20170401','kitti_raw_data']
 
 
 

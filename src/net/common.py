@@ -1,22 +1,12 @@
-# num libs
-import math
 import random
 import numpy as np
-#----------------------------------
-import matplotlib
-matplotlib.use('AGG')
-#matplotlib.use('Qt4Agg')
-#matplotlib.use('Qt5Agg')
-#----------------------------------
-
+import tensorflow as tf
 import cv2
-import matplotlib.pyplot as plt
-
-
 
 SEED = 202
 random.seed(SEED)
 np.random.seed(SEED)
+tf.set_random_seed(SEED)
 
 #### kitti dataset orijection from lidar to top, front and rgb ####
 
@@ -41,41 +31,3 @@ MATRIX_Mt = ([[  2.34773698e-04,   1.04494074e-02,   9.99945389e-01,  0.00000000
 MATRIX_Kt = ([[ 721.5377,    0.    ,    0.    ],
               [   0.    ,  721.5377,    0.    ],
               [ 609.5593,  172.854 ,    1.    ]])
-
-
-
-
-# std libs
-import os
-import pickle
-from timeit import default_timer as timer
-from datetime import datetime
-import csv
-import pandas as pd
-import pickle
-
-# deep learning libs
-import tensorflow as tf
-tf.set_random_seed(SEED)
-
-# import keras
-# from keras import backend as K
-#sess = tf.Session()
-# K.set_session(sess)
-# assert(K._BACKEND=='tensorflow')
-#K.learning_phase() #0:test,  1:train
-# from keras.models import Sequential, Model
-# from keras.layers import Deconvolution2D, Convolution2D, Cropping2D, Cropping1D, Input, merge
-# from keras.layers.core import Flatten, Dense, Dropout, Lambda, Activation, Reshape
-# from keras.layers.normalization import BatchNormalization
-# from keras.layers.advanced_activations import PReLU,SReLU,ELU
-# from keras.layers.pooling import MaxPooling2D, AveragePooling2D
-# from keras import initializations
-#
-# from keras.models import load_model
-# from keras.optimizers import Adam, SGD
-# from keras.regularizers import l2
-# from keras.callbacks import LearningRateScheduler
-
-
-# my libs

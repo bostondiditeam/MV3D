@@ -91,10 +91,7 @@ class MV3D(object):
 
         #load_indexs=(np.random.rand(10)*153).astype(np.int)
         # load_indexs=[ 0,  99, 23, 135]
-        load_indexs=[ 26,   6,  23,  53,  83,  13,  48,  60, 123,  38, 115,  27,  79,
-       120, 123,   8,  26, 140,  25, 120,  67, 109, 131,  58,  26,  43,
-       111,  16, 121, 101,  80,  32,  42, 142,  38,  67,  13,   1, 143,
-        47,  45,  74, 121,  58,  91,  25,   3,  96,  41,  71]
+        load_indexs=[ 0]
 
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs)
         top_images = data.getTopImages(load_indexs)

@@ -207,7 +207,8 @@ def parseXML(trackletFile):
                 elif poseInfo.tag == 'occlusion_kf':
                   newTrack.occs[frameIdx, 1] = occFromText[poseInfo.text]
                 elif poseInfo.tag == 'truncation':
-                  newTrack.truncs[frameIdx] = truncFromText[poseInfo.text]
+                    pass#todo: support truncation in tracklet.py
+                #   newTrack.truncs[frameIdx] = truncFromText[poseInfo.text]
                 elif poseInfo.tag == 'amt_occlusion':
                   newTrack.amtOccs[frameIdx,0] = float(poseInfo.text)
                   hasAmt = True

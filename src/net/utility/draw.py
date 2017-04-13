@@ -24,7 +24,7 @@ def normalise(image, limit=255.0):
     return image
 
 def imsave(name, image):
-    plt.imsave(os.path.join(cfg.LOG_DIR,name)+'.jpg' ,image)
+    plt.imsave(os.path.join(cfg.LOG_DIR,name)+'.png' ,image)
 
 def npsave(name,numpy_array):
     np.save(os.path.join(cfg.LOG_DIR,name),numpy_array)

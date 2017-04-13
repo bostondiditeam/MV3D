@@ -2,11 +2,12 @@ from kitti_data import pykitti
 from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
 from kitti_data.draw import *
 from kitti_data.io import *
-#from net.utility.draw import *
+import net.utility.draw as draw
 from net.processing.boxes3d import *
 import numpy
 from config import cfg
 import os
+import cv2
 
 
 # run functions --------------------------------------------------------------------------
@@ -236,6 +237,7 @@ def getLidarDatas(indexs):
     return [ np.load(os.path.join(data_dir, 'seg/lidar/lidar_%05d.npy' % n)) for n in indexs ]
 
 
+
 # ## drawing ####
 #
 # def draw_lidar(lidar, is_grid=False, is_top_region=True, fig=None):
@@ -336,46 +338,53 @@ if __name__ == '__main__':
 
     dummy_data_dir=cfg.DATA_SETS_DIR
     basedir = dummy_data_dir
-    date  = '2011_09_26'
-    drive = '0005'
+    date  = '2017_04_01'
+    drive = '0010'
+    frames_index=[0]
 
     # The range argument is optional - default is None, which loads the whole dataset
-    dataset = pykitti.raw(basedir, date, drive) #, range(0, 50, 5))
+    dataset = pykitti.raw(basedir, date, drive,frames_index) #, range(0, 50, 5))
 
     # Load some data
     dataset.load_calib()         # Calibration data are accessible as named tuples
-    dataset.load_timestamps()    # Timestamps are parsed into datetime objects
-    dataset.load_oxts()          # OXTS packets are loaded as named tuples
+    # dataset.load_timestamps()    # Timestamps are parsed into datetime objects
+    # dataset.load_oxts()          # OXTS packets are loaded as named tuples
     #dataset.load_gray()         # Left/right images are accessible as named tuples
-    dataset.load_rgb()          # Left/right images are accessible as named tuples
+    # dataset.load_rgb()          # Left/right images are accessible as named tuples
+    dataset.load_left_rgb()
     dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
 
     tracklet_file = dummy_data_dir + '/' + date + '/tracklet_labels.xml'
 
-    num_frames=len(dataset.velo)  #154
-    objects = read_objects(tracklet_file, num_frames)
+    objects = read_objects(tracklet_file, frames_index)
 
     ############# convert   ###########################
     os.makedirs(dummy_data_dir + '/seg',exist_ok=True)
 
-    if 0:  ## rgb images --------------------
+    if 1:  ## rgb images --------------------
         os.makedirs(dummy_data_dir + '/seg/rgb',exist_ok=True)
 
-        for n in range(num_frames):
+        for n in frames_index:
             print('rgb images={}'.format(n))
             rgb = dataset.rgb[n][0]
             rgb =(rgb*255).astype(np.uint8)
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            if(cfg.DATA_SETS_TYPE =='didi20170401'):
+                pass # rgb = rgb[500:-80, :, :]
+            elif cfg.DATA_SETS_TYPE =='kitti_raw_data':
+                pass
+            else:
+                raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
             cv2.imwrite(dummy_data_dir + '/seg/rgb/rgb_%05d.png'%n,rgb)
         print('rgb image save done\n')
 
 
-    if 0:  ## top view --------------------
+    if 1:  ## top view --------------------
         os.makedirs(dummy_data_dir + '/seg/lidar',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top_image',exist_ok=True)
 
-        for n in range(num_frames):
+        for n in frames_index:
             print('top view={}'.format(n))
             lidar = dataset.velo[n]
             top, top_image = lidar_to_top(lidar)
@@ -391,7 +400,7 @@ if __name__ == '__main__':
     if 1:  ## boxes3d  --------------------
         os.makedirs(dummy_data_dir + '/seg/gt_boxes3d',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/gt_labels',exist_ok=True)
-        for n in range(num_frames):
+        for n in frames_index:
             print('boxes3d={}'.format(n))
             objs = objects[n]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
@@ -399,18 +408,35 @@ if __name__ == '__main__':
             np.save(dummy_data_dir + '/seg/gt_boxes3d/gt_boxes3d_%05d.npy'%n,gt_boxes3d)
             np.save(dummy_data_dir + '/seg/gt_labels/gt_labels_%05d.npy'%n,gt_labels)
 
-
+    if 1: #dump gt boxes
+        os.makedirs(dummy_data_dir + '/seg/gt_box_plot', exist_ok=True)
+        for n in frames_index:
+            print('rgb images={}'.format(n))
+            rgb = dataset.rgb[n][0]
+            rgb = (rgb * 255).astype(np.uint8)
+            rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+            if (cfg.DATA_SETS_TYPE == 'didi20170401'):
+                pass  # rgb = rgb[500:-80, :, :]
+            elif cfg.DATA_SETS_TYPE == 'kitti_raw_data':
+                pass
+            else:
+                raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+            objs = objects[n]
+            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+            img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
+            cv2.imwrite(dummy_data_dir + '/seg/gt_box_plot/gtbox_%05d.png' % n, img)
+        print('gt box image save done\n')
 
     ############# analysis ###########################
     if 0: ## make mean
         mean_image = np.zeros((400,400),dtype=np.float32)
-        num_frames=20
-        for n in range(num_frames):
+        frames_index=20
+        for n in frames_index:
             print(n)
             top_image = cv2.imread(dummy_data_dir + '/seg/top_image/top_image_%05d.png'%n,0)
             mean_image += top_image.astype(np.float32)
 
-        mean_image = mean_image/num_frames
+        mean_image = mean_image / len(frames_index)
         cv2.imwrite(dummy_data_dir + '/seg/top_image/top_mean_image.png',mean_image)
 
 
@@ -420,7 +446,7 @@ if __name__ == '__main__':
         scales =[]
         mean_image = cv2.imread(dummy_data_dir + '/seg/top_image/top_mean_image.png',0)
 
-        for n in range(num_frames):
+        for n in frames_index:
             print(n)
             gt_boxes3d = np.load(dummy_data_dir + '/seg/gt_boxes3d/gt_boxes3d_%05d.npy'%n)
 
@@ -452,71 +478,4 @@ if __name__ == '__main__':
         numpy.savetxt(dummy_data_dir + '/seg/scales.txt',scales)
         cv2.imwrite(dummy_data_dir + '/seg/top_image/top_rois.png',mean_image)
 
-    #
-    # #----------------------------------------------------------
-    # #----------------------------------------------------------
-    #
-    #
-    # #----------------------------------------------------------
-    # lidar = dataset.velo[0]
-    #
-    # objs = objects[0]
-    # gt_labels, gt_boxes, gt_boxes3d = obj_to_gt(objs)
-    #
-    # # fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
-    # # draw_lidar(lidar, fig=fig)
-    # # draw_gt_boxes3d(gt_boxes3d, fig=fig)
-    # # mlab.show(1)
-    #
-    # print ('** calling lidar_to_tops() **')
-    # if 0:
-    #     top, top_image = lidar_to_top(lidar)
-    #     rgb = dataset.rgb[0][0]
-    # else:
-    #     top = np.load(dummy_data_dir + '/one_frame/top.npy')
-    #     top_image = cv2.imread(dummy_data_dir + '/one_frame/top_image.png')
-    #     rgb = np.load(dummy_data_dir + '/one_frame/rgb.npy')
-    #
-    # rgb =(rgb*255).astype(np.uint8)
-    # rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-    # # -----------
-    #
-    #
-    #
-    # #check
-    # num = len(gt_boxes)
-    # for n in range(num):
-    #    x1,y1,x2,y2 = gt_boxes[n]
-    #    cv2.rectangle(top_image,(x1,y1), (x2,y2), (0,255,255), 1)
-    #
-    #
-    # # ## check
-    # # boxes3d0 = box_to_box3d(gt_boxes)
-    # #
-    # # draw_gt_boxes3d(boxes3d0,  color=(1,1,0), line_width=1, fig=fig)
-    # # mlab.show(1)
-    # #
-    # # for n in range(num):
-    # #     qs = make_projected_box3d(gt_boxes3d[n])
-    # #     draw_projected_box3d(rgb,qs)
-    # #
-    # # imshow('rgb',rgb)
-    # # cv2.waitKey(0)
-    #
-    #
-    #
-    # #save
-    # #np.save(dummy_data_dir + '/one_frame/rgb.npy',rgb)
-    # #np.save(dummy_data_dir + '/one_frame/lidar.npy',lidar)
-    # #np.save(dummy_data_dir + '/one_frame/top.npy',top)
-    # #cv2.imwrite(dummy_data_dir + '/one_frame/top_image.png',top_image)
-    # #cv2.imwrite(dummy_data_dir + '/one_frame/top_image.maked.png',top_image)
-    #
-    # np.save(dummy_data_dir + '/one_frame/gt_labels.npy',gt_labels)
-    # np.save(dummy_data_dir + '/one_frame/gt_boxes.npy',gt_boxes)
-    # np.save(dummy_data_dir + '/one_frame/gt_boxes3d.npy',gt_boxes3d)
-    #
-    # # imshow('top_image',top_image)
-    # # cv2.waitKey(0)
-    # #
-    # # exit(0)
+

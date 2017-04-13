@@ -2,6 +2,8 @@
 
 from collections import namedtuple
 
+import matplotlib
+matplotlib.use('AGG')
 import matplotlib.image as mpimg
 import numpy as np
 
@@ -84,6 +86,30 @@ def load_stereo_pairs(imL_files, imR_files, **kwargs):
         impairs.append(StereoPair(imL, imR))
 
     return impairs
+
+def load_left_single(imL_files, **kwargs):
+    """Helper method to read stereo image pairs."""
+    StereoPair = namedtuple('StereoPair', 'left, right')
+
+    impairs = []
+    for imfiles in zip(imL_files):
+        # Convert to uint8 and BGR for OpenCV if requested
+        imformat = kwargs.get('format', '')
+        if imformat is 'cv2':
+            imL = np.uint8(mpimg.imread(imfiles[0]) * 255)
+
+            # Convert RGB to BGR
+            if len(imL.shape) > 2:
+                imL = imL[:, :, ::-1]
+
+        else:
+            imL = mpimg.imread(imfiles[0])
+
+        impairs.append(StereoPair(imL, imL))
+
+    return impairs
+
+
 
 
 def load_velo_scans(velo_files):

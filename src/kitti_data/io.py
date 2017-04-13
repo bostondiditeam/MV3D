@@ -1,17 +1,18 @@
-from kitti_data import pykitti
+# from kitti_data import pykitti
 from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
 
 import numpy as np
 import math
+from config import cfg
 
-def read_objects(tracklet_file, num_frames):
+def read_objects(tracklet_file, frames_index):
 
     objects = []  #grouped by frames
-    for n in range(num_frames): objects.append([])
+    for n in frames_index: objects.append([])
 
     # read tracklets from file
     tracklets = parseXML(tracklet_file)
-    num = len(tracklets)
+    num = len(tracklets)    #number of obs
 
     for n in range(num):
         tracklet = tracklets[n]
@@ -25,11 +26,23 @@ def read_objects(tracklet_file, num_frames):
 
         # loop over all data in tracklet
         t  = tracklet.firstFrame
-        for translation, rotation, state, occlusion, truncation, amtOcclusion, amtBorders, absoluteFrameNumber in tracklet:
 
-            # determine if object is in the image; otherwise continue
-            if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
-               continue
+        for i in frames_index:
+            translation = tracklet.trans[i]
+            rotation = tracklet.rots[i]
+            state = tracklet.states[i]
+            occlusion = tracklet.occs[i]
+            truncation = tracklet.truncs[i]
+
+
+            if cfg.DATA_SETS_TYPE == 'kitti_raw_data':
+                # # determine if object is in the image; otherwise continue
+                if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
+                   continue
+            elif cfg.DATA_SETS_TYPE == 'didi20170401':
+                pass
+            else:
+                raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
 
             # re-create 3D bounding box in velodyne coordinate system
             yaw = rotation[2]   # other rotations are 0 in all xml files I checked

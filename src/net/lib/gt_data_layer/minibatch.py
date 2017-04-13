@@ -119,6 +119,8 @@ def _get_bbox_regression_labels(bbox_target_data, num_classes):
 
 def _vis_minibatch(im_blob, rois_blob, labels_blob, sublabels_blob):
     """Visualize a mini-batch for debugging."""
+    import matplotlib
+    matplotlib.use('AGG')
     import matplotlib.pyplot as plt
     for i in xrange(rois_blob.shape[0]):
         rois = rois_blob[i, :]

@@ -265,6 +265,28 @@ class raw:
 
         print('done.')
 
+    def load_left_rgb(self, **kwargs):
+        """Load RGB stereo images from file.
+
+        Setting imformat='cv2' will convert the images to uint8 and BGR for
+        easy use with OpenCV.
+        """
+        print('Loading color images from ' + self.drive + '...')
+
+        imL_path = os.path.join(self.data_path, 'image_02', 'data', '*.png')
+
+        imL_files = sorted(glob.glob(imL_path))
+
+        # Subselect the chosen range of frames, if any
+        if self.frame_range:
+            imL_files = [imL_files[i] for i in self.frame_range]
+
+        print('Found ' + str(len(imL_files)) + ' image pairs...')
+
+        self.rgb = utils.load_left_single(imL_files, **kwargs)
+
+        print('done.')
+
     def load_velo(self):
         """Load velodyne [x,y,z,reflectance] scan data from binary files."""
         # Find all the Velodyne files
