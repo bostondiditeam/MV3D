@@ -14,3 +14,4 @@ bag_to_kitti/lidar/.idea
 bag_to_kitti/lidar/.vscode
 .vscode-upload.json
 bag_to_kitti/lidar/cmake-build-debug
+.vscode
