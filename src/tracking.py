@@ -5,7 +5,8 @@ from net.processing.boxes3d import boxes3d_for_evaluation
 from tracklets.Tracklet_saver import Tracklet_saver
 import argparse
 import os
-from config import *
+from config import cfg
+import time
 
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
@@ -18,16 +19,17 @@ def pred_and_save(tracklet_pred_dir):
     m3=mod.MV3D()
     m3.tracking_init(tops[0].shape,fronts[0].shape,rgbs[0].shape)
 
-    load_indexs=[ 135, 0,  99, 23]
+    load_indexs=[100]
     for i in load_indexs:
         rgbs, tops, fronts, gt_labels, gt_boxes3d = data.load([i])
         boxes3d,probs=m3.tacking(tops[0],fronts[0],rgbs[0])
 
         # for debugging: save image and show image.
-        # file_name='tacking_test_img_{}'.format(i)
-        # img_tracking=draw_boxed3d_to_rgb(rgbs[0],boxes3d)
-        # imsave(file_name,img_tracking)
-        # print(file_name+' save ok'
+        file_name='tacking_test_img_{}'.format(i)
+        img_tracking=draw_boxed3d_to_rgb(rgbs[0],boxes3d)
+        path=os.path.join(cfg.LOG_DIR,file_name)
+        imsave(path,img_tracking)
+        print(path+' save ok')
 
         # save boxes3d as tracklet files.
         translation, size, rotation = boxes3d_for_evaluation(boxes3d)
@@ -53,6 +55,6 @@ if __name__ == '__main__':
         #  fits you needs.
         gt_tracklet_file = os.path.join(cfg.DATA_SETS_DIR, '2011_09_26', 'tracklet_labels.xml')
         tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
-        print("scores are save under {%s} directory.".format(tracklet_pred_dir))
+        print("scores are save under {} directory.".format(tracklet_pred_dir))
 
     print("Completed")

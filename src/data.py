@@ -340,7 +340,7 @@ if __name__ == '__main__':
     basedir = dummy_data_dir
     date  = '2017_04_01'
     drive = '0010'
-    frames_index=[0]
+    frames_index=[138]
 
     # The range argument is optional - default is None, which loads the whole dataset
     dataset = pykitti.raw(basedir, date, drive,frames_index) #, range(0, 50, 5))
@@ -363,10 +363,10 @@ if __name__ == '__main__':
 
     if 1:  ## rgb images --------------------
         os.makedirs(dummy_data_dir + '/seg/rgb',exist_ok=True)
-
+        count=0
         for n in frames_index:
             print('rgb images={}'.format(n))
-            rgb = dataset.rgb[n][0]
+            rgb = dataset.rgb[count][0]
             rgb =(rgb*255).astype(np.uint8)
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
             if(cfg.DATA_SETS_TYPE =='didi20170401'):
@@ -376,6 +376,7 @@ if __name__ == '__main__':
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
             cv2.imwrite(dummy_data_dir + '/seg/rgb/rgb_%05d.png'%n,rgb)
+            count+=1
         print('rgb image save done\n')
 
 
@@ -383,15 +384,16 @@ if __name__ == '__main__':
         os.makedirs(dummy_data_dir + '/seg/lidar',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/top_image',exist_ok=True)
-
+        count=0
         for n in frames_index:
             print('top view={}'.format(n))
-            lidar = dataset.velo[n]
+            lidar = dataset.velo[count]
             top, top_image = lidar_to_top(lidar)
 
             np.save(dummy_data_dir + '/seg/lidar/lidar_%05d.npy'%n,lidar)
             np.save(dummy_data_dir + '/seg/top/top_%05d.npy'%n,top)
             cv2.imwrite(dummy_data_dir + '/seg/top_image/top_image_%05d.png'%n,top_image)
+            count+=1
         print('top view save done\n')
 
 
@@ -400,19 +402,22 @@ if __name__ == '__main__':
     if 1:  ## boxes3d  --------------------
         os.makedirs(dummy_data_dir + '/seg/gt_boxes3d',exist_ok=True)
         os.makedirs(dummy_data_dir + '/seg/gt_labels',exist_ok=True)
+        count=0
         for n in frames_index:
             print('boxes3d={}'.format(n))
-            objs = objects[n]
+            objs = objects[count]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
 
             np.save(dummy_data_dir + '/seg/gt_boxes3d/gt_boxes3d_%05d.npy'%n,gt_boxes3d)
             np.save(dummy_data_dir + '/seg/gt_labels/gt_labels_%05d.npy'%n,gt_labels)
+            count+=1
 
-    if 1: #dump gt boxes
+    if 0: #dump gt boxes
         os.makedirs(dummy_data_dir + '/seg/gt_box_plot', exist_ok=True)
+        count = 0
         for n in frames_index:
             print('rgb images={}'.format(n))
-            rgb = dataset.rgb[n][0]
+            rgb = dataset.rgb[count][0]
             rgb = (rgb * 255).astype(np.uint8)
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
             if (cfg.DATA_SETS_TYPE == 'didi20170401'):
@@ -421,10 +426,11 @@ if __name__ == '__main__':
                 pass
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-            objs = objects[n]
+            objs = objects[count]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
             img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
             cv2.imwrite(dummy_data_dir + '/seg/gt_box_plot/gtbox_%05d.png' % n, img)
+            count+=1
         print('gt box image save done\n')
 
     ############# analysis ###########################
