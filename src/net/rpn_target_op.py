@@ -90,7 +90,7 @@ def make_anchors(bases, stride, image_shape, feature_shape, allowed_border=0):
             inside_inds: indexes of inside anchors
     """
 
-    H, W                  = feature_shape
+    H, W = feature_shape
     img_height, img_width = image_shape
 
     # anchors = shifted bases. Generate proposals from box deltas and anchors
@@ -145,7 +145,7 @@ def rpn_target( anchors, inside_inds, gt_labels,  gt_boxes):
     # overlaps between the anchors and the gt process
     overlaps = box_overlaps(
         np.ascontiguousarray(inside_anchors,  dtype=np.float),
-        np.ascontiguousarray(gt_boxes,        dtype=np.float))
+        np.ascontiguousarray(gt_boxes, dtype=np.float))
 
     argmax_overlaps    = overlaps.argmax(axis=1)
     max_overlaps       = overlaps[np.arange(len(inside_inds)), argmax_overlaps]

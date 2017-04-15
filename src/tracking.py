@@ -14,13 +14,14 @@ def pred_and_save(tracklet_pred_dir):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
 
-    rgbs, tops, fronts, gt_labels, gt_boxes3d = data.load([0])
+    prefix = "2011_09_26_0005"
+    rgbs, tops, fronts, gt_labels, gt_boxes3d = data.load([0], prefix)
     m3=mod.MV3D()
     m3.tracking_init(tops[0].shape,fronts[0].shape,rgbs[0].shape)
 
-    load_indexs=[ 135, 0,  99, 23]
+    load_indexs=[0]
     for i in load_indexs:
-        rgbs, tops, fronts, gt_labels, gt_boxes3d = data.load([i])
+        rgbs, tops, fronts, gt_labels, gt_boxes3d = data.load([i], prefix)
         boxes3d,probs=m3.tacking(tops[0],fronts[0],rgbs[0])
 
         # for debugging: save image and show image.
@@ -43,7 +44,7 @@ from tracklets.evaluate_tracklets import tracklet_score
 if_score = True
 
 if __name__ == '__main__':
-    tracklet_pred_dir = os.path.join(cfg.DATA_SETS_DIR, 'predicted')
+    tracklet_pred_dir = cfg.PREDICTED_XML_DIR
 
     # generate tracklet file
     pred_file = pred_and_save(tracklet_pred_dir)
@@ -51,8 +52,8 @@ if __name__ == '__main__':
     if(if_score):
         # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
         #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.DATA_SETS_DIR, '2011_09_26', 'tracklet_labels.xml')
+        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, '2011_09_26', '2011_09_26_drive_0005_sync', 'tracklet_labels.xml')
         tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
-        print("scores are save under {%s} directory.".format(tracklet_pred_dir))
+        print("scores are save under {} directory.".format(tracklet_pred_dir))
 
     print("Completed")

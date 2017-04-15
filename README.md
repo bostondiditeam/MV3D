@@ -13,14 +13,95 @@
 
 # Workflow
 
+
 # Key Dependency
 - A Nvidia GPU card with computation capability > 3
 - CUDA
 - Python3.5
 - Tensorflow-GPU(version>1.0)
 
+# File Structure
+```
+├── data   <-- all data is stored here. (Introduced in detail below)
+│   ├── predicted  <-- after prediction, results will be saved here.
+│   ├── preprocessed   <-- MV3D net will take inputs from here(after data.py) 
+│   └── raw <-- raw data
+├── environment_cpu.yml  <-- install cpu version.
+├── README.md
+├── saved_model                 <--- model and weights saved here. 
+├── src        <-- MV3D net related source code 
+│   ├── config.py
+│   ├── data.py
+│   ├── didi_data
+│   ├── kitti_data
+│   ├── lidar_data_preprocess
+│   ├── make.sh
+│   ├── model.py
+│   ├── mv3d_net.py
+│   ├── net
+│   ├── play_demo.ipynb
+│   ├── __pycache__
+│   ├── tracking.py   <--- prediction after training. 
+│   ├── tracklets
+│   └── train.py    <--- training the whole network. 
+└── utils    <-- all related tools put here, like ros bag data into kitti format
+    └── bag_to_kitti  <--- Take lidar value from ROS bag and save it as bin files.
+```
 
-# How to run
+# Related data are organized in this way. (Under /data directory)
+```
+├── predicted <-- after prediction, results will be saved here.
+│   ├── didi <-- when didi dataset is used, the results will be put here
+│   └── kitti <-- When kitti dataset used for prediction, put the results here
+│       ├── iou_per_obj.csv   <-- What will be evaluated for this competition, IoU score
+│       ├── pr_per_iou.csv   <--precision and recall rate per iou, currently not be evaluated by didi's rule
+│       └── tracklet_labels_pred.xml  <-- Tracklet generated from prediction pipeline. 
+├── preprocessed  <-- Data will be fed into MV3D net (After processed by data.py)
+│   ├── didi <-- When didi dataset is processed, save it here
+│   └── kitti <-- When Kitti dataset is processed, save it here
+│       ├── gt_boxes3d <-- bounding box 3d coordinates.  
+│       │   └── 2011_09_26_0005_00000.npy <-- NOTED: this is different comparing to raw data orgnized under raw/kitti 
+│       │                                        directory, all preprocessed data will be save here, so it will follow
+│       │                                         date_driver_number.npy format, in other words, 2011_09_26_0005_00000
+│       │                                         .npy can saved here,  2011_09_30_0007_0001.npy can also be saved 
+│       │                                         here. While under /data/raw directory, it will strictly follow 
+│       │                                         original kitti format, as you can see in below structure. We design 
+│       │                                         this format mainly for easier shuffling during training. 
+│       ├── gt_box_plot
+│       │   └── 2011_09_26_0005_00000.png
+│       ├── gt_labels
+│       │   └── 2011_09_26_0005_00000.npy
+│       ├── lidar  
+│       │   └── 2011_09_26_0005_00000.npy
+│       ├── rgb   <-- image input
+│       │   └── 2011_09_26_0005_00000.png
+│       ├── top   <-- bird eye view features from lidar data. 
+│       │   └── 2011_09_26_0005_00000.npy
+│       └── top_image
+│           └── 2011_09_26_0005_00000.png
+└── raw  <-- this strictly follow KITTI raw data file format, while seperated into didi and kitti dataset. 
+    ├── didi <-- will be something similar to kitti raw data format below. 
+    └── kitti
+        └── 2011_09_26
+            ├── 2011_09_26_drive_0005_sync
+            │   ├── image_02
+            │   │   ├── data
+            │   │   │   └── 0000000000.png
+            │   │   └── timestamps.txt
+            │   ├── tracklet_labels.xml
+            │   └── velodyne_points
+            │       ├── data
+            │       │   └── 0000000000.bin
+            │       ├── timestamps_end.txt
+            │       ├── timestamps_start.txt
+            │       └── timestamps.txt
+            ├── calib_cam_to_cam.txt
+            ├── calib_imu_to_velo.txt
+            └── calib_velo_to_cam.txt
+
+```
+
+# Modification needed to run
 *After Tensorflow-GPU could work*
 If you are not using Nvidia K520 GPU, you need to change "arch=sm_30" to other value in src/net/lib/setup.py and src/lib/make.sh in order to compiler *.so file right. 
 Here is  short list for arch values for different architecture. 

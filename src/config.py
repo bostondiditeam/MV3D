@@ -17,6 +17,13 @@ import numpy as np
 from time import strftime, localtime
 from easydict import EasyDict as edict
 
+use_kitti_dataset = True
+
+if use_kitti_dataset:
+    dataset_name = 'kitti'
+else:
+    dataset_name = 'didi'
+
 __C = edict()
 # Consumers can get config by:
 #    import config as cfg
@@ -26,12 +33,19 @@ __C.TEST_KEY=11
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
-__C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data/kitti/dummy')
+__C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data')
+
+__C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', dataset_name)
+__C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', dataset_name)
+__C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', dataset_name)
+
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
-__C.DATA_SETS_TYPE='didi20170401'       #['didi20170401','kitti_raw_data']
+__C.DATA_SETS_TYPE='kitti'       #['didi','kitti']
 
-
+# print(cfg.RAW_DATA_SETS_DIR)
+# print(cfg.PREPROCESSED_DATA_SETS_DIR)
+# print(cfg.PREDICTED_XML_DIR)
 
 
 def _merge_a_into_b(a, b):

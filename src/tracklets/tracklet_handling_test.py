@@ -14,8 +14,8 @@ from data import obj_to_gt_boxes3d
 # load from tracklet.xml -> convert it into 3D bbox from data.py, then
 
 def test_case_first_frame():
-    tracklet_file = os.path.join(cfg.DATA_SETS_DIR, '2011_09_26/tracklet_labels.xml')
-    tracklet_file = './test/tracklet_labels_ori.xml'
+    tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, '2011_09_26', '2011_09_26_drive_0005_sync',
+                                 'tracklet_labels.xml')
     num_frames = 809
     objects = read_objects(tracklet_file, num_frames)
 

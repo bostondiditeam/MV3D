@@ -53,7 +53,6 @@ def  project_to_front_roi(rois3d):
     return rois
 
 class MV3D(object):
-
     def __init__(self):
 
         self.stride=8
@@ -91,9 +90,15 @@ class MV3D(object):
 
         #load_indexs=(np.random.rand(10)*153).astype(np.int)
         # load_indexs=[ 0,  99, 23, 135]
-        load_indexs=[ 0]
+        load_indexs=[i for i in range(100)]
+        load_indexs = [0]
+        load_index_length = len(load_indexs)
 
-        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs)
+        date = '2011_09_26'
+        driver = '0005'
+        prefix = date + '_' + driver
+
+        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs, prefix)
         top_images = data.getTopImages(load_indexs)
         # todo: support other class
 
@@ -147,15 +152,20 @@ class MV3D(object):
             top_shape=train_tops[0].shape
             top_feature_shape=data.getTopFeatureShape(top_shape,self.stride)
             top_view_anchors, inside_inds = make_anchors(self.bases, self.stride, top_shape[0:2],top_feature_shape[0:2])
+            # todo
             inside_inds = np.arange(0, len(top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
+            idx = 0
             for iter in range(max_iter):
                 epoch=1.0*iter
                 rate=0.01
 
 
                 ## generate train image -------------
-                idx = np.random.choice(num_frames)     #*10   #num_frames)  #0
+                # this should not be random.
+                # idx = np.random.choice(num_frames, 2)     #*10   #num_frames)  #0
+                idx = idx % load_index_length
+
                 batch_top_view    = np_reshape(train_tops[idx])
                 batch_front_view  = np_reshape(train_fronts[idx])
                 batch_rgb_images  = np_reshape(train_rgbs[idx])
@@ -209,7 +219,7 @@ class MV3D(object):
                     net['fuse_labels']:  batch_fuse_labels,
                     net['fuse_targets']: batch_fuse_targets,
                 }
-                #_, batch_top_cls_loss, batch_top_reg_loss = sess.run([solver_step, top_cls_loss, top_reg_loss],fd2)
+                _, batch_top_cls_loss, batch_top_reg_loss = sess.run([solver_step, top_cls_loss, top_reg_loss],fd2)
 
 
                 _, batch_top_cls_loss, batch_top_reg_loss, batch_fuse_cls_loss, batch_fuse_reg_loss = \
@@ -229,7 +239,7 @@ class MV3D(object):
 
                 #debug: ------------------------------------
                 ##debug gt generation
-                if 1 and iter%iter_debug==0:
+                if 0 and iter%iter_debug==0:
                     top_image=top_images[idx]
                     rgb       = train_rgbs[idx]
 
@@ -322,7 +332,7 @@ class MV3D(object):
                     img_rcnn_nms_2 = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
                     nud.imsave('img_rcnn_nms_2_{}'.format(idx), img_rcnn_nms_2)
 
-
+                idx += 1
 
 
     def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):
