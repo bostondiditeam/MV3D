@@ -365,10 +365,10 @@ if __name__ == '__main__':
 
     if 1:  ## rgb images --------------------
         os.makedirs(save_preprocess_dir + '/rgb',exist_ok=True)
-
+        count=0
         for n in frames_index:
             print('rgb images={}'.format(n))
-            rgb = dataset.rgb[n][0]
+            rgb = dataset.rgb[count][0]
             rgb =(rgb*255).astype(np.uint8)
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
             if(cfg.DATA_SETS_TYPE =='didi'):
@@ -383,6 +383,7 @@ if __name__ == '__main__':
             # todo fit it to didi dataset later.
             cv2.imwrite(save_preprocess_dir + '/rgb/'+date+'_'+drive+'_%05d.png'%n, rgb)
             # cv2.imwrite(save_preprocess_dir + '/rgb/rgb_%05d.png'%n,rgb)
+            count+=1
         print('rgb image save done\n')
 
 
@@ -393,7 +394,7 @@ if __name__ == '__main__':
 
         for n in frames_index:
             print('top view={}'.format(n))
-            lidar = dataset.velo[n]
+            lidar = dataset.velo[count]
             top, top_image = lidar_to_top(lidar)
             # rename it to something like 2011_09_26_0005_00000.npy for kitti dataset.
             # In didi, it will be like 2_1_1_1490991690046339536.npy (means didi dataset 2, car 1, bag 1,
@@ -410,19 +411,21 @@ if __name__ == '__main__':
     if 1:  ## boxes3d  --------------------
         os.makedirs(save_preprocess_dir + '/gt_boxes3d',exist_ok=True)
         os.makedirs(save_preprocess_dir + '/gt_labels',exist_ok=True)
+        count = 0
         for n in frames_index:
             print('boxes3d={}'.format(n))
-            objs = objects[n]
+            objs = objects[count]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
 
             np.save(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n,gt_boxes3d)
             np.save(save_preprocess_dir + '/gt_labels/'+date+'_'+drive+'_%05d.npy'%n,gt_labels)
-
+            count += 1
     if 1: #dump gt boxes
         os.makedirs(save_preprocess_dir + '/gt_box_plot', exist_ok=True)
+        count = 0
         for n in frames_index:
             print('rgb images={}'.format(n))
-            rgb = dataset.rgb[n][0]
+            rgb = dataset.rgb[count][0]
             rgb = (rgb * 255).astype(np.uint8)
             rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
             if (cfg.DATA_SETS_TYPE == 'didi'):
@@ -431,10 +434,11 @@ if __name__ == '__main__':
                 pass
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-            objs = objects[n]
+            objs = objects[count]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
             img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
             cv2.imwrite(save_preprocess_dir + '/gt_box_plot/'+date+'_'+drive+'_%05d.png'%n, img)
+            count += 1
         print('gt box image save done\n')
 
     ############# analysis ###########################
