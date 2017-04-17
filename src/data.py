@@ -1,13 +1,15 @@
 from kitti_data import pykitti
-from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
-from kitti_data.draw import *
+# from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
+# from kitti_data.draw import *
 from kitti_data.io import *
 import net.utility.draw as draw
 from net.processing.boxes3d import *
-import numpy
+from net.common import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+    TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
 import os
 import cv2
+import numpy
 
 
 # run functions --------------------------------------------------------------------------
@@ -350,22 +352,24 @@ if __name__ == '__main__':
     raw_dir = cfg.RAW_DATA_SETS_DIR
     date  = '2011_09_26'
     drive = '0005'
-    frames_index = range(154)
+    frames_index = [110]
 
     # The range argument is optional - default is None, which loads the whole dataset
     dataset = pykitti.raw(raw_dir, date, drive,frames_index) #, range(0, 50, 5))
+
+    # read objects
+    tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
+    objects = read_objects(tracklet_file, frames_index)
 
     # Load some data
     dataset.load_calib()         # Calibration data are accessible as named tuples
     # dataset.load_timestamps()    # Timestamps are parsed into datetime objects
     # dataset.load_oxts()          # OXTS packets are loaded as named tuples
     # dataset.load_gray()         # Left/right images are accessible as named tuples
-    dataset.load_rgb()          # Left/right images are accessible as named tuples
-    # dataset.load_left_rgb()
+    dataset.load_left_rgb()
     dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
 
     tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
-
     objects = read_objects(tracklet_file, frames_index)
 
     ############# convert   ###########################
