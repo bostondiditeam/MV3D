@@ -37,12 +37,12 @@ def read_objects(tracklet_file, frames_index):
 
 
             if cfg.DATA_SETS_TYPE == 'kitti':
-                pass
+                print('truncation filter disable')
                 # # determine if object is in the image; otherwise continue
                 # if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
                 #    continue
             elif cfg.DATA_SETS_TYPE == 'didi':
-                pass
+                print('truncation filter disable')
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
 

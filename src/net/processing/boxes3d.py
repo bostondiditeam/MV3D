@@ -1,7 +1,6 @@
 from net.common import *
 import math
 
-
 ##extension for 3d
 def top_to_lidar_coords(xx,yy):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1

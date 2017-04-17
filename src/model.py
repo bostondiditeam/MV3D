@@ -17,7 +17,6 @@ from config import cfg
 from net.processing.boxes import non_max_suppress
 
 
-dummy_data_dir='../data/kitti/dummy/'
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
 # "Multi-View 3D Object Detection Network for Autonomous Driving" - Xiaozhi Chen, CVPR 2017
@@ -77,17 +76,6 @@ class MV3D(object):
 
 
     def train(self, max_iter=100000,pre_trained=True):
-
-
-        #-----------------------
-        #check data
-        # if 0:
-        #     fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
-        #     draw_lidar(lidars[0], fig=fig)
-        #     draw_gt_boxes3d(gt_boxes3d[0], fig=fig)
-        #     mlab.show(1)
-        #     cv2.waitKey(1)
-
 
         #load_indexs=(np.random.rand(10)*153).astype(np.int)
         # load_indexs=[ 0,  99, 23, 135]
