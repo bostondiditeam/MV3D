@@ -1,12 +1,12 @@
-import random
-import numpy as np
-import tensorflow as tf
-import cv2
+# import random
+# import numpy as np
+# import tensorflow as tf
+# import cv2
 
-SEED = 202
-random.seed(SEED)
-np.random.seed(SEED)
-tf.set_random_seed(SEED)
+# SEED = 202
+# random.seed(SEED)
+# np.random.seed(SEED)
+# tf.set_random_seed(SEED)
 
 #### kitti dataset orijection from lidar to top, front and rgb ####
 

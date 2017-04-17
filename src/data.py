@@ -1,13 +1,15 @@
 from kitti_data import pykitti
-from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
-from kitti_data.draw import *
+# from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
+# from kitti_data.draw import *
 from kitti_data.io import *
 import net.utility.draw as draw
 from net.processing.boxes3d import *
-import numpy
+from net.common import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+    TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
 import os
 import cv2
+import numpy
 
 
 # run functions --------------------------------------------------------------------------
@@ -355,6 +357,10 @@ if __name__ == '__main__':
     # The range argument is optional - default is None, which loads the whole dataset
     dataset = pykitti.raw(raw_dir, date, drive,frames_index) #, range(0, 50, 5))
 
+    # read objects
+    tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
+    objects = read_objects(tracklet_file, frames_index)
+
     # Load some data
     dataset.load_calib()         # Calibration data are accessible as named tuples
     # dataset.load_timestamps()    # Timestamps are parsed into datetime objects
@@ -365,7 +371,6 @@ if __name__ == '__main__':
     dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
 
     tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
-
     objects = read_objects(tracklet_file, frames_index)
 
     ############# convert   ###########################
@@ -444,7 +449,7 @@ if __name__ == '__main__':
                 pass
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-            objs = objects[count]
+            objs = objects[n]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
             img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
             cv2.imwrite(save_preprocess_dir + '/gt_box_plot/'+date+'_'+drive+'_%05d.png'%n, img)
