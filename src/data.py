@@ -333,6 +333,16 @@ def getLidarDatas(indexs):
 #
 #     mlab.view(azimuth=180,elevation=None,distance=50,focalpoint=[ 12.0909996 , -1.04700089, -2.03249991])#2.0909996 , -1.04700089, -2.03249991
 
+
+# -----------------------
+# check data
+# if 0:
+#     fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
+#     draw_lidar(lidars[0], fig=fig)
+#     draw_gt_boxes3d(gt_boxes3d[0], fig=fig)
+#     mlab.show(1)
+#     cv2.waitKey(1)
+
 # main #################################################################33
 if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
@@ -340,8 +350,7 @@ if __name__ == '__main__':
     raw_dir = cfg.RAW_DATA_SETS_DIR
     date  = '2011_09_26'
     drive = '0005'
-    frames_index=[0,1,2, 3, 4, 5]
-    frames_index = [0,]
+    frames_index = range(154)
 
     # The range argument is optional - default is None, which loads the whole dataset
     dataset = pykitti.raw(raw_dir, date, drive,frames_index) #, range(0, 50, 5))
@@ -392,6 +401,7 @@ if __name__ == '__main__':
         os.makedirs(save_preprocess_dir + '/top',exist_ok=True)
         os.makedirs(save_preprocess_dir + '/top_image',exist_ok=True)
 
+        count=0
         for n in frames_index:
             print('top view={}'.format(n))
             lidar = dataset.velo[count]
@@ -402,7 +412,7 @@ if __name__ == '__main__':
             np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
             np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
             cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)
-            # cv2.imwrite(save_preprocess_dir + '/top_image/' top_image_%05d.png'%n,top_image)
+            count+=1
         print('top view save done\n')
 
 
