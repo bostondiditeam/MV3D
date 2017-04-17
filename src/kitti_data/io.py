@@ -31,7 +31,6 @@ def read_objects(tracklet_file, frames_index):
         object_in_frames_index = [i for i in frames_index if i in range(start_frame, end_frame)]
         object_in_tracklet_index=[i-start_frame for i in object_in_frames_index]
 
-        count=0
         for i in object_in_tracklet_index:
             translation = tracklet.trans[i]
             rotation = tracklet.rots[i]
@@ -43,9 +42,9 @@ def read_objects(tracklet_file, frames_index):
             if cfg.DATA_SETS_TYPE == 'kitti':
                 # print('truncation filter disable')
                 # determine if object is in the image; otherwise continue
-                # if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
-                #    continue
-                pass
+                if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
+                   continue
+                # pass
             elif cfg.DATA_SETS_TYPE == 'didi':
                 print('truncation filter disable')
             else:
@@ -79,7 +78,6 @@ def read_objects(tracklet_file, frames_index):
             else:
                 continue
 
-            objects[count].append(o)
-            count+=1
+            objects[frames_index.index(i+start_frame)].append(o)
 
     return objects
