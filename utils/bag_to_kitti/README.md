@@ -14,14 +14,15 @@ then you get same data format as KITTI raw data.
 
 
 # How to run the tools
-##For tool under ./lidar, change directory to ./lidar by cd ./lidar:
+## For tool under ./lidar, change directory to ./lidar by cd ./lidar:
 ### setup
 - ```catkin_make```
+- ```source ./devel/setup.zsh```
 - ```rosrun lidar lidar_node```
 - ```rosrun nodelet nodelet standalone velodyne_pointcloud/CloudNodelet```
 - ```rosbag play -l name-of-file.bag``` The "-l" keeps the bag file playing on repeat so that you can keep working on your algorithm without having to mess with the data playback.
 
-##For bag_to_kitti.py tool 
+## For bag_to_kitti.py tool 
 ```python -m sync_img_lidar_tracklet_tool.bag_to_kitti  -i /home/didi/didi_dataset/dataset_2/Data/1 -o ``` 
 ```/home/didi/didi_dataset/dataset_2/output -pc /home/didi/sync_img_lidar/output/```
 Read some reference from here [https://github.com/udacity/didi-competition/tree/master/tracklets]
