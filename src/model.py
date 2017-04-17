@@ -79,7 +79,7 @@ class MV3D(object):
 
         #load_indexs=(np.random.rand(10)*153).astype(np.int)
         # load_indexs=[ 0,  99, 23, 135]
-        load_indexs=range(0,100)
+        load_indexs=[110,111]
 
         date = '2011_09_26'
         driver = '0005'
@@ -152,8 +152,7 @@ class MV3D(object):
 
                 ## generate train image -------------
                 # this should not be random.
-                # idx = np.random.choice(num_frames, 2)     #*10   #num_frames)  #0
-                idx = idx % load_index_length
+                idx = iter % num_frames
 
                 batch_top_view    = np_reshape(train_tops[idx])
                 batch_front_view  = np_reshape(train_fronts[idx])
@@ -316,8 +315,6 @@ class MV3D(object):
 
                     img_rcnn_nms_2 = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
                     nud.imsave('%d_img_rcnn_nms_2'% load_indexs[idx], img_rcnn_nms_2)
-
-                idx += 1
 
 
     def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):

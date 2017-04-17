@@ -4,6 +4,7 @@ building blocks of network
 '''
 import tensorflow as tf
 from net.common import *
+import numpy as np
 
 
 
