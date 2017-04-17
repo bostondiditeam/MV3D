@@ -352,7 +352,7 @@ if __name__ == '__main__':
     raw_dir = cfg.RAW_DATA_SETS_DIR
     date  = '2011_09_26'
     drive = '0005'
-    frames_index = range(154)
+    frames_index = [110]
 
     # The range argument is optional - default is None, which loads the whole dataset
     dataset = pykitti.raw(raw_dir, date, drive,frames_index) #, range(0, 50, 5))
@@ -366,8 +366,7 @@ if __name__ == '__main__':
     # dataset.load_timestamps()    # Timestamps are parsed into datetime objects
     # dataset.load_oxts()          # OXTS packets are loaded as named tuples
     # dataset.load_gray()         # Left/right images are accessible as named tuples
-    dataset.load_rgb()          # Left/right images are accessible as named tuples
-    # dataset.load_left_rgb()
+    dataset.load_left_rgb()
     dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
 
     tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
@@ -449,7 +448,7 @@ if __name__ == '__main__':
                 pass
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-            objs = objects[n]
+            objs = objects[count]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
             img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
             cv2.imwrite(save_preprocess_dir + '/gt_box_plot/'+date+'_'+drive+'_%05d.png'%n, img)

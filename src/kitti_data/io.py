@@ -29,8 +29,10 @@ def read_objects(tracklet_file, frames_index):
         end_frame=tracklet.firstFrame+tracklet.nFrames
 
         object_in_frames_index = [i for i in frames_index if i in range(start_frame, end_frame)]
+        object_in_tracklet_index=[i-start_frame for i in object_in_frames_index]
 
-        for i in range(tracklet.nFrames):
+        count=0
+        for i in object_in_tracklet_index:
             translation = tracklet.trans[i]
             rotation = tracklet.rots[i]
             state = tracklet.states[i]
@@ -77,6 +79,7 @@ def read_objects(tracklet_file, frames_index):
             else:
                 continue
 
-            objects[object_in_frames_index[i]].append(o)
+            objects[count].append(o)
+            count+=1
 
     return objects
