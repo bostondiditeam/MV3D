@@ -74,6 +74,8 @@ def top_feature_net(input, anchors, inds_inside, num_bases):
 
 #------------------------------------------------------------------------------
 def rgb_feature_net(input):
+    if cfg.IMAGE_FUSION_DIABLE==True:
+        return None
 
     stride=1.
     #with tf.variable_scope('rgb-preprocess') as scope:
@@ -194,11 +196,19 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     front_features = front_feature_net(front_view)
     rgb_features = rgb_feature_net(rgb_images)
 
+    rgb_pool_heigth = None
+    rgb_pool_width = None
+    if cfg.IMAGE_FUSION_DIABLE==True:
+        rgb_pool_heigth=0
+        rgb_pool_width = 0
+    else:
+        rgb_pool_heigth=6
+        rgb_pool_width = 6
     fuse_scores, fuse_probs, fuse_deltas = \
         fusion_net(
             ([top_features, top_rois, 6, 6, 1. / stride],
              [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
-             [rgb_features, rgb_rois, 6, 6, 1. / stride],),
+             [rgb_features, rgb_rois, rgb_pool_heigth, rgb_pool_width, 1. / stride],),
             num_class, out_shape)
 
     fuse_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='fuse_label')

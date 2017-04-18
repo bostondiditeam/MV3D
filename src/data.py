@@ -415,7 +415,7 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
             objs = objects[count]
             gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-            top_image=draw_box3d_on_top(top_image,gt_boxes3d)
+            top_image=draw_box3d_on_top(top_image,gt_boxes3d,color=(0,0,80))
             np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
             np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
             cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)

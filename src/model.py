@@ -86,7 +86,7 @@ class MV3D(object):
         prefix = date + '_' + driver
 
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs, prefix)
-        top_images = data.getTopImages(load_indexs)
+        top_images = data.getTopImages(load_indexs,prefix)
         # todo: support other class
 
         train_gt_boxes3d=[train_gt_boxes3d[n][train_gt_labels[n] > 0] for n in range(len(load_indexs))]
@@ -120,10 +120,10 @@ class MV3D(object):
         self.log.write('-------------------------------------------------------------------------------------\n')
 
 
-        sess = tf.InteractiveSession()
+        sess = tf.Session()
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=0.2, max_to_keep=10)
         with sess.as_default():
-            if(pre_trained==True):
+            if pre_trained==True and not tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR)==None:
                 saver.restore(sess, tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
             else:
                 sess.run( tf.global_variables_initializer(), { blocks.IS_TRAIN_PHASE : True } )
@@ -170,7 +170,7 @@ class MV3D(object):
                     net['top_inside_inds']: inside_inds,
 
                     learning_rate:   rate,
-                    blocks.IS_TRAIN_PHASE:  False
+                    blocks.IS_TRAIN_PHASE:  True
                 }
                 batch_proposals, batch_proposal_scores, batch_top_features = \
                     sess.run([proposals, proposal_scores, top_features],fd1)
@@ -224,7 +224,7 @@ class MV3D(object):
 
                 #debug: ------------------------------------
                 ##debug gt generation
-                if 0 and iter%iter_debug==0:
+                if 1 and iter%iter_debug==0:
                     top_image=top_images[idx]
                     rgb       = train_rgbs[idx]
 
