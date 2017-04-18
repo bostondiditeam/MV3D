@@ -10,6 +10,7 @@ from config import cfg
 import os
 import cv2
 import numpy
+import glob
 
 
 # run functions --------------------------------------------------------------------------
@@ -345,17 +346,15 @@ def getLidarDatas(indexs):
 #     mlab.show(1)
 #     cv2.waitKey(1)
 
-# main #################################################################33
-if __name__ == '__main__':
-    print( '%s: calling main function ... ' % os.path.basename(__file__))
+def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
-    raw_dir = cfg.RAW_DATA_SETS_DIR
-    date  = '2011_09_26'
-    drive = '0005'
-    frames_index = [110]
+    if frames_index is None:
+        img_path = os.path.join(raw_dir, date, date+"_drive_" +  drive + "_sync", "image_02", "data")
+        nb_frames = len(glob.glob(img_path+"/*.png"))
+        frames_index = range(nb_frames)
 
     # The range argument is optional - default is None, which loads the whole dataset
-    dataset = pykitti.raw(raw_dir, date, drive,frames_index) #, range(0, 50, 5))
+    dataset = pykitti.raw(raw_dir, date, drive, frames_index) #, range(0, 50, 5))
 
     # read objects
     tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
@@ -481,7 +480,6 @@ if __name__ == '__main__':
             top_boxes = box3d_to_top_box(gt_boxes3d)
             draw_box3d_on_top(mean_image, gt_boxes3d,color=(255,255,255), thickness=1, darken=1)
 
-
             for i in range(len(top_boxes)):
                 x1,y1,x2,y2 = top_boxes[i]
                 w = math.fabs(x2-x1)
@@ -507,3 +505,23 @@ if __name__ == '__main__':
         cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
 
 
+# main #################################################################33
+if __name__ == '__main__':
+    print( '%s: calling main function ... ' % os.path.basename(__file__))
+    # if test a single_image
+    frames_index = [5, 110]
+    raw_dir = cfg.RAW_DATA_SETS_DIR
+
+    if len(frames_index) != 0:
+        date = "2011_09_26"
+        driver = "0005"
+        data_in_single_driver(raw_dir, date, driver, frames_index)
+    else:
+        dates  = ['2011_09_26']
+        drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019', '0036',
+                 '0057', '0084', '0009', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091', '0013', '0027', '0048',
+                 '0061', '0015', '0028', '0051', '0064']
+        # drivers = ['0048']
+        for date in dates:
+            for driver in drivers:
+                data_in_single_driver(raw_dir, date, driver)
