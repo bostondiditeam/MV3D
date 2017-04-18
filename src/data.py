@@ -412,6 +412,10 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
             # rename it to something like 2011_09_26_0005_00000.npy for kitti dataset.
             # In didi, it will be like 2_1_1_1490991690046339536.npy (means didi dataset 2, car 1, bag 1,
             # then timestamp)
+
+            objs = objects[count]
+            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+            top_image=draw_box3d_on_top(top_image,gt_boxes3d)
             np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
             np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
             cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)
