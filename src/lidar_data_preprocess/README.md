@@ -31,8 +31,11 @@ The Kiti dataset import prototype is based on s-nepal 's work on https://github.
 ## To specify lidar data source directory, lidar top view image saved directory, lidar front view image saved directory ... :
 
 Modify the following directory path in python_call_liblidar_test_ubuntu.py (or python_call_liblidar_test_osx.py)
+
 lidar_data_src_dir = "./raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
+
 top_image_dst_dir = "./preprocessed/kitti/top_image/"
+
 front_image_dst_dir = "./preprocessed/kitti/front_image/"
 
 ## Suggestions
