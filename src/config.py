@@ -17,12 +17,7 @@ import numpy as np
 from time import strftime, localtime
 from easydict import EasyDict as edict
 
-use_kitti_dataset = True
 
-if use_kitti_dataset:
-    dataset_name = 'kitti'
-else:
-    dataset_name = 'didi'
 
 __C = edict()
 # Consumers can get config by:
@@ -30,18 +25,21 @@ __C = edict()
 cfg = __C
 __C.TEST_KEY=11
 
+# dataset type
+__C.DATA_SETS_TYPE='kitti'       #['didi','kitti']
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
 __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data')
 
-__C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', dataset_name)
-__C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', dataset_name)
-__C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', dataset_name)
+__C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', __C.DATA_SETS_TYPE)
+__C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
+__C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_TYPE)
 
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
-__C.DATA_SETS_TYPE='kitti'       #['didi','kitti']
+
+__C.IMAGE_FUSION_DIABLE = False
 
 # print(cfg.RAW_DATA_SETS_DIR)
 # print(cfg.PREPROCESSED_DATA_SETS_DIR)
@@ -109,3 +107,8 @@ def cfg_from_list(cfg_list):
             'type {} does not match original type {}'.format(
             type(value), type(d[subkey]))
         d[subkey] = value
+
+if __name__ == '__main__':
+    print('__C.ROOT_DIR = '+__C.ROOT_DIR)
+    print('__C.DATA_SETS_DIR = '+__C.DATA_SETS_DIR)
+    print('__C.RAW_DATA_SETS_DIR = '+__C.RAW_DATA_SETS_DIR)

@@ -1,13 +1,16 @@
 from kitti_data import pykitti
-from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
-from kitti_data.draw import *
+# from kitti_data.pykitti.tracklet import parseXML, TRUNC_IN_IMAGE, TRUNC_TRUNCATED
+# from kitti_data.draw import *
 from kitti_data.io import *
 import net.utility.draw as draw
 from net.processing.boxes3d import *
-import numpy
+from net.common import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+    TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
 import os
 import cv2
+import numpy
+import glob
 
 
 # run functions --------------------------------------------------------------------------
@@ -333,30 +336,39 @@ def getLidarDatas(indexs):
 #
 #     mlab.view(azimuth=180,elevation=None,distance=50,focalpoint=[ 12.0909996 , -1.04700089, -2.03249991])#2.0909996 , -1.04700089, -2.03249991
 
-# main #################################################################33
-if __name__ == '__main__':
-    print( '%s: calling main function ... ' % os.path.basename(__file__))
 
-    raw_dir = cfg.RAW_DATA_SETS_DIR
-    date  = '2011_09_26'
-    drive = '0005'
-    frames_index=[0,1,2, 3, 4, 5]
-    frames_index = [0,]
+# -----------------------
+# check data
+# if 0:
+#     fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
+#     draw_lidar(lidars[0], fig=fig)
+#     draw_gt_boxes3d(gt_boxes3d[0], fig=fig)
+#     mlab.show(1)
+#     cv2.waitKey(1)
+
+def data_in_single_driver(raw_dir, date, drive, frames_index=None):
+
+    if frames_index is None:
+        img_path = os.path.join(raw_dir, date, date+"_drive_" +  drive + "_sync", "image_02", "data")
+        nb_frames = len(glob.glob(img_path+"/*.png"))
+        frames_index = range(nb_frames)
 
     # The range argument is optional - default is None, which loads the whole dataset
-    dataset = pykitti.raw(raw_dir, date, drive,frames_index) #, range(0, 50, 5))
+    dataset = pykitti.raw(raw_dir, date, drive, frames_index) #, range(0, 50, 5))
+
+    # read objects
+    tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
+    objects = read_objects(tracklet_file, frames_index)
 
     # Load some data
     dataset.load_calib()         # Calibration data are accessible as named tuples
     # dataset.load_timestamps()    # Timestamps are parsed into datetime objects
     # dataset.load_oxts()          # OXTS packets are loaded as named tuples
     # dataset.load_gray()         # Left/right images are accessible as named tuples
-    dataset.load_rgb()          # Left/right images are accessible as named tuples
-    # dataset.load_left_rgb()
+    dataset.load_left_rgb()
     dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
 
     tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
-
     objects = read_objects(tracklet_file, frames_index)
 
     ############# convert   ###########################
@@ -392,6 +404,7 @@ if __name__ == '__main__':
         os.makedirs(save_preprocess_dir + '/top',exist_ok=True)
         os.makedirs(save_preprocess_dir + '/top_image',exist_ok=True)
 
+        count=0
         for n in frames_index:
             print('top view={}'.format(n))
             lidar = dataset.velo[count]
@@ -399,10 +412,14 @@ if __name__ == '__main__':
             # rename it to something like 2011_09_26_0005_00000.npy for kitti dataset.
             # In didi, it will be like 2_1_1_1490991690046339536.npy (means didi dataset 2, car 1, bag 1,
             # then timestamp)
+
+            objs = objects[count]
+            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+            top_image=draw_box3d_on_top(top_image,gt_boxes3d,color=(0,0,80))
             np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
             np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
             cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)
-            # cv2.imwrite(save_preprocess_dir + '/top_image/' top_image_%05d.png'%n,top_image)
+            count+=1
         print('top view save done\n')
 
 
@@ -467,7 +484,6 @@ if __name__ == '__main__':
             top_boxes = box3d_to_top_box(gt_boxes3d)
             draw_box3d_on_top(mean_image, gt_boxes3d,color=(255,255,255), thickness=1, darken=1)
 
-
             for i in range(len(top_boxes)):
                 x1,y1,x2,y2 = top_boxes[i]
                 w = math.fabs(x2-x1)
@@ -493,3 +509,23 @@ if __name__ == '__main__':
         cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
 
 
+# main #################################################################33
+if __name__ == '__main__':
+    print( '%s: calling main function ... ' % os.path.basename(__file__))
+    # if test a single_image
+    frames_index = [5, 110]
+    raw_dir = cfg.RAW_DATA_SETS_DIR
+
+    if len(frames_index) != 0:
+        date = "2011_09_26"
+        driver = "0005"
+        data_in_single_driver(raw_dir, date, driver, frames_index)
+    else:
+        dates  = ['2011_09_26']
+        drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019', '0036',
+                 '0057', '0084', '0009', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091', '0013', '0027', '0048',
+                 '0061', '0015', '0028', '0051', '0064']
+        # drivers = ['0048']
+        for date in dates:
+            for driver in drivers:
+                data_in_single_driver(raw_dir, date, driver)

@@ -17,7 +17,6 @@ from config import cfg
 from net.processing.boxes import non_max_suppress
 
 
-dummy_data_dir='../data/kitti/dummy/'
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
 # "Multi-View 3D Object Detection Network for Autonomous Driving" - Xiaozhi Chen, CVPR 2017
@@ -78,27 +77,16 @@ class MV3D(object):
 
     def train(self, max_iter=100000,pre_trained=True):
 
-
-        #-----------------------
-        #check data
-        # if 0:
-        #     fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
-        #     draw_lidar(lidars[0], fig=fig)
-        #     draw_gt_boxes3d(gt_boxes3d[0], fig=fig)
-        #     mlab.show(1)
-        #     cv2.waitKey(1)
-
-
         #load_indexs=(np.random.rand(10)*153).astype(np.int)
         # load_indexs=[ 0,  99, 23, 135]
-        load_indexs=range(0,100)
+        load_indexs=[110,111]
 
         date = '2011_09_26'
         driver = '0005'
         prefix = date + '_' + driver
 
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(load_indexs, prefix)
-        top_images = data.getTopImages(load_indexs)
+        top_images = data.getTopImages(load_indexs,prefix)
         # todo: support other class
 
         train_gt_boxes3d=[train_gt_boxes3d[n][train_gt_labels[n] > 0] for n in range(len(load_indexs))]
@@ -132,10 +120,10 @@ class MV3D(object):
         self.log.write('-------------------------------------------------------------------------------------\n')
 
 
-        sess = tf.InteractiveSession()
+        sess = tf.Session()
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=0.2, max_to_keep=10)
         with sess.as_default():
-            if(pre_trained==True):
+            if pre_trained==True and not tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR)==None:
                 saver.restore(sess, tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
             else:
                 sess.run( tf.global_variables_initializer(), { blocks.IS_TRAIN_PHASE : True } )
@@ -164,8 +152,7 @@ class MV3D(object):
 
                 ## generate train image -------------
                 # this should not be random.
-                # idx = np.random.choice(num_frames, 2)     #*10   #num_frames)  #0
-                idx = idx % load_index_length
+                idx = iter % num_frames
 
                 batch_top_view    = np_reshape(train_tops[idx])
                 batch_front_view  = np_reshape(train_fronts[idx])
@@ -183,7 +170,7 @@ class MV3D(object):
                     net['top_inside_inds']: inside_inds,
 
                     learning_rate:   rate,
-                    blocks.IS_TRAIN_PHASE:  False
+                    blocks.IS_TRAIN_PHASE:  True
                 }
                 batch_proposals, batch_proposal_scores, batch_top_features = \
                     sess.run([proposals, proposal_scores, top_features],fd1)
@@ -237,7 +224,7 @@ class MV3D(object):
 
                 #debug: ------------------------------------
                 ##debug gt generation
-                if 0 and iter%iter_debug==0:
+                if 1 and iter%iter_debug==0:
                     top_image=top_images[idx]
                     rgb       = train_rgbs[idx]
 
@@ -328,8 +315,6 @@ class MV3D(object):
 
                     img_rcnn_nms_2 = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
                     nud.imsave('%d_img_rcnn_nms_2'% load_indexs[idx], img_rcnn_nms_2)
-
-                idx += 1
 
 
     def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):

@@ -17,6 +17,12 @@ utils/.vscode-upload.json
 utils/bag_to_kitti/lidar/cmake-build-debug
 utils/.vscode
 
-\.idea/
+bag_to_kitti/lidar/.idea
+.vscode-upload.json
+.vscode
+bag_to_kitti/lidar/cmake-build-debug
+*.npy
+*.png
 
+\.idea/
 \.project

@@ -430,6 +430,8 @@ def main():
             cap_front_rtk_interp_rec = cap_front_rtk_interp.to_dict(orient='records')
 
             # if corresponding velodyne directory exists, calibrate them and save it in output directory.
+            print("I'm here")
+            # lidar_indir = os.listdir(lidar_indir)
             if bs.name in os.listdir(lidar_indir):
                 lidar_dir = os.path.join(lidar_indir, bs.name, "velodyne_points")
                 # generate timestamp file.

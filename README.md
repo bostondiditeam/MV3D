@@ -13,7 +13,6 @@
 
 # Workflow
 
-
 # Key Dependency
 - A Nvidia GPU card with computation capability > 3
 - CUDA

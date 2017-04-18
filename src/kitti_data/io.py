@@ -14,7 +14,6 @@ def read_objects(tracklet_file, frames_index):
     tracklets = parseXML(tracklet_file)
     num = len(tracklets)    #number of obs
 
-    num = 1
     for n in range(num):
         tracklet = tracklets[n]
 
@@ -26,9 +25,13 @@ def read_objects(tracklet_file, frames_index):
             [ 0.0,  0.0,  0.0, 0.0,    h,     h,   h,   h]])
 
         # loop over all data in tracklet
-        t  = tracklet.firstFrame
+        start_frame  = tracklet.firstFrame
+        end_frame=tracklet.firstFrame+tracklet.nFrames
 
-        for i in frames_index:
+        object_in_frames_index = [i for i in frames_index if i in range(start_frame, end_frame)]
+        object_in_tracklet_index=[i-start_frame for i in object_in_frames_index]
+
+        for i in object_in_tracklet_index:
             translation = tracklet.trans[i]
             rotation = tracklet.rots[i]
             state = tracklet.states[i]
@@ -37,12 +40,13 @@ def read_objects(tracklet_file, frames_index):
 
 
             if cfg.DATA_SETS_TYPE == 'kitti':
-                pass
-                # # determine if object is in the image; otherwise continue
-                # if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
-                #    continue
+                # print('truncation filter disable')
+                # determine if object is in the image; otherwise continue
+                if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
+                   continue
+                # pass
             elif cfg.DATA_SETS_TYPE == 'didi':
-                pass
+                print('truncation filter disable')
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
 
@@ -71,8 +75,9 @@ def read_objects(tracklet_file, frames_index):
                 o.translation=translation
                 o.rotation=rotation
                 o.size=tracklet.size
+            else:
+                continue
 
-            objects[t].append(o)
-            t = t+1
+            objects[frames_index.index(i+start_frame)].append(o)
 
     return objects

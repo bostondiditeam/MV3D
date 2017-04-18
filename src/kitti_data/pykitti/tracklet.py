@@ -31,6 +31,7 @@ from xml.etree.ElementTree import ElementTree
 import numpy as np
 import itertools
 from warnings import warn
+from config import cfg
 
 STATE_UNSET = 0
 STATE_INTERP = 1
@@ -207,8 +208,12 @@ def parseXML(trackletFile):
                 elif poseInfo.tag == 'occlusion_kf':
                   newTrack.occs[frameIdx, 1] = occFromText[poseInfo.text]
                 elif poseInfo.tag == 'truncation':
-                    pass#todo: support truncation in tracklet.py
-                #   newTrack.truncs[frameIdx] = truncFromText[poseInfo.text]
+                    if cfg.DATA_SETS_TYPE == 'kitti':
+                      newTrack.truncs[frameIdx] = truncFromText[poseInfo.text]
+                    elif cfg.DATA_SETS_TYPE == 'didi':
+                      print('truncation filter disable')
+                    else:
+                      raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
                 elif poseInfo.tag == 'amt_occlusion':
                   newTrack.amtOccs[frameIdx,0] = float(poseInfo.text)
                   hasAmt = True

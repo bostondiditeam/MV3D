@@ -108,7 +108,7 @@ int save_lidar_pointcloud(const std::string path, pcl::PointCloud<pcl::PointXYZI
 
     for (int j = 0; j < cloud->points.size(); j++)
     {
-        float data[4]={(float)(cloud->points[j].x) ,(float)(cloud->points[j].x) ,(float)(cloud->points[j].x) ,
+        float data[4]={(float)(cloud->points[j].x) ,(float)(cloud->points[j].y) ,(float)(cloud->points[j].z) ,
                         (float)(cloud->points[j].intensity / 255.0)};
         myfile.write((char *)data,sizeof(data));
     }
