@@ -65,7 +65,7 @@ void updateCloudBoundary(CloudBoundaryT& cb, PointT& p)
 		cb.z_max = p.z;
 }
 
-int delay = 1000; // delay between successive LiDAR frames in ms
+int delay = 0; // delay between successive LiDAR frames in ms
 
 const float x_MIN = 0.0;
 const float x_MAX = 40.0;
@@ -118,9 +118,44 @@ int getR(float x, float y, float z, float delta_PHI)
 	// note "-" is used for conversion between LiDAR and Camera coordinate (LiDAR +Z = Camera -R)
 }
 
-
-int main()
+int main(int argc, char** argv)
 {
+	/*
+	std::cout<<argc<<std::endl;
+	std::cout<<argv[0]<<std::endl;
+	std::cout<<argv[1]<<std::endl;
+	std::cout<<argv[2]<<std::endl;
+	std::cout<<argv[3]<<std::endl;
+	std::cout<<argv[4]<<std::endl;
+	*/
+
+	string lidar_data_src_dir;
+	string top_image_dst_dir;
+	string front_image_dst_dir;
+	/*
+	lidar_data_src_dir = "../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/";
+	top_image_dst_dir = "../preprocessed/kitti/top_image";
+	front_image_dst_dir = "../preprocessed/kitti/front_image";
+	*/
+	
+	if (argc == 5)
+	{
+		lidar_data_src_dir = argv[1];
+		top_image_dst_dir = argv[2];
+		front_image_dst_dir = argv[3];
+		delay = atof(argv[4]);
+	}
+	else 
+	{
+		std::cout<<"Error!";
+		return 1;
+	}
+
+	std::cout << "Lidar data source directory: " <<lidar_data_src_dir <<std::endl;	// ../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/
+	std::cout << "Top image saved directory: "<<top_image_dst_dir <<std::endl;	// ../preprocessed/kitti/top_image
+	std::cout << "Front image saved directory: "<<front_image_dst_dir <<std::endl;	// ../preprocessed/kitti/front_image
+	std::cout << "Delay of showing image (ms): "<< delay<<std::endl;
+
 	pcl::PointCloud<PointT>::Ptr cloud (new pcl::PointCloud<PointT>);
 	pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("PCL Cloud"));
 	pcl::visualization::PointCloudColorHandlerGenericField<PointT> handler ("intensity"); 
@@ -131,12 +166,12 @@ int main()
 	FILE *fp;
 	int frame_counter = 0;
   
-	string velo_dir  = "2011_09_26_drive_0001_sync/velodyne_points/data/";
+	string velo_dir;//  = "2011_09_26_drive_0001_sync/velodyne_points/data/";
+	velo_dir = lidar_data_src_dir;
 
+	std::cerr << "=== LiDAR Preprocess Start ===\n", tt.tic ();
 	while (!viewer->wasStopped ())
 	{ 
-	    std::cerr << "=== LiDAR Data Load Start ===\n", tt.tic ();
-
 	    int32_t num = 1000000;
 	    float *data = (float*)malloc(num*sizeof(float));
 
@@ -150,11 +185,14 @@ int main()
 
 		string velo_path = velo_dir + velo_filename.str();
 
+		std::cout<<"Preprocess :"<< velo_path << std::endl;
+
 		const char* x = velo_path.c_str();
 		fp = fopen (x, "rb");
 
 		if(fp == NULL){
 			cout << x << " not found. Ensure that the file path is correct." << endl;
+			std::cerr << "=== LiDAR Preprocess Done "<< tt.toc ()<<" ms === \n"; 
 			return 0;
 		}
 
@@ -311,27 +349,36 @@ int main()
 		    px+=4; py+=4; pz+=4; pr+=4;
 		}
 
-		cv::imshow("Front View - Height feature image", FV_height_image) ;
-		cv::imshow("Front View - Distance feature image", FV_distance_image) ;
-		cv::imshow("Front View - Intensity feature image", FV_intensity_image) ;
-		//cv::waitKey(delay) ;
-		//cv::destroyWindow("Front View - Height feature image");
-		//cv::destroyWindow("Front View - Distance feature image");
-		//cv::destroyWindow("Front View - Intensity feature image");
+		if (delay !=0)
+		{
+			cv::imshow("Front View - Height feature image", FV_height_image) ;
+			cv::imshow("Front View - Distance feature image", FV_distance_image) ;
+			cv::imshow("Front View - Intensity feature image", FV_intensity_image) ;
+
+			cv::moveWindow("Front View - Height feature image", 0, 300);
+			cv::moveWindow("Front View - Distance feature image", 0, 250);
+			cv::moveWindow("Front View - Intensity feature image", 0, 500);
+
+			cv::waitKey(delay) ;
+			//cv::destroyWindow("Front View - Height feature image");
+			//cv::destroyWindow("Front View - Distance feature image");
+			//cv::destroyWindow("Front View - Intensity feature image");
+		}
 
 		//Save front view (FV) feature images
 		ostringstream str_frame_id;
 		str_frame_id << frame_counter ;
 
-		string full_str = "seg/front_image/front_height_image_";
-		full_str=full_str + str_frame_id.str() + ".png";
+		string full_str = "";
+		full_str= front_image_dst_dir + "front_height_image_"+ str_frame_id.str() + ".png";
 		imwrite(full_str.c_str(),FV_height_image);
-		full_str = "seg/front_image/front_distance_image_";
-		full_str=full_str + str_frame_id.str() + ".png";
+		std::cout<<full_str<<" saved."<<std::endl;
+		full_str=front_image_dst_dir + "front_distance_image_" + str_frame_id.str() + ".png";
 		imwrite(full_str.c_str(),FV_distance_image);
-		full_str = "seg/front_image/front_intensity_image_";
-		full_str=full_str + str_frame_id.str() + ".png";
+		std::cout<<full_str<<" saved."<<std::endl;
+		full_str=front_image_dst_dir + "front_intensity_image_" + str_frame_id.str() + ".png";
 		imwrite(full_str.c_str(),FV_intensity_image);
+		std::cout<<full_str<<" saved."<<std::endl;
 
 
 		//normalize density map & normalized for top view images to be saved
@@ -355,8 +402,8 @@ int main()
 				if ( intensity_map[X][Y] > intensity_MAX )
 					intensity_MAX = intensity_map[X][Y];
 			}
-		std::cout <<"density_min:"<<density_MIN <<", density_max:"<<density_MAX<<std::endl;
-		std::cout <<"intensity_min:"<<intensity_MIN <<", intensity_max:"<<intensity_MAX<<std::endl;
+//		std::cout <<"density_min:"<<density_MIN <<", density_max:"<<density_MAX<<std::endl;
+//		std::cout <<"intensity_min:"<<intensity_MIN <<", intensity_max:"<<intensity_MAX<<std::endl;
 
 		for (int Y=0; Y<Y_SIZE; Y++)
 			for (int X=0; X<X_SIZE; X++)
@@ -376,20 +423,26 @@ int main()
 
 
 		//Show image ---
-		cv::imshow("Top View - Density feature image", TV_density_image) ;
-		cv::imshow("Top View - Intensity feature image", TV_intensity_image) ;
-    	cv::waitKey(delay) ;
-		//cv::destroyWindow("Top View - Density feature image");
-    	//cv::destroyWindow("Top View - Intensity feature image");
+		if (delay !=0)
+		{
+			cv::imshow("Top View - Density feature image", TV_density_image) ;
+			cv::imshow("Top View - Intensity feature image", TV_intensity_image) ;
+
+			cv::moveWindow("Top View - Density feature image", 1000, 0);
+			cv::moveWindow("Top View - Intensity feature image", 1000, 250);
+
+	    	cv::waitKey(delay) ;
+			//cv::destroyWindow("Top View - Density feature image");
+	    	//cv::destroyWindow("Top View - Intensity feature image");
+    	}
 
 		////Save top view (TV) feature images		
-		full_str = "seg/top_image/top_intensity_image_";
-		full_str=full_str + str_frame_id.str() + ".png";
+		full_str=top_image_dst_dir + "top_intensity_image_" + str_frame_id.str() + ".png";
 		imwrite(full_str.c_str(),TV_intensity_image);
-
-		full_str = "seg/top_image/top_density_image_";
-		full_str=full_str + str_frame_id.str() + ".png";
+		std::cout<<full_str<<" saved."<<std::endl;
+		full_str=top_image_dst_dir + "top_density_image_" + str_frame_id.str() + ".png";
 		imwrite(full_str.c_str(),TV_density_image);		
+		std::cout<<full_str<<" saved."<<std::endl;
 
 
 		vector <float> height_MIN;
@@ -409,7 +462,7 @@ int main()
 						height_MAX[Z] = height_maps[X][Y][Z];
 				}
 			}
-			std::cout<<"Z:"<<Z<<", "<<"height_MIN[Z]:"<<height_MIN[Z]<<", height_MAX[Z]:"<<height_MAX[Z]<<std::endl;
+//			std::cout<<"Z:"<<Z<<", "<<"height_MIN[Z]:"<<height_MIN[Z]<<", height_MAX[Z]:"<<height_MAX[Z]<<std::endl;
 		}		
 			
 
@@ -424,15 +477,20 @@ int main()
 					TV_height_images[Z].at<cv::Vec3b> (Y,X)[2] =  (int)((height_maps[X][Y][Z]-height_MIN[Z])/height_MAX[Z] *255);
 				}
 			}
-			cv::imshow("Top View - Height feature image", TV_height_images[Z]) ;
-			cv::waitKey(delay/2) ;
-			//cv::destroyWindow("Top View - Height feature image");
+
+			if (delay !=0)
+			{
+				cv::imshow("Top View - Height feature image", TV_height_images[Z]) ;
+				cv::moveWindow("Top View - Height feature image", 1000, 500);
+				cv::waitKey(delay) ;
+				//cv::destroyWindow("Top View - Height feature image");
+			}
 
 			ostringstream str_height_layer_id;
 			str_height_layer_id << Z ;
-			full_str = "seg/top_image/top_height_image_";
-			full_str=full_str + str_frame_id.str() + "-" + str_height_layer_id.str() +".png";
+			full_str=top_image_dst_dir + "top_height_image_" + str_frame_id.str() + "-" + str_height_layer_id.str() +".png";
 			imwrite(full_str.c_str(),TV_height_images[Z]);
+			std::cout<<full_str<<" saved."<<std::endl;
 		}
 
 		//release image data
@@ -472,9 +530,9 @@ int main()
 		}
 		std::cout <<"MAX : "<<max_value<<"MIN : "<<min_value<<std::endl;
 */
-
-		std::cerr << "=== LiDAR Preprocess Done "<< tt.toc ()<<" ms === \n"; 
-
+		
+		
+/*
 		pcl::PointCloud<PointT>::Ptr cloud_demo (new pcl::PointCloud<PointT>);
 		viewer->addCoordinateSystem(1.0);
 		std::cout <<"Frame # : "<< frame_counter <<std::endl;
@@ -488,7 +546,7 @@ int main()
 		  	handler.setInputCloud (cloud_demo);
 			if (!viewer->updatePointCloud (cloud_demo, handler, "demo"))
 				viewer->addPointCloud (cloud_demo, handler, "demo");
-//			viewer->spinOnce (delay/2);
+//			viewer->spinOnce (delay);
 		}
 
 		std::cout <<"Show density map ... "<< std::endl;
@@ -505,6 +563,8 @@ int main()
 			viewer->addPointCloud (cloud_demo, handler, "demo");
 //		viewer->spinOnce (delay * 2);
 
+*/
+
 		//update frame counter
 		frame_counter++;		
 
@@ -514,6 +574,7 @@ int main()
 
 		delete data;
 	}
+	std::cerr << "=== LiDAR Preprocess Done "<< tt.toc ()<<" ms === \n"; 
 
 	return 0;  
 }
