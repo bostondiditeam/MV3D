@@ -38,7 +38,7 @@ top_image_dst_dir = "./preprocessed/kitti/top_image/"
 
 front_image_dst_dir = "./preprocessed/kitti/front_image/"
 
-### Note if those directories don't exist, create them first. Then the python script will save processed images in them.
+#### Note if those directories don't exist, create them first. Then the python script will save processed images in them.
 
 ## Suggestions
 
