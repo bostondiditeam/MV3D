@@ -348,184 +348,211 @@ def getLidarDatas(indexs):
 
 def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
+    if (cfg.DATA_SETS_TYPE == 'didi'):
+        img_path = os.path.join(raw_dir, date, drive, "image_02", "data")
+    elif cfg.DATA_SETS_TYPE == 'kitti':
+        img_path = os.path.join(raw_dir, date, date + "_drive_" + drive + "_sync", "image_02", "data")
+    else:
+        raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+
     if frames_index is None:
-        img_path = os.path.join(raw_dir, date, date+"_drive_" +  drive + "_sync", "image_02", "data")
         nb_frames = len(glob.glob(img_path+"/*.png"))
         frames_index = range(nb_frames)
 
-    # The range argument is optional - default is None, which loads the whole dataset
-    dataset = pykitti.raw(raw_dir, date, drive, frames_index) #, range(0, 50, 5))
+    # spilt large numbers of frame to small chunks
+    max_cache_frames_num = 50
+    if len(frames_index)>max_cache_frames_num:
+        frames_idx_chunks=[frames_index[i:i+max_cache_frames_num] for i in range(0,len(frames_index),max_cache_frames_num)]
+    else:
+        frames_idx_chunks=[frames_index]
 
-    # read objects
-    tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
-    objects = read_objects(tracklet_file, frames_index)
+    for frames_index in frames_idx_chunks:
+        # The range argument is optional - default is None, which loads the whole dataset
+        dataset = pykitti.raw(raw_dir, date, drive, frames_index) #, range(0, 50, 5))
 
-    # Load some data
-    dataset.load_calib()         # Calibration data are accessible as named tuples
-    # dataset.load_timestamps()    # Timestamps are parsed into datetime objects
-    # dataset.load_oxts()          # OXTS packets are loaded as named tuples
-    # dataset.load_gray()         # Left/right images are accessible as named tuples
-    dataset.load_left_rgb()
-    dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
+        # read objects
+        tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
+        objects = read_objects(tracklet_file, frames_index)
 
-    tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
-    objects = read_objects(tracklet_file, frames_index)
+        # Load some data
+        # dataset.load_calib()         # Calibration data are accessible as named tuples
+        # dataset.load_timestamps()    # Timestamps are parsed into datetime objects
+        # dataset.load_oxts()          # OXTS packets are loaded as named tuples
+        # dataset.load_gray()         # Left/right images are accessible as named tuples
+        dataset.load_left_rgb()
+        dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
 
-    ############# convert   ###########################
-    save_preprocess_dir = cfg.PREPROCESSED_DATA_SETS_DIR
-    os.makedirs(save_preprocess_dir, exist_ok=True)
+        tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
+        objects = read_objects(tracklet_file, frames_index)
 
-    if 1:  ## rgb images --------------------
-        os.makedirs(save_preprocess_dir + '/rgb',exist_ok=True)
-        count=0
-        for n in frames_index:
-            print('rgb images={}'.format(n))
-            rgb = dataset.rgb[count][0]
-            rgb =(rgb*255).astype(np.uint8)
-            rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-            if(cfg.DATA_SETS_TYPE =='didi'):
-                pass # rgb = rgb[500:-80, :, :]
-            elif cfg.DATA_SETS_TYPE =='kitti':
-                pass
-            else:
-                raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-            # rename it to something like 2011_09_26_0005_00000.png for kitti dataset.
-            # In didi, it will be like 2_1_1_1490991690046339536.bin.png (means didi dataset 2, car 1, bag 1,
-            # then timestamp)
-            # todo fit it to didi dataset later.
-            cv2.imwrite(save_preprocess_dir + '/rgb/'+date+'_'+drive+'_%05d.png'%n, rgb)
-            # cv2.imwrite(save_preprocess_dir + '/rgb/rgb_%05d.png'%n,rgb)
-            count+=1
-        print('rgb image save done\n')
+        ############# convert   ###########################
+        save_preprocess_dir = cfg.PREPROCESSED_DATA_SETS_DIR
+        os.makedirs(save_preprocess_dir, exist_ok=True)
 
-
-    if 1:  ## top view --------------------
-        os.makedirs(save_preprocess_dir + '/lidar',exist_ok=True)
-        os.makedirs(save_preprocess_dir + '/top',exist_ok=True)
-        os.makedirs(save_preprocess_dir + '/top_image',exist_ok=True)
-
-        count=0
-        for n in frames_index:
-            print('top view={}'.format(n))
-            lidar = dataset.velo[count]
-            top, top_image = lidar_to_top(lidar)
-            # rename it to something like 2011_09_26_0005_00000.npy for kitti dataset.
-            # In didi, it will be like 2_1_1_1490991690046339536.npy (means didi dataset 2, car 1, bag 1,
-            # then timestamp)
-
-            objs = objects[count]
-            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-            top_image=draw_box3d_on_top(top_image,gt_boxes3d,color=(0,0,80))
-            np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
-            np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
-            cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)
-            count+=1
-        print('top view save done\n')
+        if 1:  ## rgb images --------------------
+            os.makedirs(save_preprocess_dir + '/rgb',exist_ok=True)
+            count=0
+            for n in frames_index:
+                print('rgb images={}'.format(n))
+                rgb = dataset.rgb[count][0]
+                rgb =(rgb*255).astype(np.uint8)
+                rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+                if(cfg.DATA_SETS_TYPE =='didi'):
+                    pass # rgb = rgb[500:-80, :, :]
+                elif cfg.DATA_SETS_TYPE =='kitti':
+                    pass
+                else:
+                    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+                # rename it to something like 2011_09_26_0005_00000.png for kitti dataset.
+                # In didi, it will be like 2_1_1_1490991690046339536.bin.png (means didi dataset 2, car 1, bag 1,
+                # then timestamp)
+                # todo fit it to didi dataset later.
+                cv2.imwrite(save_preprocess_dir + '/rgb/'+date+'_'+drive+'_%05d.png'%n, rgb)
+                # cv2.imwrite(save_preprocess_dir + '/rgb/rgb_%05d.png'%n,rgb)
+                count+=1
+            print('rgb image save done\n')
 
 
+        if 1:  ## top view --------------------
+            os.makedirs(save_preprocess_dir + '/lidar',exist_ok=True)
+            os.makedirs(save_preprocess_dir + '/top',exist_ok=True)
+            os.makedirs(save_preprocess_dir + '/top_image',exist_ok=True)
+
+            count=0
+            for n in frames_index:
+                print('top view={}'.format(n))
+                lidar = dataset.velo[count]
+
+                # if (cfg.DATA_SETS_TYPE == 'didi'):
+                #     lidar[:,3]=lidar[:,3]-np.min(lidar[:,3])
+                #     lidar[:, 3]=lidar[:,3]/np.max(lidar[:,3])
+                # elif cfg.DATA_SETS_TYPE == 'kitti':
+                #     pass
+                # else:
+                #     raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+
+                top, top_image = lidar_to_top(lidar)
+                # rename it to something like 2011_09_26_0005_00000.npy for kitti dataset.
+                # In didi, it will be like 2_1_1_1490991690046339536.npy (means didi dataset 2, car 1, bag 1,
+                # then timestamp)
+
+                objs = objects[count]
+                gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+                top_image=draw_box3d_on_top(top_image,gt_boxes3d,color=(0,0,80))
+                np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
+                np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
+                cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)
+                count+=1
+            print('top view save done\n')
 
 
-    if 1:  ## boxes3d  --------------------
-        os.makedirs(save_preprocess_dir + '/gt_boxes3d',exist_ok=True)
-        os.makedirs(save_preprocess_dir + '/gt_labels',exist_ok=True)
-        count = 0
-        for n in frames_index:
-            print('boxes3d={}'.format(n))
-            objs = objects[count]
-            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-
-            np.save(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n,gt_boxes3d)
-            np.save(save_preprocess_dir + '/gt_labels/'+date+'_'+drive+'_%05d.npy'%n,gt_labels)
-            count += 1
-    if 1: #dump gt boxes
-        os.makedirs(save_preprocess_dir + '/gt_box_plot', exist_ok=True)
-        count = 0
-        for n in frames_index:
-            print('rgb images={}'.format(n))
-            rgb = dataset.rgb[count][0]
-            rgb = (rgb * 255).astype(np.uint8)
-            rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-            if (cfg.DATA_SETS_TYPE == 'didi'):
-                pass  # rgb = rgb[500:-80, :, :]
-            elif cfg.DATA_SETS_TYPE == 'kitti':
-                pass
-            else:
-                raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-            objs = objects[count]
-            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-            img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
-            cv2.imwrite(save_preprocess_dir + '/gt_box_plot/'+date+'_'+drive+'_%05d.png'%n, img)
-            count += 1
-        print('gt box image save done\n')
-
-    ############# analysis ###########################
-    if 0: ## make mean
-        mean_image = np.zeros((400,400),dtype=np.float32)
-        frames_index=20
-        for n in frames_index:
-            print(n)
-            top_image = cv2.imread(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.npy'%n,0)
-            mean_image += top_image.astype(np.float32)
-
-        mean_image = mean_image / len(frames_index)
-        cv2.imwrite(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',mean_image)
 
 
-    if 0: ## gt_3dboxes distribution ... location and box, height
-        depths =[]
-        aspects=[]
-        scales =[]
-        mean_image = cv2.imread(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',0)
+        if 1:  ## boxes3d  --------------------
+            os.makedirs(save_preprocess_dir + '/gt_boxes3d',exist_ok=True)
+            os.makedirs(save_preprocess_dir + '/gt_labels',exist_ok=True)
+            count = 0
+            for n in frames_index:
+                print('boxes3d={}'.format(n))
+                objs = objects[count]
+                gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
 
-        for n in frames_index:
-            print(n)
-            gt_boxes3d = np.load(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n)
+                np.save(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n,gt_boxes3d)
+                np.save(save_preprocess_dir + '/gt_labels/'+date+'_'+drive+'_%05d.npy'%n,gt_labels)
+                count += 1
+        if 1: #dump gt boxes
+            os.makedirs(save_preprocess_dir + '/gt_box_plot', exist_ok=True)
+            count = 0
+            for n in frames_index:
+                print('rgb images={}'.format(n))
+                rgb = dataset.rgb[count][0]
+                rgb = (rgb * 255).astype(np.uint8)
+                rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+                if (cfg.DATA_SETS_TYPE == 'didi'):
+                    pass  # rgb = rgb[500:-80, :, :]
+                elif cfg.DATA_SETS_TYPE == 'kitti':
+                    pass
+                else:
+                    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+                objs = objects[count]
+                gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+                img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
+                cv2.imwrite(save_preprocess_dir + '/gt_box_plot/'+date+'_'+drive+'_%05d.png'%n, img)
+                count += 1
+            print('gt box image save done\n')
 
-            top_boxes = box3d_to_top_box(gt_boxes3d)
-            draw_box3d_on_top(mean_image, gt_boxes3d,color=(255,255,255), thickness=1, darken=1)
+        ############# analysis ###########################
+        if 0: ## make mean
+            mean_image = np.zeros((400,400),dtype=np.float32)
+            frames_index=20
+            for n in frames_index:
+                print(n)
+                top_image = cv2.imread(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.npy'%n,0)
+                mean_image += top_image.astype(np.float32)
 
-            for i in range(len(top_boxes)):
-                x1,y1,x2,y2 = top_boxes[i]
-                w = math.fabs(x2-x1)
-                h = math.fabs(y2-y1)
-                area = w*h
-                s = area**0.5
-                scales.append(s)
+            mean_image = mean_image / len(frames_index)
+            cv2.imwrite(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',mean_image)
 
-                a = w/h
-                aspects.append(a)
 
-                box3d = gt_boxes3d[i]
-                d = np.sum(box3d[0:4,2])/4 -  np.sum(box3d[4:8,2])/4
-                depths.append(d)
+        if 0: ## gt_3dboxes distribution ... location and box, height
+            depths =[]
+            aspects=[]
+            scales =[]
+            mean_image = cv2.imread(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',0)
 
-        depths  = np.array(depths)
-        aspects = np.array(aspects)
-        scales  = np.array(scales)
+            for n in frames_index:
+                print(n)
+                gt_boxes3d = np.load(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n)
 
-        numpy.savetxt(save_preprocess_dir + '/depths'+date+'_'+drive+'.txt',depths)
-        numpy.savetxt(save_preprocess_dir + '/aspects'+date+'_'+drive+'.txt',aspects)
-        numpy.savetxt(save_preprocess_dir + '/scales'+date+'_'+drive+'.txt',scales)
-        cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
+                top_boxes = box3d_to_top_box(gt_boxes3d)
+                draw_box3d_on_top(mean_image, gt_boxes3d,color=(255,255,255), thickness=1, darken=1)
+
+                for i in range(len(top_boxes)):
+                    x1,y1,x2,y2 = top_boxes[i]
+                    w = math.fabs(x2-x1)
+                    h = math.fabs(y2-y1)
+                    area = w*h
+                    s = area**0.5
+                    scales.append(s)
+
+                    a = w/h
+                    aspects.append(a)
+
+                    box3d = gt_boxes3d[i]
+                    d = np.sum(box3d[0:4,2])/4 -  np.sum(box3d[4:8,2])/4
+                    depths.append(d)
+
+            depths  = np.array(depths)
+            aspects = np.array(aspects)
+            scales  = np.array(scales)
+
+            numpy.savetxt(save_preprocess_dir + '/depths'+date+'_'+drive+'.txt',depths)
+            numpy.savetxt(save_preprocess_dir + '/aspects'+date+'_'+drive+'.txt',aspects)
+            numpy.savetxt(save_preprocess_dir + '/scales'+date+'_'+drive+'.txt',scales)
+            cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
 
 
 # main #################################################################33
 if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    # if test a single_image
-    frames_index = [5, 110]
-    raw_dir = cfg.RAW_DATA_SETS_DIR
-
-    if len(frames_index) != 0:
-        date = "2011_09_26"
-        driver = "0005"
-        data_in_single_driver(raw_dir, date, driver, frames_index)
+    if (cfg.DATA_SETS_TYPE == 'didi'):
+        dates=['2']
+        drivers=['3_f','11_f','12_f','13','14_f','17']
+        frames_index = None
+    elif cfg.DATA_SETS_TYPE == 'kitti':
+        dates = ['2011_09_26']
+        drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019',
+                   '0036',
+                   '0057', '0084', '0009', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091',
+                   '0013', '0027', '0048',
+                   '0061', '0015', '0028', '0051', '0064']
+        drivers=['0005']
+        frames_index=[0,5,8,12,16,20,50]
     else:
-        dates  = ['2011_09_26']
-        drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019', '0036',
-                 '0057', '0084', '0009', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091', '0013', '0027', '0048',
-                 '0061', '0015', '0028', '0051', '0064']
-        # drivers = ['0048']
-        for date in dates:
-            for driver in drivers:
-                data_in_single_driver(raw_dir, date, driver)
+        raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+
+    for date in dates:
+        for driver in drivers:
+            data_in_single_driver(cfg.RAW_DATA_SETS_DIR, date, driver, frames_index)
+
+
