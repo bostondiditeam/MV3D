@@ -1,25 +1,33 @@
-# import random
-# import numpy as np
-# import tensorflow as tf
-# import cv2
-
-# SEED = 202
-# random.seed(SEED)
-# np.random.seed(SEED)
-# tf.set_random_seed(SEED)
+from config import cfg
 
 #### kitti dataset orijection from lidar to top, front and rgb ####
 
-TOP_Y_MIN=-20  #40
-TOP_Y_MAX=+20
-TOP_X_MIN=0
-TOP_X_MAX=40   #70.4
-TOP_Z_MIN=-2.0    ###<todo> determine the correct values!
-TOP_Z_MAX= 0.4
 
-TOP_X_DIVISION=0.1  #0.1
-TOP_Y_DIVISION=0.1
-TOP_Z_DIVISION=0.4
+
+if (cfg.DATA_SETS_TYPE == 'didi'):
+    TOP_Y_MIN = -20
+    TOP_Y_MAX = +20
+    TOP_X_MIN = -20
+    TOP_X_MAX = 20
+    TOP_Z_MIN = -2.0
+    TOP_Z_MAX = 0.4
+
+    TOP_X_DIVISION = 0.1
+    TOP_Y_DIVISION = 0.1
+    TOP_Z_DIVISION = 0.4
+elif cfg.DATA_SETS_TYPE == 'kitti':
+    TOP_Y_MIN = -20
+    TOP_Y_MAX = +20
+    TOP_X_MIN = 0
+    TOP_X_MAX = 40
+    TOP_Z_MIN = -0.4
+    TOP_Z_MAX = 2.0
+
+    TOP_X_DIVISION = 0.1
+    TOP_Y_DIVISION = 0.1
+    TOP_Z_DIVISION = 0.4
+else:
+    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 
 
 #rgb camera
