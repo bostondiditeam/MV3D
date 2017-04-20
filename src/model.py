@@ -93,15 +93,17 @@ class MV3D(object):
         return load_indexs
 
 
-    def train(self, max_iter=100000, pre_trained=True, dataset_dir=None, dates=None, drivers=None, file_names_list=None):
+    def train(self, max_iter=100000, pre_trained=True, dataset_dir=None, dates=None, drivers=None, frames_index=None):
         # if load indexes has no contents, it will be read all contents in a driver
         # batch size is how many frames are loaded into the memory, generator is not suitable, need to be destroyed
         # after.
         num_cache_frame =30
         data_seg = cfg.PREPROCESSED_DATA_SETS_DIR
 
-        if file_names_list is None:
-            file_names_list = self.get_all_load_index(data_seg, dates, drivers)
+        file_names_list = self.get_all_load_index(data_seg, dates, drivers)
+        if frames_index!=None:
+            file_names_list=[file_names_list[i] for i in frames_index]
+
         # test if all names are there, if not skip this batch.
         shuffled_train_files = shuffle(file_names_list, random_state=1)
         # load_indexs=[110,111]

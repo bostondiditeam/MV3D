@@ -17,4 +17,4 @@ load_indexs = None
 #
 m3=mod.MV3D()
 m3.train(max_iter=10000, pre_trained=True, dataset_dir=dataset_dir, dates=dates, drivers=drivers,
-         load_indexs=load_indexs)
+         frames_index =load_indexs)
