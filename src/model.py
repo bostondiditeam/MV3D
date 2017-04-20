@@ -76,8 +76,6 @@ class MV3D(object):
     def proposal(self):
         pass
 
-    def pretrain(self):
-        pass
 
     # def train_size
 

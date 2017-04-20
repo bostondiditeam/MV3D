@@ -19,10 +19,13 @@ def pred_and_save(tracklet_pred_dir, prefix):
     m3=mod.MV3D()
     m3.tracking_init(tops[0].shape,fronts[0].shape,rgbs[0].shape)
 
-    load_indexs=[0]
+    load_indexs=[0,1,2]
     for i in load_indexs:
         rgbs, tops, fronts, gt_labels, gt_boxes3d = data.load([i], prefix)
+        t1=time.time()
         boxes3d,probs=m3.tacking(tops[0],fronts[0],rgbs[0])
+        t2=time.time()
+        print('time= '+ str(t2-t1))
 
         # for debugging: save image and show image.
         file_name='tacking_test_img_{}'.format(i)

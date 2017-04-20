@@ -168,7 +168,7 @@ if 1:
 
     from show_lidar import *
 
-    lidars= utils.load_velo_scans(['15_1490991819171413890.bin'])
+    lidars= utils.load_velo_scans(['kitti_005_0000000000.bin'])
     lidar=lidars[0]
     intensity_max=np.max(lidars[0][:,3])
     fig = mlab.figure(figure=None, bgcolor=(0, 0, 0), fgcolor=None, engine=None, size=(500, 500))
