@@ -30,7 +30,7 @@ Setup ROS workspace.
 mkdir -p shapes/src
 cd shapes
 catkin_make
-source devel.setup.bash
+source devel/setup.bash
 cd src
 ```
 
