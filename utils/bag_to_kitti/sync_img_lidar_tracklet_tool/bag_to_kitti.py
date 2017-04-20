@@ -434,9 +434,14 @@ def main():
             # lidar_indir = os.listdir(lidar_indir)
             if bs.name in os.listdir(lidar_indir):
                 lidar_dir = os.path.join(lidar_indir, bs.name, "velodyne_points")
+                lidar_dir = os.path.join(lidar_indir, bs.name)
+                # print("bag name is: ", bs.name)
+                # print("lidar_dir is here: ", lidar_dir)
+                # print("output file name is here: ", velodyne_dir)
                 # generate timestamp file.
-                print("go into if")
+
                 txt_file = glob.glob(lidar_dir + "/*.txt")
+                # print("txt_files are here: ", txt_file)
                 lidar_maps = []
                 for file_name in txt_file:
                     with open(file_name) as f:
@@ -447,21 +452,28 @@ def main():
                         lidar_maps.append((a, bin_name))
                 lidar_frame = pd.DataFrame(lidar_maps, columns=lidar_cols)
                 lidar_frame = lidar_frame.sort_values(by=lidar_cols[0])
-                lidar_frame.to_csv(lidar_outdir + '/../timestamp.csv', index=False)
+
+                lidar_frame_csv = lidar_frame.copy()
+                # print(list(lidar_frame_csv))
+                lidar_frame_csv['timestamp'] = lidar_frame_csv.timestamp.map(lambda x: '{:.0f}'.format(x))
+                lidar_frame_csv.to_csv(lidar_outdir + '/../timestamp.csv', index=False)
                 # compare the timestamp and copy and rename bin file here.
                 # lidar_interp is a dataframe.
+
                 lidar_interp = interpolate_to_camera(camera_index_df, lidar_frame, filter_cols=lidar_cols)
-                # print("lidar interp type is: ", type(lidar_interp))
-                # change filename to number, use round.
+
                 lidar_interp['filename'] = lidar_interp['filename'].round().astype(int)
                 lidar_interp = lidar_interp.astype(object)
-                # print(lidar_interp)
+
+                lidar_interp_csv = lidar_interp.copy()
+                lidar_interp_csv['timestamp'] = lidar_interp_csv.timestamp.map(lambda x: str(x))
+                lidar_interp_csv.to_csv(lidar_outdir + '/../map.csv', index=False)
+
+
                 for index, row in lidar_interp.iterrows():
-                    # print(str(row['timestamp']), row['filename'])
-                    # for every row, copy from original to output.
                     source_lidar_file_path = os.path.join(lidar_dir, str(row['filename'])+'.bin')
-                    # print("lidar input here: ", source_lidar_file_path)
                     dest_lidar_file_path = os.path.join(lidar_outdir, str(row['timestamp'])+'.bin')
+
                     # print("lidar outout here: ", dest_lidar_file_path)
                     shutil.copy(source_lidar_file_path, dest_lidar_file_path)
 
@@ -531,7 +543,6 @@ def main():
         else:
             print('Warning: No camera image times were found. '
                   'Skipping sensor interpolation and Tracklet generation.')
-
 
 if __name__ == '__main__':
     main()

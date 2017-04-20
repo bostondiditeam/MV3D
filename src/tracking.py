@@ -11,11 +11,10 @@ import time
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
 
-def pred_and_save(tracklet_pred_dir):
+def pred_and_save(tracklet_pred_dir, prefix):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
 
-    prefix = "2011_09_26_0005"
     rgbs, tops, fronts, gt_labels, gt_boxes3d = data.load([0], prefix)
     m3=mod.MV3D()
     m3.tracking_init(tops[0].shape,fronts[0].shape,rgbs[0].shape)
@@ -48,8 +47,9 @@ if_score = True
 if __name__ == '__main__':
     tracklet_pred_dir = cfg.PREDICTED_XML_DIR
 
+    prefix = "2011_09_26_0005"
     # generate tracklet file
-    pred_file = pred_and_save(tracklet_pred_dir)
+    pred_file = pred_and_save(tracklet_pred_dir, prefix)
 
     if(if_score):
         # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to

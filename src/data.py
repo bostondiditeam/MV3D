@@ -214,19 +214,15 @@ def lidar_to_top_old(lidar):
 
     return top, top_image
 
-
-def load(indexs, prefix):
-
+def load(file_names):
     # fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
-
     # data_dir=cfg.DATA_SETS_DIR
     data_seg = cfg.PREPROCESSED_DATA_SETS_DIR
-
-    train_rgbs=[cv2.imread(os.path.join(data_seg,'rgb', prefix + '_%05d.png' % n),1) for n in indexs]
-    train_tops=[np.load(os.path.join(data_seg,'top', prefix+'_%05d.npy' % n)) for n in indexs]
-    train_fronts=[np.zeros((1, 1), dtype=np.float32) for n in indexs]
-    train_gt_labels=[np.load(os.path.join(data_seg,'gt_labels', prefix+'_%05d.npy' % n)) for n in indexs]
-    train_gt_boxes3d=[np.load(os.path.join(data_seg, 'gt_boxes3d', prefix+'_%05d.npy' % n)) for n in indexs]
+    train_rgbs=[cv2.imread(os.path.join(data_seg,'rgb', file + '.png'),1) for file in file_names]
+    train_tops=[np.load(os.path.join(data_seg,'top', file + '.npy')) for file in file_names]
+    train_fronts=[np.zeros((1, 1), dtype=np.float32) for file in file_names]
+    train_gt_labels=[np.load(os.path.join(data_seg,'gt_labels', file + '.npy')) for file in file_names]
+    train_gt_boxes3d=[np.load(os.path.join(data_seg, 'gt_boxes3d', file + '.npy')) for file in file_names]
 
     return train_rgbs,train_tops,train_fronts,train_gt_labels,train_gt_boxes3d
 
