@@ -266,7 +266,11 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
         # read objects
         tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
-        objects = read_objects(tracklet_file, frames_index)
+        if os.path.isfile(tracklet_file):
+            objects = read_objects(tracklet_file, frames_index)
+        else:
+            objects=None
+            print('Skip read tracklet_labels file : Not found it')
 
         # Load some data
         # dataset.load_calib()         # Calibration data are accessible as named tuples
@@ -276,8 +280,6 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         dataset.load_left_rgb()
         dataset.load_velo()          # Each scan is a Nx4 array of [x,y,z,reflectance]
 
-        tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
-        objects = read_objects(tracklet_file, frames_index)
 
         ############# convert   ###########################
         save_preprocess_dir = cfg.PREPROCESSED_DATA_SETS_DIR
@@ -317,22 +319,17 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
                 print('top view={}'.format(n))
                 lidar = dataset.velo[count]
 
-                # if (cfg.DATA_SETS_TYPE == 'didi'):
-                #     lidar[:,3]=lidar[:,3]-np.min(lidar[:,3])
-                #     lidar[:, 3]=lidar[:,3]/np.max(lidar[:,3])
-                # elif cfg.DATA_SETS_TYPE == 'kitti':
-                #     pass
-                # else:
-                #     raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-
                 top, top_image = lidar_to_top(lidar)
                 # rename it to something like 2011_09_26_0005_00000.npy for kitti dataset.
                 # In didi, it will be like 2_1_1_1490991690046339536.npy (means didi dataset 2, car 1, bag 1,
                 # then timestamp)
 
-                objs = objects[count]
-                gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-                top_image=draw_box3d_on_top(top_image,gt_boxes3d,color=(0,0,80))
+                # draw bbox on top image
+                if objects!=None:
+                    objs = objects[count]
+                    gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+                    top_image=draw_box3d_on_top(top_image,gt_boxes3d,color=(0,0,80))
+
                 np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
                 np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
                 cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)
@@ -342,7 +339,7 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
 
 
-        if 1:  ## boxes3d  --------------------
+        if 1 and objects!=None:  ## boxes3d  --------------------
             os.makedirs(save_preprocess_dir + '/gt_boxes3d',exist_ok=True)
             os.makedirs(save_preprocess_dir + '/gt_labels',exist_ok=True)
             count = 0
@@ -354,7 +351,8 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
                 np.save(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n,gt_boxes3d)
                 np.save(save_preprocess_dir + '/gt_labels/'+date+'_'+drive+'_%05d.npy'%n,gt_labels)
                 count += 1
-        if 1: #dump gt boxes
+
+        if 0 and objects!= None: #dump gt boxes
             os.makedirs(save_preprocess_dir + '/gt_box_plot', exist_ok=True)
             count = 0
             for n in frames_index:
@@ -376,63 +374,74 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
             print('gt box image save done\n')
 
         ############# analysis ###########################
-        if 0: ## make mean
-            mean_image = np.zeros((400,400),dtype=np.float32)
-            frames_index=20
-            for n in frames_index:
-                print(n)
-                top_image = cv2.imread(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.npy'%n,0)
-                mean_image += top_image.astype(np.float32)
+        # if 0: ## make mean
+        #     mean_image = np.zeros((400,400),dtype=np.float32)
+        #     frames_index=20
+        #     for n in frames_index:
+        #         print(n)
+        #         top_image = cv2.imread(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.npy'%n,0)
+        #         mean_image += top_image.astype(np.float32)
+        #
+        #     mean_image = mean_image / len(frames_index)
+        #     cv2.imwrite(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',mean_image)
+        #
+        #
+        # if 0: ## gt_3dboxes distribution ... location and box, height
+        #     depths =[]
+        #     aspects=[]
+        #     scales =[]
+        #     mean_image = cv2.imread(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',0)
+        #
+        #     for n in frames_index:
+        #         print(n)
+        #         gt_boxes3d = np.load(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n)
+        #
+        #         top_boxes = box3d_to_top_box(gt_boxes3d)
+        #         draw_box3d_on_top(mean_image, gt_boxes3d,color=(255,255,255), thickness=1, darken=1)
+        #
+        #         for i in range(len(top_boxes)):
+        #             x1,y1,x2,y2 = top_boxes[i]
+        #             w = math.fabs(x2-x1)
+        #             h = math.fabs(y2-y1)
+        #             area = w*h
+        #             s = area**0.5
+        #             scales.append(s)
+        #
+        #             a = w/h
+        #             aspects.append(a)
+        #
+        #             box3d = gt_boxes3d[i]
+        #             d = np.sum(box3d[0:4,2])/4 -  np.sum(box3d[4:8,2])/4
+        #             depths.append(d)
+        #
+        #     depths  = np.array(depths)
+        #     aspects = np.array(aspects)
+        #     scales  = np.array(scales)
+        #
+        #     numpy.savetxt(save_preprocess_dir + '/depths'+date+'_'+drive+'.txt',depths)
+        #     numpy.savetxt(save_preprocess_dir + '/aspects'+date+'_'+drive+'.txt',aspects)
+        #     numpy.savetxt(save_preprocess_dir + '/scales'+date+'_'+drive+'.txt',scales)
+        #     cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
 
-            mean_image = mean_image / len(frames_index)
-            cv2.imwrite(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',mean_image)
+def preproces(dates=None, drivers=None, frames_index=None):
 
-
-        if 0: ## gt_3dboxes distribution ... location and box, height
-            depths =[]
-            aspects=[]
-            scales =[]
-            mean_image = cv2.imread(save_preprocess_dir + '/top_image/top_mean_image'+date+'_'+drive+'.png',0)
-
-            for n in frames_index:
-                print(n)
-                gt_boxes3d = np.load(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n)
-
-                top_boxes = box3d_to_top_box(gt_boxes3d)
-                draw_box3d_on_top(mean_image, gt_boxes3d,color=(255,255,255), thickness=1, darken=1)
-
-                for i in range(len(top_boxes)):
-                    x1,y1,x2,y2 = top_boxes[i]
-                    w = math.fabs(x2-x1)
-                    h = math.fabs(y2-y1)
-                    area = w*h
-                    s = area**0.5
-                    scales.append(s)
-
-                    a = w/h
-                    aspects.append(a)
-
-                    box3d = gt_boxes3d[i]
-                    d = np.sum(box3d[0:4,2])/4 -  np.sum(box3d[4:8,2])/4
-                    depths.append(d)
-
-            depths  = np.array(depths)
-            aspects = np.array(aspects)
-            scales  = np.array(scales)
-
-            numpy.savetxt(save_preprocess_dir + '/depths'+date+'_'+drive+'.txt',depths)
-            numpy.savetxt(save_preprocess_dir + '/aspects'+date+'_'+drive+'.txt',aspects)
-            numpy.savetxt(save_preprocess_dir + '/scales'+date+'_'+drive+'.txt',scales)
-            cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
-
+    if dates == None:
+        paths = glob.glob(os.path.join(cfg.RAW_DATA_SETS_DIR ,'*'))
+        dates = [os.path.basename(path) for path in paths]
+    for date in dates:
+        if drivers==None:
+            paths = glob.glob(os.path.join(cfg.RAW_DATA_SETS_DIR,date,'*'))
+            drivers = [os.path.basename(path) for path in paths]
+        for driver in drivers:
+            data_in_single_driver(cfg.RAW_DATA_SETS_DIR, date, driver, frames_index)
 
 # main #################################################################33
 if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     if (cfg.DATA_SETS_TYPE == 'didi'):
-        dates=['2']
-        drivers=['3_f','11_f','12_f','13','14_f','17']
-        frames_index = None
+        dates=['Round1Test']
+        drivers=None
+        frames_index=None
     elif cfg.DATA_SETS_TYPE == 'kitti':
         dates = ['2011_09_26']
         drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019',
@@ -445,8 +454,8 @@ if __name__ == '__main__':
     else:
         raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 
-    for date in dates:
-        for driver in drivers:
-            data_in_single_driver(cfg.RAW_DATA_SETS_DIR, date, driver, frames_index)
+    preproces(dates, drivers, frames_index)
+
+
 
 
