@@ -10,7 +10,7 @@ import data
 import net.processing.boxes3d  as boxes3d_plot
 from net.rpn_target_op import make_bases, make_anchors, rpn_target
 from net.rcnn_target_op import rcnn_target
-from net.rpn_nms_op     import draw_rpn_nms, draw_rpn
+from net.rpn_nms_op     import draw_rpn_proposal
 from net.rcnn_nms_op    import rcnn_nms, draw_rcnn_nms, draw_rcnn,draw_rcnn_nms_with_gt
 from net.rpn_target_op  import draw_rpn_gt, draw_rpn_targets, draw_rpn_labels
 from net.rcnn_target_op import draw_rcnn_targets, draw_rcnn_labels
@@ -93,17 +93,17 @@ class MV3D(object):
         return load_indexs
 
 
-    def train(self, max_iter=100000, pre_trained=True, dataset_dir=None, dates=None, drivers=None, load_indexs=None):
+    def train(self, max_iter=100000, pre_trained=True, dataset_dir=None, dates=None, drivers=None, file_names_list=None):
         # if load indexes has no contents, it will be read all contents in a driver
         # batch size is how many frames are loaded into the memory, generator is not suitable, need to be destroyed
         # after.
-        nb_frame_load =10
+        num_cache_frame =30
         data_seg = cfg.PREPROCESSED_DATA_SETS_DIR
 
-        if load_indexs is None:
-            load_indexs = self.get_all_load_index(data_seg, dates, drivers)
+        if file_names_list is None:
+            file_names_list = self.get_all_load_index(data_seg, dates, drivers)
         # test if all names are there, if not skip this batch.
-        shuffled_train_files = shuffle(load_indexs, random_state=1)
+        shuffled_train_files = shuffle(file_names_list, random_state=1)
         # load_indexs=[110,111]
 
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load([shuffled_train_files[0]])
@@ -124,7 +124,7 @@ class MV3D(object):
         learning_rate = tf.placeholder(tf.float32, shape=[])
         solver = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=0.9)
         # solver = tf.train.AdamOptimizer(learning_rate=0.0001)
-        # solver_step = solver.minimize(top_cls_loss+top_reg_loss+l2)
+        #solver_step = solver.minimize(top_cls_loss+top_reg_loss+l2)
         # solver_step = solver.minimize(top_cls_loss + 10*top_reg_loss)
         solver_step = solver.minimize(top_cls_loss+top_reg_loss+fuse_cls_loss+0.05*fuse_reg_loss+l2)
         # solver_step = solver.minimize( fuse_cls_loss +  fuse_reg_loss)
@@ -135,6 +135,7 @@ class MV3D(object):
         # start training here  #########################################################################################
         self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
         self.log.write('-------------------------------------------------------------------------------------\n')
+
 
         sess = tf.Session()
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=0.2, max_to_keep=10)
@@ -175,7 +176,7 @@ class MV3D(object):
                 # nb_frame_load.
 
                 # for testing frames
-                if nb_frame_load > train_file_length:
+                if num_cache_frame > train_file_length:
                     if iter == 0:
                         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = data.load(
                             shuffled_train_files)
@@ -183,9 +184,9 @@ class MV3D(object):
                     if idx >= train_file_length:
                         idx = 0
                 # for bulk datasets
-                elif iter % nb_frame_load == 0 or diff != nb_frame_load:
+                elif iter % num_cache_frame == 0 or diff != num_cache_frame:
                     # reload other data.
-                    end = min(start + nb_frame_load, train_file_length)
+                    end = min(start + num_cache_frame, train_file_length)
                     train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = data.load(
                         shuffled_train_files[start:end])
                     diff = end - start
@@ -223,10 +224,8 @@ class MV3D(object):
                     learning_rate:   rate,
                     blocks.IS_TRAIN_PHASE:  True
                 }
-
                 batch_proposals, batch_proposal_scores, batch_top_features = \
                     sess.run([proposals, proposal_scores, top_features],fd1)
-
 
                 ## generate  train rois  for RPN
                 batch_top_inds, batch_top_pos_inds, batch_top_labels, batch_top_targets  = \
@@ -235,9 +234,9 @@ class MV3D(object):
                 batch_top_rois, batch_fuse_labels, batch_fuse_targets  = \
                      rcnn_target(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
 
-                batch_rois3d	 = project_to_roi3d(batch_top_rois)
-                batch_front_rois = project_to_front_roi(batch_rois3d)
-                batch_rgb_rois   = project_to_rgb_roi(batch_rois3d)
+                batch_rois3d	 = project_to_roi3d    (batch_top_rois)
+                batch_front_rois = project_to_front_roi(batch_rois3d  )
+                batch_rgb_rois   = project_to_rgb_roi  (batch_rois3d  )
 
 
                 ## run classification and regression loss -----------
@@ -276,74 +275,75 @@ class MV3D(object):
 
 
                 #debug: ------------------------------------
-                ##debug gt generation
-                if 0 and iter%iter_debug==0:
-                    top_image=top_images[idx]
+                if 1 and iter%iter_debug==0:
+                    top_image = data.getTopImages([file_names_list[idx]])[0]
                     rgb       = train_rgbs[idx]
 
                     img_gt     = draw_rpn_gt(top_image, batch_gt_top_boxes, batch_gt_labels)
                     img_label  = draw_rpn_labels (top_image, top_view_anchors, batch_top_inds, batch_top_labels )
                     img_target = draw_rpn_targets(top_image, top_view_anchors, batch_top_pos_inds, batch_top_targets)
-                    nud.imsave('%d_img_rpn_gt' % load_indexs[idx], img_gt)
-                    nud.imsave('%d_img_rpn_label'% load_indexs[idx], img_label)
-                    nud.imsave('%d_img_rpn_target'% load_indexs[idx], img_target)
+                    nud.imsave('%s_img_rpn_gt' % file_names_list[idx], img_gt)
+                    nud.imsave('%s_img_rpn_label' % file_names_list[idx], img_label)
+                    nud.imsave('%s_img_rpn_target' % file_names_list[idx], img_target)
+
+                    rpn_proposal = draw_rpn_proposal(top_image, batch_proposals, batch_proposal_scores,draw_num=20)
+                    nud.imsave('%s_img_rpn_proposal' % file_names_list[idx], rpn_proposal)
 
                     img_label  = draw_rcnn_labels (top_image, batch_top_rois, batch_fuse_labels )
                     img_target = draw_rcnn_targets(top_image, batch_top_rois, batch_fuse_labels, batch_fuse_targets)
-                    nud.imsave('%d_img_rcnn_label'% load_indexs[idx], img_label)
-                    nud.imsave('%d_img_rcnn_target'% load_indexs[idx], img_target)
+                    nud.imsave('%s_img_rcnn_label' % file_names_list[idx], img_label)
+                    nud.imsave('%s_img_rcnn_target' % file_names_list[idx], img_target)
 
 
                     img_rgb_rois = boxes3d_plot.draw_boxes(rgb, batch_rgb_rois[:,1:5], color=(255,0,255), thickness=1)
-                    nud.imsave('%d_img_rgb_rois'% load_indexs[idx], img_rgb_rois)
-
-                    # cv2.waitKey(1)
-
-                    # top_image = top_imgs[idx]
-                    rgb       = train_rgbs[idx]
-
-                    batch_top_probs, batch_top_deltas  = \
-                        sess.run([ net['top_probs'], net['top_deltas'] ],fd2)
-
-                    batch_fuse_probs, batch_fuse_deltas = \
-                        sess.run([ net['fuse_probs'], net['fuse_deltas'] ],fd2)
-
-                    #batch_fuse_deltas=0*batch_fuse_deltas #disable 3d box prediction
-                    probs, boxes3d = rcnn_nms(batch_fuse_probs, batch_fuse_deltas, batch_rois3d, threshold=0.5)
-                    # nud.npsave('probs', probs)
-                    # nud.npsave('boxes3d', boxes3d)
-                    # nud.npsave('batch_fuse_probs', batch_fuse_probs)
-                    # nud.npsave('batch_fuse_deltas', batch_fuse_deltas)
-                    # nud.npsave('batch_rois3d',batch_rois3d)
+                    nud.imsave('%s_img_rgb_rois' % file_names_list[idx], img_rgb_rois)
 
 
-                    ## show rpn score maps
-                    # p = batch_top_probs.reshape( *(top_feature_shape[0:2]), 2*self.num_bases)
-                    # for n in range(num_bases):
-                    #     r=n%num_scales
-                    #     s=n//num_scales
-                    #     pn = p[:,:,2*n+1]*255
-                    #     axs[s,r].cla()
-                    #     axs[s,r].imshow(pn, cmap='gray', vmin=0, vmax=255)
-                    # plt.pause(0.01)
+                    # # top_image = top_imgs[idx]
+                    # rgb       = train_rgbs[idx]
+                    #
+                    # batch_top_probs, batch_top_deltas  = \
+                    #     sess.run([ net['top_probs'], net['top_deltas'] ],fd2)
+                    #
+                    # batch_fuse_probs, batch_fuse_deltas = \
+                    #     sess.run([ net['fuse_probs'], net['fuse_deltas'] ],fd2)
+                    #
+                    # #batch_fuse_deltas=0*batch_fuse_deltas #disable 3d box prediction
+                    # probs, boxes3d = rcnn_nms(batch_fuse_probs, batch_fuse_deltas, batch_rois3d, threshold=0.5)
+                    # # nud.npsave('probs', probs)
+                    # # nud.npsave('boxes3d', boxes3d)
+                    # # nud.npsave('batch_fuse_probs', batch_fuse_probs)
+                    # # nud.npsave('batch_fuse_deltas', batch_fuse_deltas)
+                    # # nud.npsave('batch_rois3d',batch_rois3d)
+                    #
+                    #
+                    # ## show rpn score maps
+                    # # p = batch_top_probs.reshape( *(top_feature_shape[0:2]), 2*self.num_bases)
+                    # # for n in range(num_bases):
+                    # #     r=n%num_scales
+                    # #     s=n//num_scales
+                    # #     pn = p[:,:,2*n+1]*255
+                    # #     axs[s,r].cla()
+                    # #     axs[s,r].imshow(pn, cmap='gray', vmin=0, vmax=255)
+                    # # plt.pause(0.01)
+                    #
+                    # # show rpn(top) nms
+                    #
+                    # img_rpn     = draw_rpn(top_image, batch_top_probs, batch_top_deltas, top_view_anchors, inside_inds)
+                    # img_rpn_nms = draw_rpn_nms(top_image, batch_proposals, batch_proposal_scores)
+                    # nud.imsave('%d_img_rpn_proposal'% load_indexs[idx], img_rpn)
+                    # nud.imsave('%d_img_rpn_proposal_nms'% load_indexs[idx], img_rpn_nms)
+                    # # cv2.waitKey(1)
+                    #
+                    # ## show rcnn(fuse) nms
+                    # img_rcnn     = draw_rcnn (top_image, batch_fuse_probs, batch_fuse_deltas, batch_top_rois, batch_rois3d)
+                    # # img_rcnn_nms = draw_rcnn_nms(rgb, boxes3d, probs)
+                    #
+                    #
+                    # nud.imsave('%d_img_rcnn'% load_indexs[idx], img_rcnn)
+                    # # nud.imsave('%d_img_rcnn_nms'% load_indexs[idx], img_rcnn_nms)
 
-                    # show rpn(top) nms
-
-                    img_rpn     = draw_rpn(top_image, batch_top_probs, batch_top_deltas, top_view_anchors, inside_inds)
-                    img_rpn_nms = draw_rpn_nms(top_image, batch_proposals, batch_proposal_scores)
-                    nud.imsave('%d_img_rpn_proposal'% load_indexs[idx], img_rpn)
-                    nud.imsave('%d_img_rpn_proposal_nms'% load_indexs[idx], img_rpn_nms)
-                    # cv2.waitKey(1)
-
-                    ## show rcnn(fuse) nms
-                    img_rcnn     = draw_rcnn (top_image, batch_fuse_probs, batch_fuse_deltas, batch_top_rois, batch_rois3d)
-                    # img_rcnn_nms = draw_rcnn_nms(rgb, boxes3d, probs)
-
-
-                    nud.imsave('%d_img_rcnn'% load_indexs[idx], img_rcnn)
-                    # nud.imsave('%d_img_rcnn_nms'% load_indexs[idx], img_rcnn_nms)
-
-                    ## test 2----------------------------
+                    ## predict test 2----------------------------
                     batch_top_rois_2 = batch_proposals[batch_proposal_scores>0.1,:]
                     batch_rois3d_2 = project_to_roi3d(batch_top_rois_2)
                     batch_front_rois_2 = project_to_front_roi(batch_rois3d_2)
@@ -364,10 +364,13 @@ class MV3D(object):
 
                     batch_fuse_probs_2, batch_fuse_deltas_2 = \
                         sess.run([net['fuse_probs'], net['fuse_deltas']], fd2_2)
-                    probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2, threshold=0.5)
+                    probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2,
+                                                  score_threshold=0.5,nms_threshold=1.)
 
-                    img_rcnn_nms_2 = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
-                    nud.imsave('%d_img_rcnn_nms_2'% load_indexs[idx], img_rcnn_nms_2)
+                    predict_rgb_view = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
+                    predict_top_view =  boxes3d_plot.draw_box3d_on_top(top_image, boxes3d_2, color=(80, 0, 0))
+                    nud.imsave('%s_predict_rgb_view' % file_names_list[idx], predict_rgb_view)
+                    nud.imsave('%s_predict_top_view' % file_names_list[idx], predict_top_view)
 
                 idx += 1
 

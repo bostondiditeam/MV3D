@@ -60,12 +60,12 @@ def draw_rcnn_nms_with_gt(rgb, boxes3d,gt_boxes3d):
 
 
 
-def rcnn_nms( probs,  deltas,  rois3d,  threshold = 0.75):
+def rcnn_nms( probs,  deltas,  rois3d,  score_threshold = 0.75,nms_threshold=0.05):
 
 
     cls=1  # do for class-one only
     probs = probs[:,cls] #see only class-1
-    idx = np.where(probs>threshold)[0]
+    idx = np.where(probs>score_threshold)[0]
 
     #post processing
     rois3d = rois3d[idx]
@@ -81,5 +81,5 @@ def rcnn_nms( probs,  deltas,  rois3d,  threshold = 0.75):
         dets = np.c_[boxes, probs]
         # keep=np.logical_and((dets[:,0]<dets[:,2]),(dets[:,1]<dets[:,3]))
         # dets=dets[keep]
-        keep = nms(dets, 0.05)
+        keep = nms(dets, nms_threshold)
         return probs[keep], boxes3d[keep]

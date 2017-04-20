@@ -15,7 +15,7 @@ import tensorflow as tf
 
 
 #nms for rpn (region proposal net) ----------------------------
-def draw_rpn(image, probs, deltas, anchors, inside_inds, threshold=0.75, darker=0.7):
+def draw_rpn_deltal_apply(image, probs, deltas, anchors, inside_inds, threshold=0.75, darker=0.7):
 
     ## yellow (thick): box regression results
     ## red: box classification results
@@ -51,16 +51,17 @@ def draw_rpn(image, probs, deltas, anchors, inside_inds, threshold=0.75, darker=
     return img_rpn
 
 
-def draw_rpn_nms(image, rois, roi_scores,  darker=0.75):
+def draw_rpn_proposal(image, rois, roi_scores, darker=0.75,draw_num=100):
     img_rpn_nms = image.copy()*darker
 
     scores = roi_scores
     inds = np.argsort(scores)       #sort ascend #[::-1]
-    num = len(inds)
+    # num = draw_num if draw_num<len(inds) else len(inds)
+    num=len(inds)
     for n in range(0, num):
         i   = inds[n]
         box = rois[i,1:5].astype(np.int)
-        v=255*n/num
+        v=254*(1-roi_scores[i])+1
         color = (0,v,v)
         cv2.rectangle(img_rpn_nms,(box[0], box[1]), (box[2], box[3]), color, 1)
 

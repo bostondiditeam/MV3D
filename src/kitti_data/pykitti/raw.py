@@ -8,6 +8,7 @@ from collections import namedtuple
 import numpy as np
 
 from kitti_data.pykitti import utils
+from config import cfg
 
 __author__ = "Lee Clement"
 __email__ = "lee.clement@robotics.utias.utoronto.ca"
@@ -18,7 +19,12 @@ class raw:
 
     def __init__(self, base_path, date, drive, frame_range=None):
         """Set the path."""
-        self.drive = date + '_drive_' + drive + '_sync'
+        if (cfg.DATA_SETS_TYPE == 'didi'):
+            self.drive = drive
+        elif cfg.DATA_SETS_TYPE == 'kitti':
+            self.drive = date + '_drive_' + drive + '_sync'
+        else:
+            raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
         self.calib_path = os.path.join(base_path, date)
         self.data_path = os.path.join(base_path, date, self.drive)
         self.frame_range = frame_range
@@ -281,7 +287,7 @@ class raw:
         if self.frame_range:
             imL_files = [imL_files[i] for i in self.frame_range]
 
-        print('Found ' + str(len(imL_files)) + ' image pairs...')
+        print('Found ' + str(len(imL_files)) + ' left rgb...')
 
         self.rgb = utils.load_left_single(imL_files, **kwargs)
 

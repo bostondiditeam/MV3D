@@ -18,9 +18,8 @@ then you get same data format as KITTI raw data.
 ### setup
 - ```catkin_make```
 - ```source ./devel/setup.zsh```
-- ```rosrun lidar lidar_node```
-- ```rosrun nodelet nodelet standalone velodyne_pointcloud/CloudNodelet```
-- ```rosbag play -l name-of-file.bag``` The "-l" keeps the bag file playing on repeat so that you can keep working on your algorithm without having to mess with the data playback.
+- ```sudo apt-get install ros-indigo-velodyne```
+- ```python conver_lidar_to_bin.py```   
 
 ## For bag_to_kitti.py tool 
 ```python -m sync_img_lidar_tracklet_tool.bag_to_kitti  -i /home/didi/didi_dataset/dataset_2/Data/1 -o ``` 

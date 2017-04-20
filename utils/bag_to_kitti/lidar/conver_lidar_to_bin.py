@@ -7,13 +7,14 @@ if __name__ == '__main__':
     home_dir='/home/stu'
     unsynced_dir='round12_data/unsynced'
     os.system('pkill -f rosmaster')
-
+    time.sleep(0.5)
     os.system('roscore &')
-
-    os.system('rosrun nodelet nodelet standalone velodyne_pointcloud/CloudNodelet &')
+    time.sleep(0.5)
+    os.system('roslaunch velodyne_pointcloud 32e_points.launch &')
     time.sleep(0.5)
 
-    if 0:
+    # conver all
+    if 1:
         #1  2  3  README.md  Round1Test
         folder_names_1=['1','2','3','Round1Test']
         for n1 in folder_names_1:
@@ -32,7 +33,7 @@ if __name__ == '__main__':
         print('\n\nConvert lidar data done !!')
 
     # test
-    if 1:
+    if 0:
         # 1  2  3  README.md  Round1Test
         folder_names_1 = ['Round1Test']
         for n1 in folder_names_1:
