@@ -1,0 +1,1 @@
+/usr/bin/c++  -fPIC    -shared -Wl,-soname,libgtest_main.so -o libgtest_main.so CMakeFiles/gtest_main.dir/src/gtest_main.cc.o  -L/home/tzeping/udacity/didi/openrepo/shapes/build/gtest/src -lpthread libgtest.so -lpthread -Wl,-rpath,/home/tzeping/udacity/didi/openrepo/shapes/build/gtest/src:/home/tzeping/udacity/didi/openrepo/shapes/build/gtest 

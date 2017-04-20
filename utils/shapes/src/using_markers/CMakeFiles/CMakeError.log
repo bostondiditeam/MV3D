@@ -1,0 +1,53 @@
+Determining if the pthread_create exist failed with the following output:
+Change Dir: /home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec1301261642/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec1301261642.dir/build.make CMakeFiles/cmTryCompileExec1301261642.dir/build
+make[1]: Entering directory `/home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1301261642.dir/CheckSymbolExists.c.o
+/usr/bin/cc    -o CMakeFiles/cmTryCompileExec1301261642.dir/CheckSymbolExists.c.o   -c /home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp/CheckSymbolExists.c
+Linking C executable cmTryCompileExec1301261642
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1301261642.dir/link.txt --verbose=1
+/usr/bin/cc       CMakeFiles/cmTryCompileExec1301261642.dir/CheckSymbolExists.c.o  -o cmTryCompileExec1301261642 -rdynamic 
+CMakeFiles/cmTryCompileExec1301261642.dir/CheckSymbolExists.c.o: In function `main':
+CheckSymbolExists.c:(.text+0x16): undefined reference to `pthread_create'
+collect2: error: ld returned 1 exit status
+make[1]: Leaving directory `/home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp'
+make[1]: *** [cmTryCompileExec1301261642] Error 1
+make: *** [cmTryCompileExec1301261642/fast] Error 2
+
+File /home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp/CheckSymbolExists.c:
+/* */
+#include <pthread.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef pthread_create
+  return ((int*)(&pthread_create))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+
+Determining if the function pthread_create exists in the pthreads failed with the following output:
+Change Dir: /home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp
+
+Run Build Command:/usr/bin/make "cmTryCompileExec1994932306/fast"
+/usr/bin/make -f CMakeFiles/cmTryCompileExec1994932306.dir/build.make CMakeFiles/cmTryCompileExec1994932306.dir/build
+make[1]: Entering directory `/home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp'
+/usr/bin/cmake -E cmake_progress_report /home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp/CMakeFiles 1
+Building C object CMakeFiles/cmTryCompileExec1994932306.dir/CheckFunctionExists.c.o
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create   -o CMakeFiles/cmTryCompileExec1994932306.dir/CheckFunctionExists.c.o   -c /usr/share/cmake-2.8/Modules/CheckFunctionExists.c
+Linking C executable cmTryCompileExec1994932306
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTryCompileExec1994932306.dir/link.txt --verbose=1
+/usr/bin/cc   -DCHECK_FUNCTION_EXISTS=pthread_create    CMakeFiles/cmTryCompileExec1994932306.dir/CheckFunctionExists.c.o  -o cmTryCompileExec1994932306 -rdynamic -lpthreads 
+/usr/bin/ld: cannot find -lpthreads
+collect2: error: ld returned 1 exit status
+make[1]: Leaving directory `/home/tzeping/udacity/didi/openrepo/shapes/src/using_markers/CMakeFiles/CMakeTmp'
+make[1]: *** [cmTryCompileExec1994932306] Error 1
+make: *** [cmTryCompileExec1994932306/fast] Error 2
+
+
