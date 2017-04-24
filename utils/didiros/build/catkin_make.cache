@@ -1,0 +1,2 @@
+roslisten
+-DCATKIN_DEVEL_PREFIX=/home/tzeping/udacity/didi/proj/didiros/devel -DCMAKE_INSTALL_PREFIX=/home/tzeping/udacity/didi/proj/didiros/install -G Unix Makefiles
