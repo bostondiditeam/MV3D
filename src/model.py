@@ -62,6 +62,11 @@ class MV3D(object):
 
         ratios=np.array([0.5,1,2], dtype=np.float32)
         scales=np.array([1,2,3],   dtype=np.float32)
+
+        # 4.2418,1.4478,1.5748 for round1 todo: remove it
+        # ratios=np.array([4.2418/2.4478], dtype=np.float32)
+        # scales=np.array([1.9],   dtype=np.float32)
+
         self.bases = make_bases(
             base_size = 16,
             ratios=ratios,  #aspet ratio
@@ -77,39 +82,37 @@ class MV3D(object):
         pass
 
 
-    # def train_size
 
-    def get_all_load_index(self, data_seg, dates, drivers):
-        # todo: check if all files from lidar, rgb, gt_boxes3d is the same
-        lidar_dir = os.path.join(data_seg, "lidar")
-        load_indexs = []
-        for date in dates:
-            for driver in drivers:
-                # file_prefix is something like /home/stu/data/preprocessed/didi/lidar/2011_09_26_0001_*
-                file_prefix = lidar_dir + '/' + date + '_' + driver + '_*'
-                driver_files = glob.glob(file_prefix)
-                name_list = [file.split('/')[-1].split('.')[0] for file in driver_files]
-                load_indexs += name_list
-        return load_indexs
-
-
-    def train(self, max_iter=100000, pre_trained=True, dataset_dir=None, dates=None, drivers=None, frames_index=None):
+    def train(self, max_iter=1e7, pre_trained=True, dataset_dir=None, dates=None, drivers=None, frames_index=None):
         # if load indexes has no contents, it will be read all contents in a driver
         # batch size is how many frames are loaded into the memory, generator is not suitable, need to be destroyed
         # after.
-        num_cache_frame =30
+        num_cache_frame =72
         data_seg = cfg.PREPROCESSED_DATA_SETS_DIR
 
-        file_names_list = self.get_all_load_index(data_seg, dates, drivers)
+        file_names_list = sorted(data.get_all_file_names(data_seg, dates, drivers))
         if frames_index!=None:
             file_names_list=[file_names_list[i] for i in frames_index]
 
         # test if all names are there, if not skip this batch.
         shuffled_train_files = shuffle(file_names_list, random_state=1)
+        shuffled_train_files=file_names_list
+
         # load_indexs=[110,111]
 
-        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load([shuffled_train_files[0]])
-        # top_images = data.getTopImages(load_indexs)
+        #for init model
+        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=data.load(shuffled_train_files)
+
+        # todo : remove it
+        for i in list(range(0,39)):
+            train_gt_labels[i] = np.array([0])
+
+        for i in range(len(train_gt_boxes3d)):
+            if len(train_gt_boxes3d[i])==0:
+                train_gt_labels[i]=np.array([0])
+
+        train_gt_boxes3d = [train_gt_boxes3d[n][train_gt_labels[n] > 0] for n in range(len(train_gt_boxes3d))]
+        train_gt_labels = [train_gt_labels[n][train_gt_labels[n] > 0] for n in range(len(train_gt_labels))]
 
         top_shape=train_tops[0].shape
         front_shape=train_fronts[0].shape
@@ -128,7 +131,7 @@ class MV3D(object):
         # solver = tf.train.AdamOptimizer(learning_rate=0.0001)
         #solver_step = solver.minimize(top_cls_loss+top_reg_loss+l2)
         # solver_step = solver.minimize(top_cls_loss + 10*top_reg_loss)
-        solver_step = solver.minimize(top_cls_loss+top_reg_loss+fuse_cls_loss+0.05*fuse_reg_loss+l2)
+        solver_step = solver.minimize(top_cls_loss+0.1*top_reg_loss+0.1*fuse_cls_loss+0.05*fuse_reg_loss+l2)
         # solver_step = solver.minimize( fuse_cls_loss +  fuse_reg_loss)
         # solver_step = solver.minimize(fuse_reg_loss)
 
@@ -163,49 +166,13 @@ class MV3D(object):
             summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'graph'), sess.graph)
             summary_writer.close()
 
-            # all train file name list: shuffled_train_files
-            train_file_length = len(shuffled_train_files)
-            # read 500 frames once
-            start = 0
-            idx = 0
+
             for iter in range(max_iter):
                 epoch=1.0 * iter
                 rate=0.01
 
-                # reload data if iter can be divided by nb_frame_load.
-                # two situation will load new data into memory. One is all frames are used up once, another is
-                # last time loaded data less than nb_frame_load and total training file number is larger than
-                # nb_frame_load.
-
-                # for testing frames
-                if num_cache_frame > train_file_length:
-                    if iter == 0:
-                        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = data.load(
-                            shuffled_train_files)
-                        diff = train_file_length
-                    if idx >= train_file_length:
-                        idx = 0
-                # for bulk datasets
-                elif iter % num_cache_frame == 0 or diff != num_cache_frame:
-                    # reload other data.
-                    end = min(start + num_cache_frame, train_file_length)
-                    train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = data.load(
-                        shuffled_train_files[start:end])
-                    diff = end - start
-                    start = end % train_file_length
-                    idx = 0
-
-                ## generate train image -------------
-                # this should not be random.
-                # idx = iter % num_frames
-                # todo: support other class
-                # to get all positive ground truth boxes.
-
-                train_gt_boxes3d = [train_gt_boxes3d[n][train_gt_labels[n] > 0] for n in range(diff)]
-                train_gt_labels = [train_gt_labels[n][train_gt_labels[n] > 0] for n in range(diff)]
-
-                if len(train_gt_labels[idx])==0:
-                    idx += 1
+                idx=iter%len(train_tops)
+                if len(train_gt_boxes3d[idx])==0:
                     continue
 
                 batch_top_view    = np_reshape(train_tops[idx])
@@ -267,11 +234,11 @@ class MV3D(object):
                 _, batch_top_cls_loss, batch_top_reg_loss, batch_fuse_cls_loss, batch_fuse_reg_loss = \
                    sess.run([solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss],fd2)
 
-                if iter%100==0:
+                if iter%200==0:
                     saver.save(sess, os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt'))
 
                 self.log.write('%3.1f   %d   %0.4f   |   %0.5f   %0.5f   |   %0.5f   %0.5f \n' %\
-                    (epoch, iter, rate, batch_top_cls_loss, batch_top_reg_loss,
+                    (epoch, idx, rate, batch_top_cls_loss, batch_top_reg_loss,
                      batch_fuse_cls_loss, batch_fuse_reg_loss))
 
 
@@ -367,14 +334,13 @@ class MV3D(object):
                     batch_fuse_probs_2, batch_fuse_deltas_2 = \
                         sess.run([net['fuse_probs'], net['fuse_deltas']], fd2_2)
                     probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2,
-                                                  score_threshold=0.5,nms_threshold=1.)
+                                                  score_threshold=0.5)
 
                     predict_rgb_view = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
                     predict_top_view =  boxes3d_plot.draw_box3d_on_top(top_image, boxes3d_2, color=(80, 0, 0))
                     nud.imsave('%s_predict_rgb_view' % file_names_list[idx], predict_rgb_view)
                     nud.imsave('%s_predict_top_view' % file_names_list[idx], predict_top_view)
 
-                idx += 1
 
 
     def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):
@@ -391,7 +357,7 @@ class MV3D(object):
 
 
 
-    def tacking(self, top_view, front_view, rgb_image):
+    def tacking(self, top_view, front_view, rgb_image,top_image=None):
         lables=[] #todo add lables output
         np_reshape = lambda np_array: np_array.reshape(1, *(np_array.shape))
         top_view=np_reshape(top_view)
@@ -410,6 +376,9 @@ class MV3D(object):
             self.tracking_sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
 
         top_rois=top_view_proposals[batch_proposal_scores>0.1,:]
+        if len(top_rois)==0:
+            return np.zeros((0,8,3)), []
+
         rois3d = project_to_roi3d(top_rois)
         front_rois = project_to_front_roi(rois3d)
         rgb_rois = project_to_rgb_roi(rois3d)
@@ -429,7 +398,7 @@ class MV3D(object):
         fuse_probs, fuse_deltas = \
             self.tracking_sess.run([ self.net['fuse_probs'], self.net['fuse_deltas'] ],fd2)
 
-        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, threshold=0.5)
+        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.5)
 
         # #debug
         # predicted_bbox = nud.draw_boxed3d_to_rgb(rgb_image[0], boxes3d)

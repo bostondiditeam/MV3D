@@ -26,7 +26,7 @@ cfg = __C
 __C.TEST_KEY=11
 
 # dataset type
-__C.DATA_SETS_TYPE='kitti'       #['didi','kitti']
+__C.DATA_SETS_TYPE='didi'       #['didi','kitti']
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
@@ -39,7 +39,7 @@ __C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_T
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 
-__C.IMAGE_FUSION_DIABLE = False
+__C.IMAGE_FUSION_DIABLE = True
 
 # print(cfg.RAW_DATA_SETS_DIR)
 # print(cfg.PREPROCESSED_DATA_SETS_DIR)
