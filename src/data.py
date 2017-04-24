@@ -38,6 +38,13 @@ def obj_to_gt_boxes3d(objs):
 
     return  gt_boxes3d, gt_labels
 
+def draw_top_image(lidar_top):
+    top_image = np.sum(lidar_top,axis=2)
+    top_image = top_image-np.min(top_image)
+    top_image = (top_image/np.max(top_image)*255)
+    top_image = np.dstack((top_image, top_image, top_image)).astype(np.uint8)
+    return top_image
+
 
 ## lidar to top ##
 def lidar_to_top(lidar):
@@ -57,7 +64,12 @@ def lidar_to_top(lidar):
     idx = np.where (lidar[:,2]<TOP_Z_MAX)
     lidar = lidar[idx]
 
-    lidar=filter_center_car(lidar)
+    if (cfg.DATA_SETS_TYPE == 'didi'):
+        lidar=filter_center_car(lidar)
+    elif cfg.DATA_SETS_TYPE == 'kitti':
+        pass
+    else:
+        raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 
 
     pxs=lidar[:,0]
@@ -115,28 +127,23 @@ def lidar_to_top(lidar):
 
     top[:,:,Zn+1] = np.log(top[:,:,Zn+1]+1)/math.log(64)
 
-    if 1:
-        top_image = np.sum(top,axis=2)
-        top_image = top_image-np.min(top_image)
-        top_image = (top_image/np.max(top_image)*255)
-        top_image = np.dstack((top_image, top_image, top_image)).astype(np.uint8)
 
 
-    if 0: #unprocess
-        top_image = np.zeros((height,width,3),dtype=np.float32)
+    # if 0: #unprocess
+    #     top_image = np.zeros((height,width,3),dtype=np.float32)
+    #
+    #     num = len(lidar)
+    #     for n in range(num):
+    #         x,y = qxs[n],qys[n]
+    #         if x>=0 and x <width and y>0 and y<height:
+    #             top_image[y,x,:] += 1
+    #
+    #     max_value=np.max(np.log(top_image+0.001))
+    #     top_image = top_image/max_value *255
+    #     top_image=top_image.astype(dtype=np.uint8)
 
-        num = len(lidar)
-        for n in range(num):
-            x,y = qxs[n],qys[n]
-            if x>=0 and x <width and y>0 and y<height:
-                top_image[y,x,:] += 1
 
-        max_value=np.max(np.log(top_image+0.001))
-        top_image = top_image/max_value *255
-        top_image=top_image.astype(dtype=np.uint8)
-
-
-    return top, top_image
+    return top
 
 
 ## lidar to top ##
@@ -217,19 +224,40 @@ def lidar_to_top_old(lidar):
         top_image=top_image.astype(dtype=np.uint8)
 
 
-    return top, top_image
+    return top
 
-def load(file_names):
+    # def train_size
+
+def get_all_file_names(data_seg, dates, drivers):
+    # todo: check if all files from lidar, rgb, gt_boxes3d is the same
+    lidar_dir = os.path.join(data_seg, "top")
+    load_indexs = []
+    for date in dates:
+        for driver in drivers:
+            # file_prefix is something like /home/stu/data/preprocessed/didi/lidar/2011_09_26_0001_*
+            file_prefix = lidar_dir + '/' + date + '_' + driver + '_*'
+            driver_files = glob.glob(file_prefix)
+            name_list = [file.split('/')[-1].split('.')[0] for file in driver_files]
+            load_indexs += name_list
+    return load_indexs
+
+def load(file_names,is_testset=False):
     # fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
     # data_dir=cfg.DATA_SETS_DIR
     data_seg = cfg.PREPROCESSED_DATA_SETS_DIR
     train_rgbs=[cv2.imread(os.path.join(data_seg,'rgb', file + '.png'),1) for file in file_names]
     train_tops=[np.load(os.path.join(data_seg,'top', file + '.npy')) for file in file_names]
     train_fronts=[np.zeros((1, 1), dtype=np.float32) for file in file_names]
-    train_gt_labels=[np.load(os.path.join(data_seg,'gt_labels', file + '.npy')) for file in file_names]
-    train_gt_boxes3d=[np.load(os.path.join(data_seg, 'gt_boxes3d', file + '.npy')) for file in file_names]
+    if is_testset==True:
+        train_gt_boxes3d=None
+        train_gt_labels=None
+    else:
+        train_gt_boxes3d=[np.load(os.path.join(data_seg, 'gt_boxes3d', file + '.npy')) for file in file_names]
+        train_gt_labels = [np.load(os.path.join(data_seg, 'gt_labels', file + '.npy')) for file in file_names]
 
     return train_rgbs,train_tops,train_fronts,train_gt_labels,train_gt_boxes3d
+
+
 
 def getTopFeatureShape(top_shape,stride):
     return (top_shape[0]//stride, top_shape[1]//stride)
@@ -309,37 +337,44 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
             print('rgb image save done\n')
 
 
-        if 1:  ## top view --------------------
-            os.makedirs(save_preprocess_dir + '/lidar',exist_ok=True)
+        if 1:  ##generate top view --------------------
             os.makedirs(save_preprocess_dir + '/top',exist_ok=True)
-            os.makedirs(save_preprocess_dir + '/top_image',exist_ok=True)
 
             count=0
             for n in frames_index:
-                print('top view={}'.format(n))
+                print('generate top view={}'.format(n))
                 lidar = dataset.velo[count]
 
-                top, top_image = lidar_to_top(lidar)
-                # rename it to something like 2011_09_26_0005_00000.npy for kitti dataset.
-                # In didi, it will be like 2_1_1_1490991690046339536.npy (means didi dataset 2, car 1, bag 1,
-                # then timestamp)
+                top = lidar_to_top(lidar)
 
-                # draw bbox on top image
-                if objects!=None:
-                    objs = objects[count]
-                    gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-                    top_image=draw_box3d_on_top(top_image,gt_boxes3d,color=(0,0,80))
-
-                np.save(save_preprocess_dir + '/lidar/'+date+'_'+drive+'_%05d.npy'%n,lidar)
                 np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
-                cv2.imwrite(save_preprocess_dir + '/top_image/'+date+'_'+drive+'_%05d.png' % n, top_image)
                 count+=1
             print('top view save done\n')
 
+        if 1: ##draw top image with bbox
+            os.makedirs(save_preprocess_dir + '/top_image', exist_ok=True)
+            count = 0
+            for n in frames_index:
+                print('draw top view image ={}'.format(n))
+
+                top = np.load(save_preprocess_dir + '/top/' + date + '_' + drive + '_%05d.npy' % n)
+                top_image = draw_top_image(top)
+
+                # draw bbox on top image
+                if objects != None:
+                    gt_boxes3d = np.load(save_preprocess_dir + '/gt_boxes3d/' + date + '_' + drive + '_%05d.npy' % n)
+                    top_image = draw_box3d_on_top(top_image, gt_boxes3d, color=(0, 0, 80))
+                else:
+                    print('Not found gt_boxes3d,skip draw bbox on top image')
+
+
+                cv2.imwrite(save_preprocess_dir + '/top_image/' + date + '_' + drive + '_%05d.png' % n, top_image)
+                count += 1
+            print('top view image draw done\n')
 
 
 
-        if 1 and objects!=None:  ## boxes3d  --------------------
+        if 0 and objects!=None:  ## boxes3d  --------------------
             os.makedirs(save_preprocess_dir + '/gt_boxes3d',exist_ok=True)
             os.makedirs(save_preprocess_dir + '/gt_labels',exist_ok=True)
             count = 0
@@ -351,6 +386,17 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
                 np.save(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n,gt_boxes3d)
                 np.save(save_preprocess_dir + '/gt_labels/'+date+'_'+drive+'_%05d.npy'%n,gt_labels)
                 count += 1
+
+        # dump lidar data
+        if 0:
+            os.makedirs(save_preprocess_dir + '/lidar', exist_ok=True)
+            count=0
+            for n in frames_index:
+                print('lidar data={}'.format(n))
+                lidar = dataset.velo[count]
+                np.save(save_preprocess_dir + '/lidar/' + date + '_' + drive + '_%05d.npy' % n, lidar)
+                count += 1
+            print('dump lidar data done\n')
 
         if 0 and objects!= None: #dump gt boxes
             os.makedirs(save_preprocess_dir + '/gt_box_plot', exist_ok=True)
