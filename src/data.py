@@ -262,9 +262,6 @@ def load(file_names,is_testset=False):
 def getTopFeatureShape(top_shape,stride):
     return (top_shape[0]//stride, top_shape[1]//stride)
 
-def getTopImages(file_names):
-    data_seg = cfg.PREPROCESSED_DATA_SETS_DIR
-    return [ cv2.imread(os.path.join(data_seg, 'top_image',file+'.png'), 1) for file in file_names]
 
 
 
@@ -342,14 +339,30 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
             count=0
             for n in frames_index:
+                if os.path.isfile(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n):
+                    count += 1
+                    continue
                 print('generate top view={}'.format(n))
                 lidar = dataset.velo[count]
 
                 top = lidar_to_top(lidar)
 
                 np.save(save_preprocess_dir + '/top/'+date+'_'+drive+'_%05d.npy'%n,top)
-                count+=1
             print('top view save done\n')
+
+
+        if 1 and objects!=None:  ## boxes3d  --------------------
+            os.makedirs(save_preprocess_dir + '/gt_boxes3d',exist_ok=True)
+            os.makedirs(save_preprocess_dir + '/gt_labels',exist_ok=True)
+            count = 0
+            for n in frames_index:
+                print('boxes3d={}'.format(n))
+                objs = objects[count]
+                gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+
+                np.save(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n,gt_boxes3d)
+                np.save(save_preprocess_dir + '/gt_labels/'+date+'_'+drive+'_%05d.npy'%n,gt_labels)
+                count += 1
 
         if 1: ##draw top image with bbox
             os.makedirs(save_preprocess_dir + '/top_image', exist_ok=True)
@@ -372,20 +385,6 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
                 count += 1
             print('top view image draw done\n')
 
-
-
-        if 0 and objects!=None:  ## boxes3d  --------------------
-            os.makedirs(save_preprocess_dir + '/gt_boxes3d',exist_ok=True)
-            os.makedirs(save_preprocess_dir + '/gt_labels',exist_ok=True)
-            count = 0
-            for n in frames_index:
-                print('boxes3d={}'.format(n))
-                objs = objects[count]
-                gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-
-                np.save(save_preprocess_dir + '/gt_boxes3d/'+date+'_'+drive+'_%05d.npy'%n,gt_boxes3d)
-                np.save(save_preprocess_dir + '/gt_labels/'+date+'_'+drive+'_%05d.npy'%n,gt_labels)
-                count += 1
 
         # dump lidar data
         if 0:
