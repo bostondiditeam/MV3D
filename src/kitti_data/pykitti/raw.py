@@ -23,6 +23,8 @@ class raw:
             self.drive = drive
         elif cfg.DATA_SETS_TYPE == 'kitti':
             self.drive = date + '_drive_' + drive + '_sync'
+        elif (cfg.DATA_SETS_TYPE == 'test'):
+            self.drive = drive
         else:
             raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
         self.calib_path = os.path.join(base_path, date)
@@ -277,7 +279,7 @@ class raw:
         Setting imformat='cv2' will convert the images to uint8 and BGR for
         easy use with OpenCV.
         """
-        print('Loading color images from ' + self.drive + '...')
+        print('Loading left color images from ' + self.drive + '...')
 
         imL_path = os.path.join(self.data_path, 'image_02', 'data', '*.png')
 

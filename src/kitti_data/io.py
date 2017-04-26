@@ -46,7 +46,10 @@ def read_objects(tracklet_file, frames_index):
                    continue
                 # pass
             elif cfg.DATA_SETS_TYPE == 'didi':
-                print('truncation filter disable')
+                # todo : 'truncation filter disable'
+                pass
+            elif cfg.DATA_SETS_TYPE == 'test':
+                pass
             else:
                 raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
 

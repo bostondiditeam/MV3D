@@ -66,10 +66,6 @@ def lidar_to_top(lidar):
 
     if (cfg.DATA_SETS_TYPE == 'didi'):
         lidar=filter_center_car(lidar)
-    elif cfg.DATA_SETS_TYPE == 'kitti':
-        pass
-    else:
-        raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 
 
     pxs=lidar[:,0]
@@ -271,6 +267,8 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         img_path = os.path.join(raw_dir, date, drive, "image_02", "data")
     elif cfg.DATA_SETS_TYPE == 'kitti':
         img_path = os.path.join(raw_dir, date, date + "_drive_" + drive + "_sync", "image_02", "data")
+    elif(cfg.DATA_SETS_TYPE == 'test'):
+        img_path = os.path.join(raw_dir, date, drive, "image_02", "data")
     else:
         raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 
@@ -279,7 +277,10 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         frames_index = range(nb_frames)
 
     # spilt large numbers of frame to small chunks
-    max_cache_frames_num = 50
+    if (cfg.DATA_SETS_TYPE == 'test'):
+        max_cache_frames_num = 4
+    else:
+        max_cache_frames_num = 50
     if len(frames_index)>max_cache_frames_num:
         frames_idx_chunks=[frames_index[i:i+max_cache_frames_num] for i in range(0,len(frames_index),max_cache_frames_num)]
     else:
@@ -314,19 +315,14 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
             os.makedirs(save_preprocess_dir + '/rgb',exist_ok=True)
             count=0
             for n in frames_index:
+                if os.path.isfile(save_preprocess_dir + '/rgb/'+date+'_'+drive+'_%05d.png'%n):
+                    count += 1
+                    continue
                 print('rgb images={}'.format(n))
                 rgb = dataset.rgb[count][0]
                 rgb =(rgb*255).astype(np.uint8)
                 rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-                if(cfg.DATA_SETS_TYPE =='didi'):
-                    pass # rgb = rgb[500:-80, :, :]
-                elif cfg.DATA_SETS_TYPE =='kitti':
-                    pass
-                else:
-                    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
-                # rename it to something like 2011_09_26_0005_00000.png for kitti dataset.
-                # In didi, it will be like 2_1_1_1490991690046339536.bin.png (means didi dataset 2, car 1, bag 1,
-                # then timestamp)
+
                 # todo fit it to didi dataset later.
                 cv2.imwrite(save_preprocess_dir + '/rgb/'+date+'_'+drive+'_%05d.png'%n, rgb)
                 # cv2.imwrite(save_preprocess_dir + '/rgb/rgb_%05d.png'%n,rgb)
@@ -409,6 +405,8 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
                     pass  # rgb = rgb[500:-80, :, :]
                 elif cfg.DATA_SETS_TYPE == 'kitti':
                     pass
+                elif cfg.DATA_SETS_TYPE == 'test':
+                    pass
                 else:
                     raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
                 objs = objects[count]
@@ -476,17 +474,22 @@ def preproces(dates=None, drivers=None, frames_index=None):
     for date in dates:
         if drivers==None:
             paths = glob.glob(os.path.join(cfg.RAW_DATA_SETS_DIR,date,'*'))
-            drivers = [os.path.basename(path) for path in paths]
-        for driver in drivers:
+            if paths==[]:
+                raise ValueError('can not found any file in:{}'.format(os.path.join(cfg.RAW_DATA_SETS_DIR,date,'*')))
+            drivers_searched = [os.path.basename(path) for path in paths]
+            drivers_des=drivers_searched
+        else:
+            drivers_des=drivers
+        for driver in drivers_des:
             data_in_single_driver(cfg.RAW_DATA_SETS_DIR, date, driver, frames_index)
 
 # main #################################################################33
 if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     if (cfg.DATA_SETS_TYPE == 'didi'):
-        dates=['1']
-        drivers= ['15']
-        frames_index=range(73)
+        dates=['1','2','3']
+        drivers= None
+        frames_index=None
     elif cfg.DATA_SETS_TYPE == 'kitti':
         dates = ['2011_09_26']
         drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019',
@@ -496,6 +499,10 @@ if __name__ == '__main__':
                    '0061', '0015', '0028', '0051', '0064']
         drivers=['0005']
         frames_index=[0,5,8,12,16,20,50]
+    elif cfg.DATA_SETS_TYPE == 'test':
+        dates = ['1','2']
+        drivers = None
+        frames_index=None
     else:
         raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 
