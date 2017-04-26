@@ -113,8 +113,6 @@ def imu2dict(msg, imu_dict):
 
 
 def get_yaw(p1, p2):
-    if abs(p1[0] - p2[0]) < 1e-2:
-        return 0.
     return math.atan2(p1[1] - p2[1], p1[0] - p2[0])
 
 
@@ -215,6 +213,10 @@ def check_oneof_topics_present(topic_map, name, topics):
         return False
     return True
 
+def syc_rtk_timestamp_to_camera(obs_rtk,camera):
+    for k in obs_rtk:
+        offset = obs_rtk[k]['timestamp'][0] - camera['timestamp'][0]
+        obs_rtk[k]['timestamp'] = [t - offset for t in obs_rtk[k]['timestamp']]
 
 def main():
     parser = argparse.ArgumentParser(description='Convert rosbag to images and csv.')
@@ -362,6 +364,9 @@ def main():
               (stats_acc['img_count'], stats_acc['msg_count']))
         sys.stdout.flush()
 
+        #todo : remove it after udacity fixed this bug
+        syc_rtk_timestamp_to_camera(obstacle_rtk_dicts, camera_dict)
+
         # take all lidar cloud point txt here and construct a dataframe
         velodyne_dir = os.path.join(dataset_outdir, 'velodyne_points')
 
@@ -429,57 +434,60 @@ def main():
                 os.path.join(dataset_outdir, 'capture_vehicle_front_rtk_interp.csv'), header=True)
             cap_front_rtk_interp_rec = cap_front_rtk_interp.to_dict(orient='records')
 
-            # if corresponding velodyne directory exists, calibrate them and save it in output directory.
-            print("I'm here")
-            # lidar_indir = os.listdir(lidar_indir)
-            if bs.name in os.listdir(lidar_indir):
-                lidar_dir = os.path.join(lidar_indir, bs.name, "velodyne_points")
-                lidar_dir = os.path.join(lidar_indir, bs.name)
-                # print("bag name is: ", bs.name)
-                # print("lidar_dir is here: ", lidar_dir)
-                # print("output file name is here: ", velodyne_dir)
-                # generate timestamp file.
+            if 0:
+                # if corresponding velodyne directory exists, calibrate them and save it in output directory.
+                print("I'm here")
+                # lidar_indir = os.listdir(lidar_indir)
+                if bs.name in os.listdir(lidar_indir):
+                    lidar_dir = os.path.join(lidar_indir, bs.name, "velodyne_points")
+                    lidar_dir = os.path.join(lidar_indir, bs.name)
+                    # print("bag name is: ", bs.name)
+                    # print("lidar_dir is here: ", lidar_dir)
+                    # print("output file name is here: ", velodyne_dir)
+                    # generate timestamp file.
 
-                txt_file = glob.glob(lidar_dir + "/*.txt")
-                # print("txt_files are here: ", txt_file)
-                lidar_maps = []
-                for file_name in txt_file:
-                    with open(file_name) as f:
-                        a = f.read()
-                        a = np.uint64(a) + 1
-                        bin_name = file_name.split('/')[-1].split('_')[0]
-                        bin_name = int(bin_name)
-                        lidar_maps.append((a, bin_name))
-                lidar_frame = pd.DataFrame(lidar_maps, columns=lidar_cols)
-                lidar_frame = lidar_frame.sort_values(by=lidar_cols[0])
+                    txt_file = glob.glob(lidar_dir + "/*.txt")
+                    # print("txt_files are here: ", txt_file)
+                    lidar_maps = []
+                    for file_name in txt_file:
+                        with open(file_name) as f:
+                            a = f.read()
+                            a = np.uint64(a) + 1
+                            bin_name = file_name.split('/')[-1].split('_')[0]
+                            bin_name = int(bin_name)
+                            lidar_maps.append((a, bin_name))
+                    lidar_frame = pd.DataFrame(lidar_maps, columns=lidar_cols)
+                    lidar_frame = lidar_frame.sort_values(by=lidar_cols[0])
 
-                lidar_frame_csv = lidar_frame.copy()
-                # print(list(lidar_frame_csv))
-                lidar_frame_csv['timestamp'] = lidar_frame_csv.timestamp.map(lambda x: '{:.0f}'.format(x))
-                lidar_frame_csv.to_csv(lidar_outdir + '/../timestamp.csv', index=False)
-                # compare the timestamp and copy and rename bin file here.
-                # lidar_interp is a dataframe.
+                    lidar_frame_csv = lidar_frame.copy()
+                    # print(list(lidar_frame_csv))
+                    lidar_frame_csv['timestamp'] = lidar_frame_csv.timestamp.map(lambda x: '{:.0f}'.format(x))
+                    lidar_frame_csv.to_csv(lidar_outdir + '/../timestamp.csv', index=False)
+                    # compare the timestamp and copy and rename bin file here.
+                    # lidar_interp is a dataframe.
 
-                lidar_interp = interpolate_to_camera(camera_index_df, lidar_frame, filter_cols=lidar_cols)
+                    lidar_interp = interpolate_to_camera(camera_index_df, lidar_frame, filter_cols=lidar_cols)
 
-                lidar_interp['filename'] = lidar_interp['filename'].round().astype(int)
-                lidar_interp = lidar_interp.astype(object)
+                    lidar_interp['filename'] = lidar_interp['filename'].round().astype(int)
+                    lidar_interp = lidar_interp.astype(object)
 
-                lidar_interp_csv = lidar_interp.copy()
-                lidar_interp_csv['timestamp'] = lidar_interp_csv.timestamp.map(lambda x: str(x))
-                lidar_interp_csv.to_csv(lidar_outdir + '/../map.csv', index=False)
-
-
-                for index, row in lidar_interp.iterrows():
-                    source_lidar_file_path = os.path.join(lidar_dir, str(row['filename'])+'.bin')
-                    dest_lidar_file_path = os.path.join(lidar_outdir, str(row['timestamp'])+'.bin')
-
-                    # print("lidar outout here: ", dest_lidar_file_path)
-                    shutil.copy(source_lidar_file_path, dest_lidar_file_path)
+                    lidar_interp_csv = lidar_interp.copy()
+                    lidar_interp_csv['timestamp'] = lidar_interp_csv.timestamp.map(lambda x: str(x))
+                    lidar_interp_csv.to_csv(lidar_outdir + '/../map.csv', index=False)
 
 
-                print("input lidar dir is here: ", lidar_dir)
-                print("output lidar dir is here: ", lidar_outdir)
+                    for index, row in lidar_interp.iterrows():
+                        source_lidar_file_path = os.path.join(lidar_dir, str(row['filename'])+'.bin')
+                        dest_lidar_file_path = os.path.join(lidar_outdir, str(row['timestamp'])+'.bin')
+
+                        # print("lidar outout here: ", dest_lidar_file_path)
+                        shutil.copy(source_lidar_file_path, dest_lidar_file_path)
+
+
+                    print("input lidar dir is here: ", lidar_dir)
+                    print("output lidar dir is here: ", lidar_outdir)
+            else:
+                print('lidar data sycn disable!!!')
 
             if not obs_rtk_df_dict:
                 print('Warning: No obstacles or obstacle RTK data present. '
