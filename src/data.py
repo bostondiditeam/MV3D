@@ -206,7 +206,7 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
 
     count = 0
     lidars=[]
-    pool=Pool(3)
+    pool=Pool(2)
     for n in frames_index:
         path=os.path.join(dataset_dir,'%05d.npy' % n)
         if overwrite==False and os.path.isfile(path):
@@ -219,6 +219,7 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
     count = 0
     for top in tops:
         n=frames_index[count]
+        path = os.path.join(dataset_dir, '%05d.npy' % n)
         np.save(path, top)
         print('top view {} saved'.format(n))
         count+=1
@@ -389,7 +390,6 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
         ############# convert   ###########################
         save_preprocess_dir = cfg.PREPROCESSED_DATA_SETS_DIR
-        os.makedirs(save_preprocess_dir, exist_ok=True)
 
         if 1:  ## rgb images --------------------
             proprecess_rgb(save_preprocess_dir, dataset, date, drive, frames_index, overwrite=False)
