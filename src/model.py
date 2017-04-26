@@ -24,6 +24,8 @@ import utils.batch_loading as dataset
 #http://3dimage.ee.tsinghua.edu.cn/cxz
 # "Multi-View 3D Object Detection Network for Autonomous Driving" - Xiaozhi Chen, CVPR 2017
 
+def get_top_feature_shape(top_shape, stride):
+    return (top_shape[0]//stride, top_shape[1]//stride)
 
 def project_to_roi3d(top_rois):
     num = len(top_rois)
@@ -223,7 +225,7 @@ class MV3D(object):
 
             # set anchor boxes
             top_shape=train_tops[0].shape
-            top_feature_shape=data.getTopFeatureShape(top_shape,self.stride)
+            top_feature_shape=get_top_feature_shape(top_shape, self.stride)
             self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.stride, top_shape[0:2],top_feature_shape[0:2])
             self.inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
@@ -426,7 +428,7 @@ class MV3D(object):
 
     def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):
         # set anchor boxes
-        top_feature_shape=data.getTopFeatureShape(top_view_shape,self.stride)
+        top_feature_shape=get_top_feature_shape(top_view_shape, self.stride)
         self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.stride, top_view_shape[0:2],top_feature_shape[0:2])
         self.anchors_inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
 

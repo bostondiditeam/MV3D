@@ -155,29 +155,6 @@ def get_all_file_names(data_seg, dates, drivers):
             load_indexs += name_list
     return load_indexs
 
-def load(file_names,is_testset=False):
-    # fig = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(1000, 500))
-    # data_dir=cfg.DATA_SETS_DIR
-    data_seg = cfg.PREPROCESSED_DATA_SETS_DIR
-    train_rgbs=[cv2.imread(os.path.join(data_seg,'rgb', file + '.png'),1) for file in file_names]
-    train_tops=[np.load(os.path.join(data_seg,'top', file + '.npy')) for file in file_names]
-    train_fronts=[np.zeros((1, 1), dtype=np.float32) for file in file_names]
-    if is_testset==True:
-        train_gt_boxes3d=None
-        train_gt_labels=None
-    else:
-        train_gt_boxes3d=[np.load(os.path.join(data_seg, 'gt_boxes3d', file + '.npy')) for file in file_names]
-        train_gt_labels = [np.load(os.path.join(data_seg, 'gt_labels', file + '.npy')) for file in file_names]
-
-    return train_rgbs,train_tops,train_fronts,train_gt_labels,train_gt_boxes3d
-
-
-
-def getTopFeatureShape(top_shape,stride):
-    return (top_shape[0]//stride, top_shape[1]//stride)
-
-
-
 
 def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite=False):
 
@@ -200,7 +177,9 @@ def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite
         count += 1
     print('rgb image save done\n')
 
-def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_index,overwrite=False,dump_image=True):
+def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_index,
+                      overwrite=False,dump_image=True):
+
     dataset_dir = os.path.join(save_preprocess_dir, 'top', date, drive)
     os.makedirs(dataset_dir, exist_ok=True)
 
@@ -237,8 +216,9 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
             top_image_path = os.path.join(dataset_dir,'%05d.png' % n)
 
             # draw bbox on top image
-            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objects[count])
-            top_image = draw_box3d_on_top(top_image, gt_boxes3d, color=(0, 0, 80))
+            if objects!=None:
+                gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objects[count])
+                top_image = draw_box3d_on_top(top_image, gt_boxes3d, color=(0, 0, 80))
             cv2.imwrite(top_image_path, top_image)
             count += 1
             print('top view image {} saved'.format(n))
@@ -341,6 +321,11 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
         count += 1
     print('gt box image save done\n')
 
+def is_evaluation_dataset(date, drive):
+    if date=='Round1Test':
+        return True
+    else:
+        return False
 
 def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
@@ -375,9 +360,11 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         tracklet_file = os.path.join(dataset.data_path, 'tracklet_labels.xml')
         if os.path.isfile(tracklet_file):
             objects = read_objects(tracklet_file, frames_index)
-        else:
+        elif is_evaluation_dataset(date, drive):
             objects=None
-            print('Skip read tracklet_labels file : Not found it')
+            print("Skip read evaluation_dataset's tracklet_labels file : ")
+        else:
+            raise ValueError('read_objects error!!!!!')
 
         # Load some data
         # dataset.load_calib()         # Calibration data are accessible as named tuples
