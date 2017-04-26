@@ -11,7 +11,7 @@ def get_file_names(data_dir, data_type, driver, date):
     driver_files = glob.glob(prefix)
     return driver_files
 
-def check_preprocessed_data(data_seg, dates_to_drivers):
+def check_preprocessed_data(data_seg, dates_to_drivers, is_testset=False):
     problem_driver =  defaultdict(list)
     right_driver = defaultdict(list)
     for date, drivers in dates_to_drivers.items():
@@ -21,7 +21,11 @@ def check_preprocessed_data(data_seg, dates_to_drivers):
             # front_files = get_file_names(data_seg, "front", driver, date)
             gt_labels_files = get_file_names(data_seg, "gt_labels", driver, date)
             gt_boxes3d_files = get_file_names(data_seg, "gt_boxes3d", driver, date)
-            value_set = set([len(rgb_files), len(top_files), len(gt_labels_files), len(gt_boxes3d_files)])
+
+            if is_testset:
+                value_set = set([len(rgb_files), len(top_files)])
+            else:
+                value_set = set([len(rgb_files), len(top_files), len(gt_labels_files), len(gt_boxes3d_files)])
             if len(value_set) != 1:
                 # print('date is here {} and driver here {}'.format(date, driver))
                 problem_driver[date].append(driver)
