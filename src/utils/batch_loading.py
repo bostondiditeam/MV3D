@@ -3,6 +3,12 @@ from config import cfg
 import os
 import glob
 from sklearn.utils import shuffle
+from utils.check_data import check_preprocessed_data
+
+# disable print
+# import sys
+# f = open(os.devnull, 'w')
+# sys.stdout = f
 
 
 class batch_loading:
@@ -32,16 +38,28 @@ class batch_loading:
         self.train_gt_labels = []
         self.train_gt_boxes3d = []
 
+    def get_shape(self):
+        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = load(self.shuffled_file_names[0])
+
+        top_shape = train_tops[0].shape
+        front_shape = train_fronts[0].shape
+        rgb_shape = train_rgbs[0].shape
+
+        return top_shape, front_shape, rgb_shape
+
     def get_all_load_index(self, data_seg, dates_to_drivers):
-        # todo: check if all files from lidar, rgb, gt_boxes3d is the same
-        lidar_dir = os.path.join(data_seg, "top")
-        print('lidar data here: ', lidar_dir)
+        # check if input data (rgb, top, gt_labels, gt_boxes) have the same amount.
+        check_preprocessed_data(data_seg, dates_to_drivers)
+        top_dir = os.path.join(data_seg, "top")
+        # print('lidar data here: ', lidar_dir)
         load_indexs = []
         for date, drivers in dates_to_drivers.items():
             for driver in drivers:
                 # file_prefix is something like /home/stu/data/preprocessed/didi/lidar/2011_09_26_0001_*
-                file_prefix = lidar_dir + '/' + date + '_' + driver + '_*'
+                file_prefix = top_dir + '/' + date + '_' + driver + '_*'
                 driver_files = glob.glob(file_prefix)
+                if len(driver_files) == 0:
+                    raise ValueError('Directory has no data starts from {}, please revise.'.format(file_prefix))
                 name_list = [file.split('/')[-1].split('.')[0] for file in driver_files]
                 load_indexs += name_list
         return load_indexs
@@ -120,11 +138,10 @@ class batch_loading:
 
 if __name__ == '__main__':
     # testing image testing, single frames
-
     # batch frame testing.
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
-    dates_to_drivers = {'1':['15', '6_f']}
+    dates_to_drivers = {'2011_09_26':['0005', '0001', '0017']}
     load_indexs = None
     batches = batch_loading(dataset_dir, dates_to_drivers, load_indexs)
 
