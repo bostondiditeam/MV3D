@@ -26,11 +26,15 @@ cfg = __C
 __C.TEST_KEY=11
 
 # dataset type
-__C.DATA_SETS_TYPE='didi'       #['didi','kitti']
+__C.DATA_SETS_TYPE='didi'       #['didi','kitti','test']
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
-__C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data')
+
+if __C.DATA_SETS_TYPE=='test':
+    __C.DATA_SETS_DIR = osp.abspath('/home/stu/round12_data_test')
+else:
+    __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data')
 
 __C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', __C.DATA_SETS_TYPE)
 __C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
