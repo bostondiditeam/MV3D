@@ -11,6 +11,7 @@ import os
 import cv2
 import numpy
 import glob
+from multiprocessing import Pool
 
 
 def filter_center_car(lidar):
@@ -82,7 +83,7 @@ def lidar_to_top(lidar):
     height  = Yn - Y0
     width   = Xn - X0
     channel = Zn - Z0  + 2
-    print('height,width,channel=%d,%d,%d'%(height,width,channel))
+    # print('height,width,channel=%d,%d,%d'%(height,width,channel))
     top = np.zeros(shape=(height,width,channel), dtype=np.float32)
 
 
@@ -179,10 +180,13 @@ def getTopFeatureShape(top_shape,stride):
 
 
 def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite=False):
-    os.makedirs(save_preprocess_dir + '/rgb', exist_ok=True)
+
+    dataset_dir=os.path.join(save_preprocess_dir,'rgb',date,drive)
+    os.makedirs(dataset_dir, exist_ok=True)
     count = 0
     for n in frames_index:
-        if overwrite==False and os.path.isfile(save_preprocess_dir + '/rgb/' + date + '_' + drive + '_%05d.png' % n):
+        path=os.path.join(dataset_dir,'%05d.png' % n)
+        if overwrite==False and os.path.isfile(path):
             count += 1
             continue
         print('rgb images={}'.format(n))
@@ -191,34 +195,65 @@ def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite
         rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
 
         # todo fit it to didi dataset later.
-        cv2.imwrite(save_preprocess_dir + '/rgb/' + date + '_' + drive + '_%05d.png' % n, rgb)
+        cv2.imwrite(os.path.join(path), rgb)
         # cv2.imwrite(save_preprocess_dir + '/rgb/rgb_%05d.png'%n,rgb)
         count += 1
     print('rgb image save done\n')
 
-def generate_top_view(save_preprocess_dir,dataset,date,drive,frames_index,overwrite=False):
-    os.makedirs(save_preprocess_dir + '/top', exist_ok=True)
+def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_index,overwrite=False,dump_image=True):
+    dataset_dir = os.path.join(save_preprocess_dir, 'top', date, drive)
+    os.makedirs(dataset_dir, exist_ok=True)
 
     count = 0
+    lidars=[]
+    pool=Pool(3)
     for n in frames_index:
-        if overwrite==False and os.path.isfile(save_preprocess_dir + '/top/' + date + '_' + drive + '_%05d.npy' % n):
+        path=os.path.join(dataset_dir,'%05d.npy' % n)
+        if overwrite==False and os.path.isfile(path):
             count += 1
             continue
-        print('generate top view={}'.format(n))
-        lidar = dataset.velo[count]
+        lidars.append(dataset.velo[count])
 
-        top = lidar_to_top(lidar)
+    tops = pool.map(lidar_to_top,lidars)
 
-        np.save(save_preprocess_dir + '/top/' + date + '_' + drive + '_%05d.npy' % n, top)
-    print('top view save done\n')
+    count = 0
+    for top in tops:
+        n=frames_index[count]
+        np.save(path, top)
+        print('top view {} saved'.format(n))
+        count+=1
+
+
+    if dump_image:
+        dataset_dir = os.path.join(save_preprocess_dir, 'top_image', date, drive)
+        os.makedirs(dataset_dir, exist_ok=True)
+
+        top_images=pool.map(draw_top_image,tops)
+
+        count = 0
+        for top_image in top_images:
+            n = frames_index[count]
+            top_image_path = os.path.join(dataset_dir,'%05d.png' % n)
+
+            # draw bbox on top image
+            gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objects[count])
+            top_image = draw_box3d_on_top(top_image, gt_boxes3d, color=(0, 0, 80))
+            cv2.imwrite(top_image_path, top_image)
+            count += 1
+            print('top view image {} saved'.format(n))
+
 
 def preprocess_bbox(save_preprocess_dir,objects,date,drive,frames_index,overwrite=False):
-    os.makedirs(save_preprocess_dir + '/gt_boxes3d', exist_ok=True)
-    os.makedirs(save_preprocess_dir + '/gt_labels', exist_ok=True)
+
+    bbox_dir = os.path.join(save_preprocess_dir, 'gt_boxes3d', date, drive)
+    os.makedirs(bbox_dir, exist_ok=True)
+
+    lable_dir = os.path.join(save_preprocess_dir, 'gt_labels', date, drive)
+    os.makedirs(lable_dir, exist_ok=True)
     count = 0
     for n in frames_index:
-        bbox_path=save_preprocess_dir + '/gt_boxes3d/' + date + '_' + drive + '_%05d.npy' % n
-        lable_path=save_preprocess_dir + '/gt_labels/' + date + '_' + drive + '_%05d.npy' % n
+        bbox_path=os.path.join(bbox_dir,'%05d.npy' % n)
+        lable_path=os.path.join(lable_dir,'%05d.npy' % n)
         if overwrite==False and os.path.isfile(bbox_path):
             count += 1
             continue
@@ -229,30 +264,32 @@ def preprocess_bbox(save_preprocess_dir,objects,date,drive,frames_index,overwrit
 
         print('boxes3d={}'.format(n))
 
-        objs = objects[count]
-        gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
+        obj = objects[count]
+        gt_boxes3d, gt_labels = obj_to_gt_boxes3d(obj)
 
         np.save(bbox_path, gt_boxes3d)
         np.save(lable_path, gt_labels)
         count += 1
 
 def draw_top_view_image(save_preprocess_dir,objects,date,drive,frames_index,overwrite=False):
-    os.makedirs(save_preprocess_dir + '/top_image', exist_ok=True)
+
+    dataset_dir = os.path.join(save_preprocess_dir, 'top_image', date, drive)
+    os.makedirs(dataset_dir, exist_ok=True)
     count = 0
     for n in frames_index:
-        top_image_path=save_preprocess_dir + '/top_image/' + date + '_' + drive + '_%05d.png' % n
+        top_image_path=os.path.join(dataset_dir,'%05d.png' % n)
         if overwrite==False and os.path.isfile(top_image_path):
             count += 1
             continue
 
         print('draw top view image ={}'.format(n))
 
-        top = np.load(save_preprocess_dir + '/top/' + date + '_' + drive + '_%05d.npy' % n)
+        top = np.load(os.path.join(save_preprocess_dir,'top',date,drive,'%05d.npy' % n) )
         top_image = draw_top_image(top)
 
         # draw bbox on top image
         if objects != None:
-            gt_boxes3d = np.load(save_preprocess_dir + '/gt_boxes3d/' + date + '_' + drive + '_%05d.npy' % n)
+            gt_boxes3d = np.load(os.path.join(save_preprocess_dir,'gt_boxes3d',date,drive,'%05d.npy' % n))
             top_image = draw_box3d_on_top(top_image, gt_boxes3d, color=(0, 0, 80))
         else:
             print('Not found gt_boxes3d,skip draw bbox on top image')
@@ -262,22 +299,26 @@ def draw_top_view_image(save_preprocess_dir,objects,date,drive,frames_index,over
     print('top view image draw done\n')
 
 def dump_lidar(save_preprocess_dir,dataset,date,drive,frames_index,overwrite=False):
-    os.makedirs(save_preprocess_dir + '/lidar', exist_ok=True)
+
+    dataset_dir = os.path.join(save_preprocess_dir, 'lidar', date, drive)
+    os.makedirs(dataset_dir, exist_ok=True)
     count = 0
     for n in frames_index:
+
+        lidar_dump_path=os.path.join(dataset_dir,'%05d.npy' % n)
         if overwrite==False and os.path.isfile(lidar_dump_path):
             count += 1
             continue
 
         print('lidar data={}'.format(n))
-        lidar_dump_path=save_preprocess_dir + '/lidar/' + date + '_' + drive + '_%05d.npy' % n
         lidar = dataset.velo[count]
         np.save(lidar_dump_path, lidar)
         count += 1
     print('dump lidar data done\n')
 
 def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,frames_index,overwrite=False):
-    os.makedirs(save_preprocess_dir + '/gt_box_plot', exist_ok=True)
+    dataset_dir = os.path.join(save_preprocess_dir, 'gt_box_plot', date, drive)
+    os.makedirs(dataset_dir, exist_ok=True)
     count = 0
     for n in frames_index:
         print('rgb images={}'.format(n))
@@ -295,7 +336,7 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
         objs = objects[count]
         gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
         img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
-        cv2.imwrite(save_preprocess_dir + '/gt_box_plot/' + date + '_' + drive + '_%05d.png' % n, img)
+        cv2.imwrite(os.path.join(dataset_dir,'%05d.png' % n), img)
         count += 1
     print('gt box image save done\n')
 
@@ -319,7 +360,7 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
     if (cfg.DATA_SETS_TYPE == 'test'):
         max_cache_frames_num = 4
     else:
-        max_cache_frames_num = 50
+        max_cache_frames_num = 4
     if len(frames_index)>max_cache_frames_num:
         frames_idx_chunks=[frames_index[i:i+max_cache_frames_num] for i in range(0,len(frames_index),max_cache_frames_num)]
     else:
@@ -355,13 +396,14 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
 
         if 1:  ##generate top view --------------------
-            generate_top_view(save_preprocess_dir, dataset, date, drive, frames_index, overwrite=False)
+            generate_top_view(save_preprocess_dir, dataset,objects, date, drive, frames_index,
+                              overwrite=True,dump_image=True)
 
 
         if 1 and objects!=None:  ## preprocess boxes3d  --------------------
             preprocess_bbox(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
-        if 1: ##draw top image with bbox
+        if 0: ##draw top image with bbox
             draw_top_view_image(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
 
@@ -421,6 +463,7 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         #     numpy.savetxt(save_preprocess_dir + '/aspects'+date+'_'+drive+'.txt',aspects)
         #     numpy.savetxt(save_preprocess_dir + '/scales'+date+'_'+drive+'.txt',scales)
         #     cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
+
 
 def preproces(dates=None, drivers=None, frames_index=None):
 
