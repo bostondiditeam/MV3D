@@ -7,13 +7,14 @@ from warnings import warn
 # get all file names starts from a prefix string.
 def get_file_names(data_dir, data_type, driver, date):
     dir_path = os.path.join(data_dir, data_type)
-    prefix = dir_path + '/' + date + '_' + driver + '_*'
+    prefix = os.path.join(dir_path, date, driver) + '/*'
     driver_files = glob.glob(prefix)
     return driver_files
 
 def check_preprocessed_data(data_seg, dates_to_drivers, is_testset=False):
     problem_driver =  defaultdict(list)
     right_driver = defaultdict(list)
+
     for date, drivers in dates_to_drivers.items():
         for driver in drivers:
             rgb_files = get_file_names(data_seg, "rgb", driver, date)
