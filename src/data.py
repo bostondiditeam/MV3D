@@ -185,7 +185,7 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
 
     count = 0
     lidars=[]
-    pool=Pool(2)
+    pool=Pool(3)
     for n in frames_index:
         path=os.path.join(dataset_dir,'%05d.npy' % n)
         if overwrite==False and os.path.isfile(path):
@@ -194,7 +194,7 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
         lidars.append(dataset.velo[count])
 
     tops = pool.map(lidar_to_top,lidars)
-
+    # tops=[lidar_to_top(lidar) for lidar in lidars]
     count = 0
     for top in tops:
         n=frames_index[count]
@@ -209,6 +209,7 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
         os.makedirs(dataset_dir, exist_ok=True)
 
         top_images=pool.map(draw_top_image,tops)
+        # top_images=[draw_top_image(top) for top in tops]
 
         count = 0
         for top_image in top_images:
@@ -222,6 +223,8 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
             cv2.imwrite(top_image_path, top_image)
             count += 1
             print('top view image {} saved'.format(n))
+    pool.close()
+    pool.join()
 
 
 def preprocess_bbox(save_preprocess_dir,objects,date,drive,frames_index,overwrite=False):
@@ -492,7 +495,12 @@ if __name__ == '__main__':
     else:
         raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 
+    import time
+    t0=time.time()
+
     preproces(dates, drivers, frames_index)
+
+    print('use time : {}'.format(time.time()-t0))
 
 
 
