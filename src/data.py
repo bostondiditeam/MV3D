@@ -379,7 +379,7 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
 
         ############# convert   ###########################
-        save_preprocess_dir = cfg.PREPROCESSED_DATA_SETS_DIR
+        save_preprocess_dir = cfg.PREPROCESSING_DATA_SETS_DIR
 
         if 1:  ## rgb images --------------------
             proprecess_rgb(save_preprocess_dir, dataset, date, drive, frames_index, overwrite=False)
