@@ -22,14 +22,14 @@ def pred_and_save(tracklet_pred_dir, dataset):
     m3.tracking_init(top_shape,front_shape,rgb_shape)
 
     for i in range(dataset.size):
-        rgb, top, front, _, _ = dataset.load( is_testset=True)
+        rgb, top, front, _, _ = dataset.load(1)
         t1=time.time()
         boxes3d,probs=m3.tacking(top[0],front[0],rgb[0])
         t2=time.time()
         print('time= '+ str(t2-t1))
 
         # for debugging: save image and show image.
-        top_image=data.draw_top_image(top)
+        top_image=data.draw_top_image(top[0])
         if len(boxes3d)!=0:
             top_image = data.draw_box3d_on_top(top_image, boxes3d[0:1,:,:], color=(0, 0, 80))
             translation, size, rotation = boxes3d_for_evaluation(boxes3d[0:1,:,:])

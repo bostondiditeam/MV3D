@@ -39,8 +39,8 @@ def top_box_to_box3d(boxes):
     return boxes3d
 
 def box3d_in_top_view(boxes3d):
-    for x,y in boxes3d:
-        if TOP_X_MIN<=x<=TOP_X_MAX and TOP_Y_MIN<=y<=TOP_Y_MAX:
+    for i in range(8):
+        if TOP_X_MIN<=boxes3d[i,0]<=TOP_X_MAX and TOP_Y_MIN<=boxes3d[i,1]<=TOP_Y_MAX:
             continue
         else:
             return False

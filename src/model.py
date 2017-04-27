@@ -82,14 +82,17 @@ class MV3D(object):
         self.log = utilfile.Logger(cfg.LOG_DIR+'/log.txt', mode='a')
 
         self.validation_set=None
+        self.log_num=0
+        self.log_max = 10
 
     def proposal(self):
         pass
 
-    def batch_data_is_invalid(train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d):
+    def batch_data_is_invalid(self,train_gt_boxes3d):
         # todo : support batch size >1
-        for gt_box in train_gt_boxes3d:
-            if box.box3d_in_top_view(gt_box):
+
+        for i in range(len(train_gt_boxes3d)):
+            if box.box3d_in_top_view(train_gt_boxes3d[i]):
                 continue
             else:
                 return True
@@ -111,14 +114,14 @@ class MV3D(object):
         for i in range(smooth_step):
 
             train_rgbs, train_tops, train_fronts,\
-            train_gt_labels, train_gt_boxes3d = self.validation_set.load(batch_size)
+            train_gt_labels, train_gt_boxes3d = self.validation_set.load(batch_size,shuffled=True)
 
-            batch_top_view    = train_tops
-            batch_front_view  = train_fronts
-            batch_rgb_images  = train_rgbs
+            batch_top_view = np.array(train_tops)
+            batch_front_view = np.array(train_fronts)
+            batch_rgb_images = np.array(train_rgbs)
 
-            batch_gt_labels    = train_gt_labels[0]
-            batch_gt_boxes3d   = train_gt_boxes3d[0]
+            batch_gt_labels = train_gt_labels[0]
+            batch_gt_boxes3d = train_gt_boxes3d[0]
             batch_gt_top_boxes = data.box3d_to_top_box(batch_gt_boxes3d)
 
 
@@ -184,12 +187,8 @@ class MV3D(object):
 
         self.validation_set=validation_set
         #for init model
-        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d=train_set.load(1)
+        top_shape, front_shape, rgb_shape = train_set.get_shape()
 
-
-        top_shape=train_tops[0].shape
-        front_shape=train_fronts[0].shape
-        rgb_shape=train_rgbs[0].shape
 
         net=mv3d_net.load(top_shape,front_shape,rgb_shape,self.num_class,len(self.bases))
         self.training_net=net
@@ -228,10 +227,8 @@ class MV3D(object):
             proposals=net['proposals']
             proposal_scores=net['proposal_scores']
             top_features=net['top_features']
-            num_frames=len(train_tops)
 
             # set anchor boxes
-            top_shape=train_tops[0].shape
             top_feature_shape=get_top_feature_shape(top_shape, self.stride)
             self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.stride, top_shape[0:2],top_feature_shape[0:2])
             self.inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
@@ -239,26 +236,27 @@ class MV3D(object):
             summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'graph'), sess.graph)
             summary_writer.close()
 
-            loss_smooth_step=1
+            loss_smooth_step=10
             loss_sum = np.zeros(4)
 
             rate = 0.01
             for iter in range(max_iter):
 
-                train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = train_set.load(batch_size)
-                if self.batch_data_is_invalid(train_gt_boxes3d):
+                train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = \
+                    train_set.load(batch_size,shuffled=True)
+                if self.batch_data_is_invalid(train_gt_boxes3d[0]):
                     continue
 
                 epoch=1.0 * iter
 
                 idx=iter%len(train_tops)
 
-                batch_top_view    = train_tops
-                batch_front_view  = train_fronts
-                batch_rgb_images  = train_rgbs
+                batch_top_view    = np.array(train_tops)
+                batch_front_view  = np.array(train_fronts)
+                batch_rgb_images  = np.array(train_rgbs)
 
-                batch_gt_labels    = train_gt_labels
-                batch_gt_boxes3d   = train_gt_boxes3d
+                batch_gt_labels    = train_gt_labels[0]
+                batch_gt_boxes3d   = train_gt_boxes3d[0]
                 batch_gt_top_boxes = data.box3d_to_top_box(batch_gt_boxes3d)
 
 
@@ -323,7 +321,7 @@ class MV3D(object):
 
                     va_top_cls_loss, va_top_reg_loss,va_fuse_cls_loss, va_fuse_reg_loss =\
                         self.validation_accuracy(loss_smooth_step)
-                    self.log.write('validation:       |   %0.5f   %0.5f   |   %0.5f   %0.5f \n' % \
+                    self.log.write('validation:         |   %0.5f   %0.5f   |   %0.5f   %0.5f \n\n' % \
                                    ( va_top_cls_loss, va_top_reg_loss, va_fuse_cls_loss, va_fuse_reg_loss))
 
 
@@ -331,8 +329,10 @@ class MV3D(object):
 
                 #debug: ------------------------------------
                 if 1 and iter%iter_debug==0:
-                    log_max=10
-                    log_idx=iter%log_max
+                    self.log_num+=1
+                    self.log_num=self.log_num%self.log_max
+
+                    log_idx=self.log_num
                     top_image = data.draw_top_image(batch_top_view[0])
                     rgb       = train_rgbs[idx]
 
