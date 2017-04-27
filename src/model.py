@@ -7,7 +7,7 @@ import net.utility.draw  as nud
 import mv3d_net
 import net.blocks as blocks
 import data
-import net.processing.boxes3d  as boxes3d_plot
+import net.processing.boxes3d  as box
 from net.rpn_target_op import make_bases, make_anchors, rpn_target
 from net.rcnn_target_op import rcnn_target
 from net.rpn_nms_op     import draw_rpn_proposal
@@ -30,14 +30,14 @@ def get_top_feature_shape(top_shape, stride):
 def project_to_roi3d(top_rois):
     num = len(top_rois)
     # rois3d = np.zeros((num,8,3))
-    rois3d = boxes3d_plot.top_box_to_box3d(top_rois[:,1:5])
+    rois3d = box.top_box_to_box3d(top_rois[:, 1:5])
     return rois3d
 
 
 def project_to_rgb_roi(rois3d):
     num  = len(rois3d)
     rois = np.zeros((num,5),dtype=np.int32)
-    projections = boxes3d_plot.box3d_to_rgb_projections(rois3d)
+    projections = box.box3d_to_rgb_projections(rois3d)
     for n in range(num):
         qs = projections[n]
         minx = np.min(qs[:,0])
@@ -85,6 +85,15 @@ class MV3D(object):
 
     def proposal(self):
         pass
+
+    def batch_data_is_invalid(train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d):
+        # todo : support batch size >1
+        for gt_box in train_gt_boxes3d:
+            if box.box3d_in_top_view(gt_box):
+                continue
+            else:
+                return True
+        return False
 
     def validation_accuracy(self,smooth_step=5):
         net=self.training_net
@@ -221,8 +230,6 @@ class MV3D(object):
             top_features=net['top_features']
             num_frames=len(train_tops)
 
-            np_reshape=lambda np_array :np_array.reshape(1, *(np_array.shape))
-
             # set anchor boxes
             top_shape=train_tops[0].shape
             top_feature_shape=get_top_feature_shape(top_shape, self.stride)
@@ -235,25 +242,23 @@ class MV3D(object):
             loss_smooth_step=1
             loss_sum = np.zeros(4)
 
+            rate = 0.01
             for iter in range(max_iter):
 
                 train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = train_set.load(batch_size)
-                train_gt_boxes3d = [train_gt_boxes3d[n][train_gt_labels[n] > 0] for n in range(len(train_gt_boxes3d))]
-                train_gt_labels = [train_gt_labels[n][train_gt_labels[n] > 0] for n in range(len(train_gt_labels))]
-
-                epoch=1.0 * iter
-                rate=0.01
-
-                idx=iter%len(train_tops)
-                if len(train_gt_boxes3d[idx])==0:
+                if self.batch_data_is_invalid(train_gt_boxes3d):
                     continue
 
-                batch_top_view    = np_reshape(train_tops[idx])
-                batch_front_view  = np_reshape(train_fronts[idx])
-                batch_rgb_images  = np_reshape(train_rgbs[idx])
+                epoch=1.0 * iter
 
-                batch_gt_labels    = train_gt_labels[idx]
-                batch_gt_boxes3d   = train_gt_boxes3d[idx]
+                idx=iter%len(train_tops)
+
+                batch_top_view    = train_tops
+                batch_front_view  = train_fronts
+                batch_rgb_images  = train_rgbs
+
+                batch_gt_labels    = train_gt_labels
+                batch_gt_boxes3d   = train_gt_boxes3d
                 batch_gt_top_boxes = data.box3d_to_top_box(batch_gt_boxes3d)
 
 
@@ -347,7 +352,7 @@ class MV3D(object):
                     nud.imsave('%d_img_rcnn_target' % log_idx, img_target)
 
 
-                    img_rgb_rois = boxes3d_plot.draw_boxes(rgb, batch_rgb_rois[:,1:5], color=(255,0,255), thickness=1)
+                    img_rgb_rois = box.draw_boxes(rgb, batch_rgb_rois[:, 1:5], color=(255, 0, 255), thickness=1)
                     nud.imsave('%d_img_rgb_rois' % log_idx, img_rgb_rois)
 
 
@@ -420,7 +425,7 @@ class MV3D(object):
                                                   score_threshold=0.5)
 
                     predict_rgb_view = draw_rcnn_nms_with_gt(rgb, boxes3d_2,batch_gt_boxes3d )
-                    predict_top_view =  boxes3d_plot.draw_box3d_on_top(top_image, boxes3d_2, color=(80, 0, 0))
+                    predict_top_view =  box.draw_box3d_on_top(top_image, boxes3d_2, color=(80, 0, 0))
                     nud.imsave('%d_predict_rgb_view' % log_idx, predict_rgb_view)
                     nud.imsave('%d_predict_top_view' % log_idx, predict_top_view)
 
