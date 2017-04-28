@@ -33,9 +33,10 @@ def pred_and_save(tracklet_pred_dir, dataset):
         if len(boxes3d)!=0:
             top_image = data.draw_box3d_on_top(top_image, boxes3d[0:1,:,:], color=(0, 0, 80))
             translation, size, rotation = boxes3d_for_evaluation(boxes3d[0:1,:,:])
+
             for j in range(len(translation)):
-                tracklet.add_tracklet(i, size[j]*2, translation[j], rotation[j])
-        imsave('%5d_testset_top_image'%i,top_image)
+                tracklet.add_tracklet(i, size[j], translation[j], rotation[j])
+        imsave('%5d_top_image'%i,top_image,'testset')
 
         # file_name='tacking_test_img_{}'.format(i)
         # img_tracking=draw_boxed3d_to_rgb(rgbs[0],boxes3d)

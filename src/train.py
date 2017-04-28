@@ -9,23 +9,20 @@ dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
 training_dataset = {
     '1': ['6_f','9_f','15','20'],
-    '2': ['3_f','13'],
+    '2': ['3_f'],
     '3': ['2_f','4','6','8']}
-
+#
 # training_dataset = {
-#     '1': ['6_f','9_f','15','20'],
-#                     }
+#     '1': ['15']}
 training = ub.batch_loading(dataset_dir, training_dataset)
 
 validation_dataset = {
     '1': ['11','21_f'],
-    '2': ['14_f','17'],
     '3': ['7','11_f']
 }
 
 # validation_dataset = {
-#     '1': ['11','21_f']
-# }
+#     '1': ['15']}
 validation = ub.batch_loading(dataset_dir, validation_dataset)
 
 m3=mod.MV3D()

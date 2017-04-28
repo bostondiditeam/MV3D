@@ -149,7 +149,7 @@ class batch_loading:
                 self.batch_start_index = start_offset
                 # print("after reloop: ", self.batch_start_index)
 
-            print('The loaded file name here: ', loaded_file_names)
+            # print('The loaded file name here: ', loaded_file_names)
             self.train_rgbs, self.train_tops, self.train_fronts, self.train_gt_labels, self.train_gt_boxes3d = \
                 load(loaded_file_names, is_testset=self.is_testset)
             self.num_frame_used = 0
