@@ -19,11 +19,16 @@ then you get same data format as KITTI raw data.
 - ```catkin_make```
 - ```source ./devel/setup.zsh```  # or setup.bash
 - ```sudo apt-get install ros-indigo-velodyne```
-- ```python conver_lidar_to_bin.py```   
+- ```python2 conver_lidar_to_bin.py```   
 
-## For bag_to_kitti.py tool 
-```python -m sync_img_lidar_tracklet_tool.bag_to_kitti  -i /home/didi/didi_dataset/dataset_2/Data/1 -o ``` 
-```/home/didi/didi_dataset/dataset_2/output -pc /home/didi/sync_img_lidar/output/```
+## For bag_to_kitti.py tool, first `cd` to `MV3D/utils/bag_to_kitti` and run: (update data paths)
+```
+ python2 -m sync_img_lidar_tracklet_tool.bag_to_kitti  \
+      -i /home/didi/didi_dataset/dataset_2/Data/1  \
+      -o  /home/didi/didi_dataset/dataset_2/output \
+      -pc /home/didi/sync_img_lidar/output/
+```
+      
 Read some reference from here [https://github.com/udacity/didi-competition/tree/master/tracklets]
 
 
