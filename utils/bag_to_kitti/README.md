@@ -17,7 +17,7 @@ then you get same data format as KITTI raw data.
 ## For tool under ./lidar, change directory to ./lidar by cd ./lidar:
 ### setup
 - ```catkin_make```
-- ```source ./devel/setup.zsh```
+- ```source ./devel/setup.zsh```  # or setup.bash
 - ```sudo apt-get install ros-indigo-velodyne```
 - ```python conver_lidar_to_bin.py```   
 
