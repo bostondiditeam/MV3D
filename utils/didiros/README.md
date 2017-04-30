@@ -12,6 +12,10 @@ image_raw to cv2:
 Odometry (rtk data) to numpy:
 [https://github.com/duburlan/didi_pipeline/blob/master/scripts/cap_to_obs_tf.py](https://github.com/duburlan/didi_pipeline/blob/master/scripts/cap_to_obs_tf.py)
 
+Velodyne Drivers
+[https://github.com/ros-drivers/velodyne](https://github.com/ros-drivers/velodyne)
+[omgteam/Didi-competition-solution](https://github.com/omgteam/Didi-competition-solution)
+
 # Concept
 ![alt text](ros_pipeline.png "ROS Pipeline")
 
@@ -21,13 +25,13 @@ Terminal 1 (start roscore):
 
 ```roscore```
 
-Terminal 2 (run velodyne driver):
+Terminal 2 (install and launch [velodyne driver](https://github.com/ros-drivers/velodyne)):
 
 ```roslaunch velodyne_pointcloud 32e_points.launch```
 
 Terminal 3 (play rosbag):
 
-```rosbag play -l /h [PATH-TO-ROSBAG]```
+```rosbag play -l [PATH-TO-ROSBAG]```
 
 Teminal 4 (process data and call MV3D)
 
