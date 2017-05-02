@@ -43,11 +43,15 @@ class Tracklet_saver():
         self.collection.write_xml(self.path)
 
 
-# a test case
-# a = Tracklet_saver('./test/')
-# size = [1,2,3]
-# transition = [10,20,30]
-# rotation = [0.1, 0.2, 0.3]
-# a.add_tracklet(100, size, transition, rotation)
-# a.add_tracklet(100, size, transition, rotation)
-# a.write_tracklet()
+if __name__ == '__main__':
+    #a test case
+    os.makedirs('./test_output/',exist_ok=True)
+    a = Tracklet_saver('./test_output/')
+    size = [4.2418,1.4478*10,1.5748*4]
+    transition = [0,3,0]
+    rotation = [0, 0, 0]
+    # for i in range(243,260):
+    #     a.add_tracklet(i, size, transition, rotation)
+    for i in range(324,647):
+        a.add_tracklet(i, size, transition, rotation)
+    a.write_tracklet()

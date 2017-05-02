@@ -1,4 +1,5 @@
-from data import load
+import cv2
+import numpy as np
 from config import cfg
 import os
 import glob
@@ -9,6 +10,30 @@ from utils.check_data import check_preprocessed_data, get_file_names
 # import sys
 # f = open(os.devnull, 'w')
 # sys.stdout = f
+
+def load(file_names,is_testset=False):
+
+    # here the file names is like /home/stu/round12_data_out_range/preprocessed/didi/top/2/14_f/00013, the top inside
+    first_item = file_names[0].split('/')
+    prefix = '/'.join(first_item[:-4])
+    #  need to be replaced.
+    frame_num_list = ['/'.join(name.split('/')[-3:]) for name in file_names]
+
+    # print('rgb path here: ', os.path.join(prefix,'rgb', date, driver, file + '.png'))
+    train_rgbs=[cv2.imread(os.path.join(prefix,'rgb', file + '.png'),1) for file in frame_num_list]
+    train_tops = [np.load(os.path.join(prefix, 'top', file + '.npy')) for file in frame_num_list]
+    train_fronts=[np.zeros((1, 1), dtype=np.float32) for file in frame_num_list]
+
+    if is_testset==True:
+        train_gt_boxes3d=None
+        train_gt_labels=None
+    else:
+        train_gt_boxes3d = [np.load(os.path.join(prefix, 'gt_boxes3d', file + '.npy')) for file in frame_num_list]
+
+        train_gt_labels = [np.load(os.path.join(prefix, 'gt_labels', file + '.npy')) for file in
+                           frame_num_list]
+
+    return train_rgbs,train_tops,train_fronts,train_gt_labels,train_gt_boxes3d
 
 
 class batch_loading:
@@ -42,7 +67,7 @@ class batch_loading:
 
     def get_shape(self):
 
-        print("file name is here: ", self.load_file_names[0:5])
+        # print("file name is here: ", self.load_file_names[0])
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = load([self.load_file_names[0]],
                                                                                        is_testset=self.is_testset)
 
@@ -61,14 +86,15 @@ class batch_loading:
         for date, drivers in dates_to_drivers.items():
             for driver in drivers:
                 # file_prefix is something like /home/stu/data/preprocessed/didi/lidar/2011_09_26_0001_*
-                file_prefix = top_dir + '/' + date + '_' + driver + '_*'
-                driver_files = glob.glob(file_prefix)
+                file_prefix = os.path.join(data_seg, "top", driver, date)
+                driver_files = get_file_names(data_seg, "top", driver, date)
                 if len(driver_files) == 0:
                     raise ValueError('Directory has no data starts from {}, please revise.'.format(file_prefix))
+
                 name_list = [file.split('/')[-1].split('.')[0] for file in driver_files]
+                name_list = [file.split('.')[0] for file in driver_files]
                 load_indexs += name_list
         load_indexs = sorted(load_indexs)
-        print(load_indexs)
         return load_indexs
 
     def load_test_frames(self, size, shuffled):
@@ -123,7 +149,7 @@ class batch_loading:
                 self.batch_start_index = start_offset
                 # print("after reloop: ", self.batch_start_index)
 
-            print('The loaded file name here: ', loaded_file_names)
+            # print('The loaded file name here: ', loaded_file_names)
             self.train_rgbs, self.train_tops, self.train_fronts, self.train_gt_labels, self.train_gt_boxes3d = \
                 load(loaded_file_names, is_testset=self.is_testset)
             self.num_frame_used = 0
@@ -159,7 +185,7 @@ if __name__ == '__main__':
     # batch frame testing.
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
-    dates_to_drivers = {'1':['20', '19'], '2':['13']}
+    dates_to_drivers = {'2':['13', '14_f']}
     # dates_to_drivers = {'Round1Test': ['19_f2']}
     load_indexs = None
     batches = batch_loading(dataset_dir, dates_to_drivers, load_indexs, is_testset=True)

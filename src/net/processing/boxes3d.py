@@ -2,6 +2,7 @@ from net.common import *
 import math
 import numpy as np
 import cv2
+import net.processing.projection as proj
 
 ##extension for 3d
 def top_to_lidar_coords(xx,yy):
@@ -38,6 +39,13 @@ def top_box_to_box3d(boxes):
 
     return boxes3d
 
+def box3d_in_top_view(boxes3d):
+    for i in range(8):
+        if TOP_X_MIN<=boxes3d[i,0]<=TOP_X_MAX and TOP_Y_MIN<=boxes3d[i,1]<=TOP_Y_MAX:
+            continue
+        else:
+            return False
+    return True
 
 def box3d_to_top_box(boxes3d):
 
@@ -72,23 +80,35 @@ def box3d_to_top_box(boxes3d):
 
 
 def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
+    if (cfg.DATA_SETS_TYPE == 'kitti'):
+        if Mt is None: Mt = np.array(MATRIX_Mt)
+        if Kt is None: Kt = np.array(MATRIX_Kt)
 
-    if Mt is None: Mt = np.array(MATRIX_Mt)
-    if Kt is None: Kt = np.array(MATRIX_Kt)
+        num  = len(boxes3d)
+        projections = np.zeros((num,8,2),  dtype=np.int32)
+        for n in range(num):
+            box3d = boxes3d[n]
+            Ps = np.hstack(( box3d, np.ones((8,1))) )
+            Qs = np.matmul(Ps,Mt)
+            Qs = Qs[:,0:3]
+            qs = np.matmul(Qs,Kt)
+            zs = qs[:,2].reshape(8,1)
+            qs = (qs/zs)
+            projections[n] = qs[:,0:2]
 
-    num  = len(boxes3d)
-    projections = np.zeros((num,8,2),  dtype=np.int32)
-    for n in range(num):
-        box3d = boxes3d[n]
-        Ps = np.hstack(( box3d, np.ones((8,1))) )
-        Qs = np.matmul(Ps,Mt)
-        Qs = Qs[:,0:3]
-        qs = np.matmul(Qs,Kt)
-        zs = qs[:,2].reshape(8,1)
-        qs = (qs/zs)
-        projections[n] = qs[:,0:2]
+        return projections
+    else:
+        num = len(boxes3d)
+        projections = np.zeros((num, 8, 2), dtype=np.int32)
+        for n in range(num):
+            box3d=boxes3d[n].copy()
+            # box3d[:,2]=box3d[:,2]-1.27
+            # box3d[:, 0] = box3d[:, 0] + 1.5
 
-    return projections
+            # projections[n] = box3d_to_rgb_projection_cv2(box3d) unknow bug??
+            projections[n]=proj.project_cam(box3d)
+        return projections
+
 
 
 def box3d_to_top_projections(boxes3d):
@@ -134,9 +154,9 @@ def draw_rgb_projections(image, projections, color=(255,0,255), thickness=2, dar
     return img
 
 
-def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1, darken=1.0):
+def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1):
 
-    img = image.copy()*darken
+    img = image.copy()
     num =len(boxes3d)
     for n in range(num):
         b   = boxes3d[n]
@@ -275,6 +295,46 @@ def boxes3d_for_evaluation(boxes3d):
     size = np.c_[H,W,L]
     rotation= np.c_[R_x,R_y,R_z]
     return translation,size,rotation
+
+
+
+import cv2
+
+def project_point(point,cameraMat,cameraExtrinsicMat,distCoeff):
+  cameraXYZ = cameraExtrinsicMat[0:3,0:3].dot(point.transpose()) + cameraExtrinsicMat[0:3, 3]
+  x1 = cameraXYZ[0] / cameraXYZ[2]
+  y1 = cameraXYZ[1] / cameraXYZ[2]
+  r2 = x1 * x1 + y1 * y1
+  factor = 1 + distCoeff[0] * r2 + distCoeff[1] * (r2 ** 2) + distCoeff[4] * (r2 ** 3)
+  x2 = x1 * factor + 2 * distCoeff[2] * x1 * y1 + distCoeff[3] * (r2 + 2 * x1 * x1)
+  y2 = y1 * factor + distCoeff[2] * (r2 + 2 * y1 * y1) + 2 * distCoeff[3] * x1 * y1
+  u = cameraMat[0][0] * x2 + cameraMat[0][2]
+  v = cameraMat[1][1] * y2 + cameraMat[1][2]
+  return [u,v]
+
+def box3d_to_rgb_projection_cv2(points):
+    #http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    projMatrix=np.reshape(np.array([1362.184692,0.000000,620.575531,0.000000,
+                           0.000000, 1372.305786, 561.873133, 0.000000,
+                           0.000000, 0.000000, 1.000000, 0.000000]),(3,4))
+
+    cameraMatrix_in=np.array([[1384.621562, 0.000000, 625.888005],
+                              [0.000000, 1393.652271, 559.626310],
+                              [0.000000, 0.000000, 1.000000]])
+
+    R_axis = np.array([[0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]])
+
+    points=np.dot(points,R_axis)
+    cameraMatrix, rotMatrix, transVect, rotMatrixX, rotMatrixY, rotMatrixZ, eulerAngles=\
+        cv2.decomposeProjectionMatrix(projMatrix,cameraMatrix=cameraMatrix_in)
+
+    rotVect, jacobian=cv2.Rodrigues(rotMatrix)
+
+    distCoeffs=np.array([[-0.152089, 0.270168, 0.003143, -0.005640, 0.000000]])
+
+    imagePoints, jacobia=cv2.projectPoints(points,rotVect,transVect[0:3,0],cameraMatrix,distCoeffs)
+    imagePoints=np.reshape(imagePoints,(8,2))
+    return imagePoints.astype(np.int)
 
 if __name__ == '__main__':
     # test boxes3d_for_evaluation
