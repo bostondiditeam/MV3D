@@ -80,7 +80,7 @@ def box3d_to_top_box(boxes3d):
 
 
 def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
-    if (cfg.DATA_SETS_TYPE == 'kitti'):
+    # if (cfg.DATA_SETS_TYPE == 'kitti'):
         if Mt is None: Mt = np.array(MATRIX_Mt)
         if Kt is None: Kt = np.array(MATRIX_Kt)
 
@@ -97,17 +97,17 @@ def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
             projections[n] = qs[:,0:2]
 
         return projections
-    else:
-        num = len(boxes3d)
-        projections = np.zeros((num, 8, 2), dtype=np.int32)
-        for n in range(num):
-            box3d=boxes3d[n].copy()
-            # box3d[:,2]=box3d[:,2]-1.27
-            # box3d[:, 0] = box3d[:, 0] + 1.5
-
-            # projections[n] = box3d_to_rgb_projection_cv2(box3d) unknow bug??
-            projections[n]=proj.project_cam(box3d)
-        return projections
+    # else:
+    #     num = len(boxes3d)
+    #     projections = np.zeros((num, 8, 2), dtype=np.int32)
+    #     for n in range(num):
+    #         box3d=boxes3d[n].copy()
+    #         # box3d[:,2]=box3d[:,2]-1.27
+    #         # box3d[:, 0] = box3d[:, 0] + 1.5
+    #
+    #         # projections[n] = box3d_to_rgb_projection_cv2(box3d) unknow bug??
+    #         projections[n]=proj.project_cam(box3d)
+    #     return projections
 
 
 
