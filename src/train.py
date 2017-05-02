@@ -10,7 +10,11 @@ dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 training_dataset = {
     '1': ['6_f','9_f','15','20'],
     '2': ['3_f'],
-    '3': ['2_f','4','6','8']}
+    '3': ['2_f','4','6','8','7']}
+
+# training_dataset = {
+#     '3': ['7','8']}
+
 #
 # training_dataset = {
 #     '1': ['15']}
