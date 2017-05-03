@@ -4,6 +4,12 @@ import math
 P = np.array([[1362.184692, 0.0, 620.575531], [0.0, 1372.305786, 561.873133], [0.0, 0.0, 1.0]])
 # P = np.array([[1384.621562, 0.0, 625.888005], [0.0, 1393.652271, 559.626310], [0.0, 0.0, 1.0]])
 
+ry=5.2/180.0*math.pi
+ry_M=np.array([[math.cos(ry), 0., math.sin(ry)], [0.0, 1.0, 0.], [-math.sin(ry), 0.0, math.cos(ry)]])
+
+rz=-1.2/180.0*math.pi
+rz_M=np.array([[math.cos(rz), -math.sin(rz), 0], [math.sin(rz), math.cos(rz), 0.], [0, 0.0, 1]])
+
 R_axis = np.array([[0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]])
 cameraMatrix_in = np.array([[1384.621562, 0.000000, 625.888005],
                             [0.000000, 1393.652271, 559.626310],
@@ -31,7 +37,9 @@ def distortion_correct(points):
 
 # return n X 2
 def project_cam(points):
-    p_tmp = np.dot(R_axis, points.T)
+    p_tmp=np.dot(ry_M,points.T)
+    p_tmp = np.dot(rz_M,p_tmp)
+    p_tmp = np.dot(R_axis, p_tmp)
     points = distortion_correct(p_tmp.T)
     p_tmp = np.array(points)
     p_cam = np.dot(P, p_tmp.T)
@@ -51,7 +59,7 @@ def project_cam(points):
     mask_row = p_row < 1096
     p_cam = p_cam[:, mask_row]
     pixels_cam = p_cam.T
-    if len(pixels_cam)==0:
+    if len(pixels_cam)!=8:
         return np.zeros((8,2))
 
 
