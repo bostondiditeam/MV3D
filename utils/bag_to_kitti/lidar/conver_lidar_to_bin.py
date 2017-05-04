@@ -1,4 +1,5 @@
 from os.path import expanduser
+import argparse
 import glob
 import os
 import time
@@ -9,6 +10,12 @@ if __name__ == '__main__':
     home_dir = expanduser('~')
     dataset_dir = home_dir + '/competition_data/didi_dataset/dataset_2/Data/'
     unsynced_dir='round12_data/unsynced'
+
+    parser = argparse.ArgumentParser(description='Convert rosbag data to synced frames')
+    parser.add_argument('-d', '--dataset', type=str, nargs='?', default=dataset_dir, help='Dataset directory path')
+    args = parser.parse_args()
+    dataset_dir = args.dataset
+
 
     os.system('pkill -f rosmaster')
     time.sleep(0.5)
