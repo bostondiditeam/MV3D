@@ -1,11 +1,15 @@
+from os.path import expanduser
 import glob
 import os
 import time
 
+
 if __name__ == '__main__':
     # os.system('source ./devel/setup.zsh')
-    home_dir='/home/stu'
+    home_dir = expanduser('~')
+    dataset_dir = home_dir + '/competition_data/didi_dataset/dataset_2/Data/'
     unsynced_dir='round12_data/unsynced'
+
     os.system('pkill -f rosmaster')
     time.sleep(0.5)
     os.system('roscore &')
@@ -18,7 +22,7 @@ if __name__ == '__main__':
         #1  2  3  README.md  Round1Test
         folder_names_1=['1','2','3','Round1Test']
         for n1 in folder_names_1:
-            bags_path=glob.glob(home_dir+'/competition_data/didi_dataset/dataset_2/Data/'+n1+'/*.bag')
+            bags_path=glob.glob(dataset_dir + n1 + '/*.bag')
             for bag_path in bags_path:
                 os.system('rm -rf ./lidar_data/*')
                 bag_name=os.path.basename(bag_path).split('.bag')[0]
