@@ -77,6 +77,32 @@ def box3d_to_top_box(boxes3d):
 
     return boxes
 
+def convert_points_to_croped_image(img_points):
+    img_points=img_points.copy()
+
+    left=cfg.IMAGE_CROP_LEFT  #pixel
+    right=cfg.IMAGE_CROP_RIGHT
+    top=cfg.IMAGE_CROP_TOP
+    bottom=cfg.IMAGE_CROP_BOTTOM
+
+    croped_img_h=proj.image_height-top-bottom
+    croped_img_w=proj.image_height-left-right
+
+    img_points[:,1] -= top
+    mask=img_points[:,1] >0
+    img_points= img_points[mask,:]
+
+    mask=img_points[:, 1] < croped_img_h
+    img_points = img_points[mask, :]
+
+    img_points[:,0] -= left
+    mask=img_points[:,0] >0
+    img_points= img_points[mask,:]
+
+    mask=img_points[:, 0] < croped_img_w
+    img_points = img_points[mask, :]
+    return img_points
+
 
 
 def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
@@ -95,19 +121,20 @@ def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
             zs = qs[:,2].reshape(8,1)
             qs = (qs/zs)
             projections[n] = qs[:,0:2]
+            return projections
 
-        return projections
     else:
         num = len(boxes3d)
         projections = np.zeros((num, 8, 2), dtype=np.int32)
         for n in range(num):
             box3d=boxes3d[n].copy()
-            # box3d[:,2]=box3d[:,2]-1.27
-            # box3d[:, 0] = box3d[:, 0] + 1.5
-
             # projections[n] = box3d_to_rgb_projection_cv2(box3d) unknow bug??
-            projections[n]=proj.project_cam(box3d)
-        return projections
+            box2d=proj.project_cam(box3d)
+            box2d=convert_points_to_croped_image(box2d)
+            if len(box2d) != 8:
+                box2d=np.zeros((8,2))
+            projections[n]=box2d
+            return projections
 
 
 
