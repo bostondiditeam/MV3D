@@ -127,7 +127,7 @@ Here is  short list for arch values for different architecture.
 #   6.1		      P4, P40, Titan X so CUDA_MODEL = 61
 #   6.0                    P100 so CUDA_MODEL = 60
 #   5.2                    M40
-#   3.7                    K80
+#   3.7                    K80 (AWS P2)
 #   3.5                    K40, K20
 #   3.0                    K10, Grid K520 (AWS G2)
 #   Other Nvidia shader models should work, but they will require extra startup
@@ -154,7 +154,11 @@ python data.py # for process raw data to input network input format
 python train.py # training the network. 
 ```
 
-# Some other readme.md files inside this repo:
+# rosbag Data Conversion
+
+Please see these [instructions](./utils/bag_to_kitti/README.md) for more information.
+
+s# Some other readme.md files inside this repo:
 - How to extract and sync data from ROS bags [Under utils/bag_to_kitti](./utils/bag_to_kitti/README.md)
 - How to generate tracklet files [Under src/tracklets/](./src/tracklets/README.md) 
 
