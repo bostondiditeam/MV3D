@@ -215,8 +215,9 @@ def check_oneof_topics_present(topic_map, name, topics):
 
 def syc_rtk_timestamp_to_camera(obs_rtk,camera):
     for k in obs_rtk:
-        offset = obs_rtk[k]['timestamp'][0] - camera['timestamp'][0]
-        obs_rtk[k]['timestamp'] = [t - offset for t in obs_rtk[k]['timestamp']]
+        if len(obs_rtk[k]['timestamp']) != 0:
+            offset = obs_rtk[k]['timestamp'][0] - camera['timestamp'][0]
+            obs_rtk[k]['timestamp'] = [t - offset for t in obs_rtk[k]['timestamp']]
 
 def main():
     parser = argparse.ArgumentParser(description='Convert rosbag to images and csv.')
@@ -434,7 +435,7 @@ def main():
                 os.path.join(dataset_outdir, 'capture_vehicle_front_rtk_interp.csv'), header=True)
             cap_front_rtk_interp_rec = cap_front_rtk_interp.to_dict(orient='records')
 
-            if 0:
+            if 1:
                 # if corresponding velodyne directory exists, calibrate them and save it in output directory.
                 print("I'm here")
                 # lidar_indir = os.listdir(lidar_indir)
