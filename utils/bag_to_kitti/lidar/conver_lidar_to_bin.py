@@ -26,6 +26,11 @@ if __name__ == '__main__':
 
     # conver all
     if 1:
+        try:
+            os.mkdir('./lidar_data')
+        except:
+            pass
+
         #1  2  3  README.md  Round1Test
         folder_names_1=['1','2','3','Round1Test']
         for n1 in folder_names_1:
