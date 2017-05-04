@@ -16,7 +16,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     dataset_dir = args.dataset
 
-
     os.system('pkill -f rosmaster')
     time.sleep(0.5)
     os.system('roscore &')
