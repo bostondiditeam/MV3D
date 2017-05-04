@@ -16,6 +16,7 @@ import os.path as osp
 import numpy as np
 from time import strftime, localtime
 from easydict import EasyDict as edict
+from os.path import expanduser
 
 
 
@@ -31,8 +32,10 @@ __C.DATA_SETS_TYPE='didi'       #['didi','kitti','test']
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
 
+home_dir = expanduser('~')
+
 if __C.DATA_SETS_TYPE=='test':
-    __C.DATA_SETS_DIR = osp.abspath('/home/stu/round12_data_test')
+    __C.DATA_SETS_DIR = osp.abspath('{}/round12_data_test'.format(home_dir))
 else:
     __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data')
 
