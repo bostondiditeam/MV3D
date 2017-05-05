@@ -13,14 +13,18 @@ utils/bag_to_kiiti/lidar/.vscode/c_cpp_properties.json
 utils/bag_to_kitti/lidar/.vscode/settings.json
 utils/bag_to_kitti/lidar/.idea
 utils/bag_to_kitti/lidar/.vscode
-utils/.vscode-upload.json
+utils/bag_to_kitti/lidar/build/*
 utils/bag_to_kitti/lidar/cmake-build-debug
+utils/bag_to_kitti/lidar/devel/lib/
+utils/.vscode-upload.json
 utils/.vscode
 
 bag_to_kitti/lidar/.idea
+bag_to_kitti/lidar/cmake-build-debug
 .vscode-upload.json
 .vscode
-bag_to_kitti/lidar/cmake-build-debug
+*.catkin_workspace
+*.cmake
 *.npy
 *.png
 
