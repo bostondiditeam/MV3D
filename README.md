@@ -58,26 +58,26 @@
 ├── preprocessed  <-- Data will be fed into MV3D net (After processed by data.py)
 │   ├── didi <-- When didi dataset is processed, save it here
 │   └── kitti <-- When Kitti dataset is processed, save it here
-│       ├── gt_boxes3d <-- bounding box 3d coordinates.  
-│       │   └── 2011_09_26_0005_00000.npy <-- NOTED: this is different comparing to raw data orgnized under raw/kitti 
-│       │                                        directory, all preprocessed data will be save here, so it will follow
-│       │                                         date_driver_number.npy format, in other words, 2011_09_26_0005_00000
-│       │                                         .npy can saved here,  2011_09_30_0007_0001.npy can also be saved 
-│       │                                         here. While under /data/raw directory, it will strictly follow 
-│       │                                         original kitti format, as you can see in below structure. We design 
-│       │                                         this format mainly for easier shuffling during training. 
-│       ├── gt_box_plot
-│       │   └── 2011_09_26_0005_00000.png
-│       ├── gt_labels
-│       │   └── 2011_09_26_0005_00000.npy
-│       ├── lidar  
-│       │   └── 2011_09_26_0005_00000.npy
-│       ├── rgb   <-- image input
-│       │   └── 2011_09_26_0005_00000.png
-│       ├── top   <-- bird eye view features from lidar data. 
-│       │   └── 2011_09_26_0005_00000.npy
-│       └── top_image
-│           └── 2011_09_26_0005_00000.png
+│       ├── gt_boxes3d
+│           └── 2011_09_26
+│               └── 0005
+|                   |___ 00000.npy
+├       |── gt_labels
+│           └── 2011_09_26
+│               └── 0005 
+|                   |___ 00000.npy
+|       ├── rgb
+│           └── 2011_09_26
+│               └── 0005 
+|                   |___ 00000.png
+|       ├── top
+│           └── 2011_09_26
+│               └── 0005 
+|                   |___ 00000.npy
+|       └── top_image
+|           └── 2011_09_26
+|               └── 0005 
+|                   |___ 00000.png
 └── raw  <-- this strictly follow KITTI raw data file format, while seperated into didi and kitti dataset. 
     ├── didi <-- will be something similar to kitti raw data format below. 
     └── kitti
