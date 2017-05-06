@@ -230,6 +230,7 @@ def main():
     parser.add_argument('-f', '--img_format', type=str, nargs='?', default='png',
         help='Image encode format, png or jpg')
     parser.add_argument('-m', dest='msg_only', action='store_true', help='Messages only, no images')
+    parser.add_argument('-nolidar', dest='nolidar', action='store_true', help='No lidar data syc')
     parser.add_argument('-d', dest='debug', action='store_true', help='Debug print enable')
     parser.set_defaults(msg_only=False)
     parser.set_defaults(debug=False)
@@ -242,6 +243,8 @@ def main():
 
     msg_only = args.msg_only
     debug_print = args.debug
+
+    nolidar=args.nolidar
 
     bridge = CvBridge()
 
@@ -435,7 +438,7 @@ def main():
                 os.path.join(dataset_outdir, 'capture_vehicle_front_rtk_interp.csv'), header=True)
             cap_front_rtk_interp_rec = cap_front_rtk_interp.to_dict(orient='records')
 
-            if 1:
+            if nolidar==False:
                 # if corresponding velodyne directory exists, calibrate them and save it in output directory.
                 print("I'm here")
                 # lidar_indir = os.listdir(lidar_indir)
