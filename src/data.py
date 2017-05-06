@@ -193,6 +193,7 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
             count += 1
             continue
         lidars.append(dataset.velo[count])
+        count += 1
 
     tops = pool.map(lidar_to_top,lidars)
     # tops=[lidar_to_top(lidar) for lidar in lidars]
