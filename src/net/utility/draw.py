@@ -31,7 +31,7 @@ def imsave(name, image,subdir=''):
 def npsave(name,numpy_array):
     np.save(os.path.join(cfg.LOG_DIR,name),numpy_array)
 
-def draw_boxed3d_to_rgb(rgb, boxes3d):
+def draw_boxed3d_to_rgb(rgb, boxes3d, color=(255, 0, 255), thickness=1):
     projections = box3d.box3d_to_rgb_projections(boxes3d)
-    rgb = box3d.draw_rgb_projections(rgb, projections, color=(255, 0, 255), thickness=1)
+    rgb = box3d.draw_rgb_projections(rgb, projections, color=color, thickness=thickness)
     return rgb
