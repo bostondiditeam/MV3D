@@ -490,7 +490,8 @@ def preproces(dates=None, drivers=None, frames_index=None):
 if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     if (cfg.DATA_SETS_TYPE == 'didi'):
-        dates=['1','2','3']
+        #dates=['1','2','3']
+        dates = ['Round1Test']
         drivers= None
         frames_index=None
     elif cfg.DATA_SETS_TYPE == 'kitti':
