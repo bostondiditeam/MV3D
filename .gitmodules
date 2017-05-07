@@ -1,0 +1,6 @@
+[submodule "didi-competition"]
+	path = didi-competition
+	url = https://github.com/udacity/didi-competition.git
+[submodule "3rd_party/didi-competition"]
+	path = 3rd_party/didi-competition
+	url = https://github.com/udacity/didi-competition.git
