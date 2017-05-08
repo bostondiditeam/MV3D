@@ -5,15 +5,15 @@ from config import cfg
 
 
 if (cfg.DATA_SETS_TYPE == 'didi'):
-    TOP_Y_MIN = -20
-    TOP_Y_MAX = +20
-    TOP_X_MIN = -20
-    TOP_X_MAX = 20
+    TOP_Y_MIN = -40
+    TOP_Y_MAX = +40
+    TOP_X_MIN = -40
+    TOP_X_MAX = 40
     TOP_Z_MIN = -2.0
     TOP_Z_MAX = 0.4
 
-    TOP_X_DIVISION = 0.1
-    TOP_Y_DIVISION = 0.1
+    TOP_X_DIVISION = 0.2
+    TOP_Y_DIVISION = 0.2
     TOP_Z_DIVISION = 0.4
 elif cfg.DATA_SETS_TYPE == 'kitti':
     TOP_Y_MIN = -20
@@ -27,15 +27,15 @@ elif cfg.DATA_SETS_TYPE == 'kitti':
     TOP_Y_DIVISION = 0.1
     TOP_Z_DIVISION = 0.4
 elif (cfg.DATA_SETS_TYPE == 'test'):
-    TOP_Y_MIN = -20
-    TOP_Y_MAX = +20
-    TOP_X_MIN = -20
-    TOP_X_MAX = 20
+    TOP_Y_MIN = -40
+    TOP_Y_MAX = +40
+    TOP_X_MIN = -40
+    TOP_X_MAX = 40
     TOP_Z_MIN = -2.0
     TOP_Z_MAX = 0.4
 
-    TOP_X_DIVISION = 0.1
-    TOP_Y_DIVISION = 0.1
+    TOP_X_DIVISION = 0.2
+    TOP_Y_DIVISION = 0.2
     TOP_Z_DIVISION = 0.4
 else:
     raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))

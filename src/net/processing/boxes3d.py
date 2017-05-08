@@ -77,6 +77,38 @@ def box3d_to_top_box(boxes3d):
 
     return boxes
 
+def convert_points_to_croped_image(img_points):
+    img_points=img_points.copy()
+
+    left=cfg.IMAGE_CROP_LEFT  #pixel
+    right=cfg.IMAGE_CROP_RIGHT
+    top=cfg.IMAGE_CROP_TOP
+    bottom=cfg.IMAGE_CROP_BOTTOM
+
+    croped_img_h=proj.image_height-top-bottom
+    croped_img_w=proj.image_height-left-right
+
+
+    img_points[:,1] -= top
+    mask=img_points[:,1] <0
+    img_points[mask,1]=0
+    out_range_mask =mask
+
+    mask=img_points[:, 1] >= croped_img_h
+    img_points[mask, 1]=croped_img_h-1
+    out_range_mask=np.logical_or(out_range_mask,mask)
+
+    img_points[:,0] -= left
+    mask=img_points[:,0] <0
+    img_points[mask,0]=0
+    out_range_mask = np.logical_or(out_range_mask, mask)
+
+    mask=img_points[:, 0] >= croped_img_w
+    img_points[mask, 0]=croped_img_w-1
+    out_range_mask = np.logical_or(out_range_mask, mask)
+
+    return img_points,out_range_mask
+
 
 
 def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
@@ -95,19 +127,19 @@ def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
             zs = qs[:,2].reshape(8,1)
             qs = (qs/zs)
             projections[n] = qs[:,0:2]
+            return projections
 
-        return projections
     else:
         num = len(boxes3d)
         projections = np.zeros((num, 8, 2), dtype=np.int32)
         for n in range(num):
             box3d=boxes3d[n].copy()
-            # box3d[:,2]=box3d[:,2]-1.27
-            # box3d[:, 0] = box3d[:, 0] + 1.5
-
-            # projections[n] = box3d_to_rgb_projection_cv2(box3d) unknow bug??
-            projections[n]=proj.project_cam(box3d)
-        return projections
+            if np.sum(box3d[:,0]>0) >0:
+                box2d = box3d_to_rgb_projection_cv2(box3d)
+                box2d,out_range=convert_points_to_croped_image(box2d)
+                if np.sum(out_range==False)>=2:
+                    projections[n]=box2d
+            return projections
 
 
 
@@ -300,6 +332,7 @@ def boxes3d_for_evaluation(boxes3d):
 
 import cv2
 
+
 def project_point(point,cameraMat,cameraExtrinsicMat,distCoeff):
   cameraXYZ = cameraExtrinsicMat[0:3,0:3].dot(point.transpose()) + cameraExtrinsicMat[0:3, 3]
   x1 = cameraXYZ[0] / cameraXYZ[2]
@@ -314,25 +347,22 @@ def project_point(point,cameraMat,cameraExtrinsicMat,distCoeff):
 
 def box3d_to_rgb_projection_cv2(points):
     #http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
-    projMatrix=np.reshape(np.array([1362.184692,0.000000,620.575531,0.000000,
-                           0.000000, 1372.305786, 561.873133, 0.000000,
-                           0.000000, 0.000000, 1.000000, 0.000000]),(3,4))
 
-    cameraMatrix_in=np.array([[1384.621562, 0.000000, 625.888005],
+    cameraMatrix=np.array([[1384.621562, 0.000000, 625.888005],
                               [0.000000, 1393.652271, 559.626310],
                               [0.000000, 0.000000, 1.000000]])
 
-    R_axis = np.array([[0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [1.0, 0.0, 0.0]])
 
-    points=np.dot(points,R_axis)
-    cameraMatrix, rotMatrix, transVect, rotMatrixX, rotMatrixY, rotMatrixZ, eulerAngles=\
-        cv2.decomposeProjectionMatrix(projMatrix,cameraMatrix=cameraMatrix_in)
+    x=np.array([ -1.50231172e-03,  -4.00842946e-01,  -5.30289086e-01,
+        -2.41054475e+00,   2.41781181e+00,  -2.46716659e+00])
+    tx, ty, tz, rx, ry, rz = x
 
-    rotVect, jacobian=cv2.Rodrigues(rotMatrix)
+    rotVect = np.array([rx, ry, rz])
+    transVect = np.array([tx, ty, tz])
 
     distCoeffs=np.array([[-0.152089, 0.270168, 0.003143, -0.005640, 0.000000]])
 
-    imagePoints, jacobia=cv2.projectPoints(points,rotVect,transVect[0:3,0],cameraMatrix,distCoeffs)
+    imagePoints, jacobia=cv2.projectPoints(points,rotVect,transVect,cameraMatrix,distCoeffs)
     imagePoints=np.reshape(imagePoints,(8,2))
     return imagePoints.astype(np.int)
 
