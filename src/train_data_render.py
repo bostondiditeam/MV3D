@@ -6,14 +6,27 @@ import cv2
 import numpy as np
 import net.utility.draw as draw
 import skvideo.io
+import data
 
 dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
+# training_dataset = {
+#     '1': ['6_f','9_f','15','20', '11', '21_f',],
+#     '2': ['3_f',],
+#     '3': ['2_f','4','6','8','7', '11_f',],
+# }
+
 training_dataset = {
-    '1': ['6_f','9_f','15','20', '11', '21_f',],
-    '2': ['3_f',],
-    '3': ['2_f','4','6','8','7','7', '11_f',],
+    '1': ['6_f',],
+    '3': ['2_f'],
 }
+
+cameraMatrix = np.array([[1384.621562, 0.000000, 625.888005],
+                            [0.000000, 1393.652271, 559.626310],
+                            [0.000000, 0.000000, 1.000000]])
+
+cameraDist = np.array([-0.152089, 0.270168, 0.003143, -0.005640, 0.000000])
+
 
 def train_data_render(gt_boxes3d_dir, gt_labels_dir, rgb_dir, top_dir, save_video_name):
     files = glob.glob(os.path.join(gt_boxes3d_dir,"*.npy"))
@@ -30,13 +43,21 @@ def train_data_render(gt_boxes3d_dir, gt_labels_dir, rgb_dir, top_dir, save_vide
         boxes3d = np.load(gt_boxes3d_file)
         rgb_image = cv2.imread(rgb_file)
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
+        rgb_image_undistort = cv2.undistort(rgb_image, cameraMatrix, cameraDist, None, cameraMatrix)
+        top = np.load(top_file)
+        top_image = data.draw_top_image(top)
         if len(boxes3d) > 0:
             rgb_image = draw.draw_boxed3d_to_rgb(rgb_image, boxes3d, color=(0, 0, 80), thickness=3)
+            rgb_image_undistort = draw.draw_boxed3d_to_rgb(rgb_image_undistort, boxes3d, color=(0, 0, 80), thickness=3)
+            top_image = data.draw_box3d_on_top(top_image, boxes3d[:, :, :], color=(80, 80, 0), thickness=3)
+
         rgb_image = cv2.resize(rgb_image, (500, 400))
-        vid_in.writeFrame(rgb_image)
+        rgb_image_undistort = cv2.resize(rgb_image_undistort, (500, 400))
+        new_image = np.concatenate((top_image, rgb_image, rgb_image_undistort), axis=1)
+        vid_in.writeFrame(new_image)
 
     vid_in.close()
-    
+
     #
     #     # for debugging: save image and show image.
     #     top_image = data.draw_top_image(top[0])
