@@ -312,14 +312,7 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
         rgb = (rgb * 255).astype(np.uint8)
         rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
         rgb=crop_image(rgb)
-        if (cfg.DATA_SETS_TYPE == 'didi'):
-            pass  # rgb = rgb[500:-80, :, :]
-        elif cfg.DATA_SETS_TYPE == 'kitti':
-            pass
-        elif cfg.DATA_SETS_TYPE == 'test':
-            pass
-        else:
-            raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+
         objs = objects[count]
         gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
         img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)

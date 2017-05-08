@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import net.utility.draw as draw
 import skvideo.io
+from config import cfg
 
 dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
@@ -56,8 +57,8 @@ def train_data_render(gt_boxes3d_dir, gt_labels_dir, rgb_dir, top_dir, save_vide
     pass
 
 if __name__ == '__main__':
-    data_dir = "../data/preprocessed/didi"
-    output_dir = "../log"
+    data_dir = cfg.PREPROCESSED_DATA_SETS_DIR
+    output_dir = cfg.LOG_DIR
     frames_index = None
 
     dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, {'Round1Test': ['19_f2'],},is_testset=True)

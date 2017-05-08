@@ -48,15 +48,20 @@ __C.IMAGE_FUSION_DIABLE = True
 
 # image crop config
 if __C.DATA_SETS_TYPE   ==  'test':
+    # __C.IMAGE_CROP_LEFT     =0 #pixel
+    # __C.IMAGE_CROP_RIGHT    =0
+    # __C.IMAGE_CROP_TOP      =400
+    # __C.IMAGE_CROP_BOTTOM   =100
+
+    __C.IMAGE_CROP_LEFT     =0  #pixel
+    __C.IMAGE_CROP_RIGHT    =0
+    __C.IMAGE_CROP_TOP      =0
+    __C.IMAGE_CROP_BOTTOM   =0
+elif __C.DATA_SETS_TYPE ==  'didi':
     __C.IMAGE_CROP_LEFT     =0 #pixel
     __C.IMAGE_CROP_RIGHT    =0
     __C.IMAGE_CROP_TOP      =400
     __C.IMAGE_CROP_BOTTOM   =100
-elif __C.DATA_SETS_TYPE ==  'didi':
-    __C.IMAGE_CROP_LEFT     =10 #pixel
-    __C.IMAGE_CROP_RIGHT    =10
-    __C.IMAGE_CROP_TOP      =10
-    __C.IMAGE_CROP_BOTTOM   =10
 else:
     __C.IMAGE_CROP_LEFT     =0  #pixel
     __C.IMAGE_CROP_RIGHT    =0
