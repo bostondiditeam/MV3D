@@ -20,6 +20,7 @@ import pandas as pd
 import PyKDL as kd
 import glob
 import shutil
+from numpy import linalg as LA
 
 from bag_topic_def import *
 from bag_utils import *
@@ -115,6 +116,12 @@ def imu2dict(msg, imu_dict):
 def get_yaw(p1, p2):
     return math.atan2(p1[1] - p2[1], p1[0] - p2[0])
 
+def get_pitch(p1,p2):
+    p1=np.array([p1[0],p1[1],p1[2]])
+    p2=np.array([p2[0],p2[1],p2[2]])
+    delta_heigth=p1[2] - p2[2]-0.3556 # 0.3556 = front_z-rear_z,refrence tf.launch
+    return -np.arcsin(delta_heigth/LA.norm(p1-p2))
+
 
 def dict_to_vect(di):
     return kd.Vector(di['tx'], di['ty'], di['tz'])
@@ -142,8 +149,11 @@ def get_obstacle_pos(
     yaw = get_yaw(front_v, rear_v)
     rot_z = kd.Rotation.RotZ(-yaw)
 
+    pitch = get_pitch(front_v, rear_v)
+    rot_y = kd.Rotation.RotY(-pitch)
+
     diff = obs_v - front_v
-    res = rot_z * diff
+    res = rot_y * rot_z * diff
     res += list_to_vect(velodyne_to_front)
 
     # FIXME the gps_to_centroid offset of the obstacle should be rotated by
