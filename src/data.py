@@ -64,7 +64,7 @@ def lidar_to_top(lidar):
     idx = np.where (lidar[:,2]<TOP_Z_MAX)
     lidar = lidar[idx]
 
-    if (cfg.DATA_SETS_TYPE == 'didi'):
+    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
         lidar=filter_center_car(lidar)
 
 
@@ -170,6 +170,7 @@ def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite
         rgb = dataset.rgb[count][0]
         rgb = (rgb * 255).astype(np.uint8)
         rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+        rgb = crop_image(rgb)
 
         # todo fit it to didi dataset later.
         cv2.imwrite(os.path.join(path), rgb)
@@ -310,20 +311,25 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
         rgb = dataset.rgb[count][0]
         rgb = (rgb * 255).astype(np.uint8)
         rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        if (cfg.DATA_SETS_TYPE == 'didi'):
-            pass  # rgb = rgb[500:-80, :, :]
-        elif cfg.DATA_SETS_TYPE == 'kitti':
-            pass
-        elif cfg.DATA_SETS_TYPE == 'test':
-            pass
-        else:
-            raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+        rgb=crop_image(rgb)
+
         objs = objects[count]
         gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
         img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
         cv2.imwrite(os.path.join(dataset_dir,'%05d.png' % n), img)
         count += 1
     print('gt box image save done\n')
+
+def crop_image(image):
+    image_crop=image.copy()
+    left=cfg.IMAGE_CROP_LEFT  #pixel
+    right=cfg.IMAGE_CROP_RIGHT
+    top=cfg.IMAGE_CROP_TOP
+    bottom=cfg.IMAGE_CROP_BOTTOM
+    bottom_index= -bottom if bottom!= 0 else None
+    right_index = -right if right != 0 else None
+    image_crop=image_crop[top:bottom_index,left:right_index,:]
+    return image_crop
 
 def is_evaluation_dataset(date, drive):
     if date=='Round1Test':

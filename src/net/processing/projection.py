@@ -1,5 +1,10 @@
 import numpy as np
 import math
+from config import cfg
+
+image_height=cfg.IMAGE_HEIGHT
+image_width=cfg.IMAGE_WIDTH
+
 # ====
 P = np.array([[1362.184692, 0.0, 620.575531], [0.0, 1372.305786, 561.873133], [0.0, 0.0, 1.0]])
 # P = np.array([[1384.621562, 0.0, 625.888005], [0.0, 1393.652271, 559.626310], [0.0, 0.0, 1.0]])
@@ -49,21 +54,21 @@ def project_cam(points):
     mask_col = p_col > 0
     p_cam = p_cam[:, mask_col]
     p_col = p_col[mask_col]
-    mask_col = p_col < 1368
+    mask_col = p_col < image_width
     p_col = p_col[mask_col]
     p_cam = p_cam[:, mask_col]
     p_row = p_cam[1, :]
     mask_row = p_row > 0
     p_cam = p_cam[:, mask_row]
     p_row = p_row[mask_row]
-    mask_row = p_row < 1096
+    mask_row = p_row < image_height
     p_cam = p_cam[:, mask_row]
     pixels_cam = p_cam.T
     if len(pixels_cam)!=8:
         return np.zeros((8,2))
 
 
-    pixels_cam[:, 1] = 1096 - pixels_cam[:, 1]  #- 423
+    pixels_cam[:, 1] = image_height - pixels_cam[:, 1]  #- 423
 
     # pixels_cam[:, 0] = pixels_cam[:, 0] * 1242.0/1368.0
     # pixels_cam[:, 1] = pixels_cam[:, 1] * 375.0/413.0
