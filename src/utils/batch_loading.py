@@ -193,6 +193,10 @@ class batch_loading:
         return np.array(train_rgbs), np.array(train_tops), np.array(train_fronts), np.array(train_gt_labels), \
                np.array(train_gt_boxes3d), frame_id
 
+import net.processing.boxes3d as  box
+import data
+import cv2
+import net.utility.draw as dump
 
 if __name__ == '__main__':
     # testing image testing, single frames
@@ -211,7 +215,13 @@ if __name__ == '__main__':
         # print('date and drivers: ', batches.get_date_and_driver(handle_id))
         # print('date and drivers: ', batches.get_frame_info(handle_id))
         print('return values: ', train_rgbs.shape, train_tops.shape, train_fronts.shape, train_gt_labels.shape,
-              train_gt_boxes3d.shape, len(frame_id))
+              train_gt_boxes3d.shape, batches.get_frame_info (frame_id) )
+
+        # dump data
+        if 1:
+            top_view_img=data.draw_top_image(train_tops[0])
+            top_view_img=box.draw_box3d_on_top(top_view_img,train_gt_boxes3d[0])
+            dump.imsave('top_view_img_%d' % i,top_view_img,'debug/'+frame_id[0])
 
     # this code is for single testing.
     # load_indexs = ['1_15_00000', '1_15_00001', '1_15_00002']

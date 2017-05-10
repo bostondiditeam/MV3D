@@ -58,7 +58,7 @@ def train_data_render(gt_boxes3d_dir, gt_labels_dir, rgb_dir, top_dir, save_vide
 
 if __name__ == '__main__':
     data_dir = cfg.PREPROCESSED_DATA_SETS_DIR
-    output_dir = cfg.LOG_DIR
+    output_dir = cfg.LOG_DIR+'/train_data_render'
     frames_index = None
 
     dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, {'Round1Test': ['19_f2'],},is_testset=True)
@@ -69,7 +69,7 @@ if __name__ == '__main__':
             gt_labels_dir = os.path.join(data_dir, "gt_lables", major, minor)
             rgb_dir = os.path.join(data_dir, "rgb", major, minor)
             top_dir = os.path.join(data_dir, "top", major, minor)
-            output_file = os.path.join(output_dir, "{}__{}.mp4".format(major, minor))
+            output_file = os.path.join(output_dir, "{}_{}.mp4".format(major, minor))
             print("output_file: " + output_file)
             train_data_render(gt_boxes3d_dir, gt_labels_dir, rgb_dir, top_dir, output_file)
 
