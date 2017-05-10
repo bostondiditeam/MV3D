@@ -47,7 +47,9 @@ class batch_loading:
         if indice is None:
             self.load_file_names = self.get_all_load_index(self.preprocess_path, self.dates_to_drivers, is_testset)
         else:
-            self.load_file_names = indice
+            # self.load_file_names = indice
+            self.load_file_names = self.get_specific_load_index(indice, self.preprocess_path, self.dates_to_drivers,
+                                                           is_testset)
             self.load_once = True
         self.size = len(self.load_file_names)
 
@@ -88,6 +90,26 @@ class batch_loading:
                 # file_prefix is something like /home/stu/data/preprocessed/didi/lidar/2011_09_26_0001_*
                 file_prefix = os.path.join(data_seg, "top", driver, date)
                 driver_files = get_file_names(data_seg, "top", driver, date)
+                if len(driver_files) == 0:
+                    raise ValueError('Directory has no data starts from {}, please revise.'.format(file_prefix))
+
+                name_list = [file.split('/')[-1].split('.')[0] for file in driver_files]
+                name_list = [file.split('.')[0] for file in driver_files]
+                load_indexs += name_list
+        load_indexs = sorted(load_indexs)
+        return load_indexs
+
+    def get_specific_load_index(self, index, data_seg, dates_to_drivers, gt_included):
+        # check if input data (rgb, top, gt_labels, gt_boxes) have the same amount.
+        check_preprocessed_data(data_seg, dates_to_drivers, gt_included)
+        top_dir = os.path.join(data_seg, "top")
+        # print('lidar data here: ', lidar_dir)
+        load_indexs = []
+        for date, drivers in dates_to_drivers.items():
+            for driver in drivers:
+                # file_prefix is something like /home/stu/data/preprocessed/didi/lidar/2011_09_26_0001_*
+                file_prefix = os.path.join(data_seg, "top", driver, date)
+                driver_files = get_file_names(data_seg, "top", driver, date, index)
                 if len(driver_files) == 0:
                     raise ValueError('Directory has no data starts from {}, please revise.'.format(file_prefix))
 
@@ -149,7 +171,7 @@ class batch_loading:
                 self.batch_start_index = start_offset
                 # print("after reloop: ", self.batch_start_index)
 
-            # print('The loaded file name here: ', loaded_file_names)
+            print('The loaded file name here: ', loaded_file_names)
             self.train_rgbs, self.train_tops, self.train_fronts, self.train_gt_labels, self.train_gt_boxes3d = \
                 load(loaded_file_names, is_testset=self.is_testset)
             self.num_frame_used = 0
@@ -185,20 +207,20 @@ if __name__ == '__main__':
     # batch frame testing.
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
-    dates_to_drivers = {'2':['13', '14_f']}
+    dates_to_drivers = {'1':['11']}
     # dates_to_drivers = {'Round1Test': ['19_f2']}
-    load_indexs = None
-    batches = batch_loading(dataset_dir, dates_to_drivers, load_indexs, is_testset=True)
-    # get_shape is used for getting shape.
-    top_shape, front_shape, rgb_shape = batches.get_shape()
-    for i in range(1000):
-        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = batches.load(2, batch=True,
-                                                                                               shuffled=False)
+    # load_indexs = None
+    # batches = batch_loading(dataset_dir, dates_to_drivers, load_indexs, is_testset=True)
+    # # get_shape is used for getting shape.
+    # top_shape, front_shape, rgb_shape = batches.get_shape()
+    # for i in range(1000):
+    #     train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = batches.load(2, batch=True,
+    #                                                                                            shuffled=False)
 
     # this code is for single testing.
-    # load_indexs = ['1_15_00000', '1_15_00001', '1_15_00002']
-    # batches = batch_loading(dataset_dir, dates_to_drivers, load_indexs)
-    #
-    # for i in range(1000):
-    #     train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = batches.load(1, False)
-    #
+    load_indexs = ['00000', '00001', '00002', '00003']
+    batches = batch_loading(dataset_dir, dates_to_drivers, load_indexs, is_testset=True)
+
+    for i in range(1000):
+        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = batches.load(1, False)
+

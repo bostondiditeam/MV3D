@@ -5,10 +5,15 @@ from warnings import warn
 
 
 # get all file names starts from a prefix string.
-def get_file_names(data_dir, data_type, driver, date):
+def get_file_names(data_dir, data_type, driver, date, index=None):
     dir_path = os.path.join(data_dir, data_type)
-    prefix = os.path.join(dir_path, date, driver) + '/*'
-    driver_files = glob.glob(prefix)
+    driver_path = os.path.join(dir_path, date, driver)
+    if index is None:
+        prefix = driver_path + '/*'
+        driver_files = glob.glob(prefix)
+    else:
+        prefix = [os.path.join(driver_path, file_name) for file_name in index]
+        driver_files = [glob.glob(i + '*')[0] for i in prefix]
     return driver_files
 
 def check_preprocessed_data(data_seg, dates_to_drivers, is_testset=False):
