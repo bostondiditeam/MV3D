@@ -29,7 +29,7 @@ def pred_and_save(tracklet_pred_dir, dataset):
     vid_in = skvideo.io.FFmpegWriter(os.path.join(cfg.LOG_DIR,'output.mp4'))
 
     for i in range(dataset.size):
-        rgb, top, front, _, _ = dataset.load(1)
+        rgb, top, front, _, _,_= dataset.load(1)
         t1=time.time()
         boxes3d,probs=m3.tacking(top[0],front[0],rgb[0])
         t2=time.time()
@@ -45,6 +45,8 @@ def pred_and_save(tracklet_pred_dir, dataset):
             for j in range(len(translation)):
                 tracklet.add_tracklet(i, size[j], translation[j], rotation[j])
         rgb_image = cv2.resize(rgb_image, (500, 400))
+        resize_scale=top_image.shape[0]/rgb_image.shape[0]
+        rgb_image = cv2.resize(rgb_image,(int(rgb_image.shape[1]*resize_scale), top_image.shape[0]))
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
         new_image = np.concatenate((top_image, rgb_image), axis = 1)
         imsave('%5d_image'%i, new_image, 'testset')
