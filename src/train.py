@@ -4,13 +4,14 @@ from config import *
 import utils.batch_loading as ub
 
 
-dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
+dataset_dir = cfg.PREPROCESSING_DATA_SETS_DIR
 
 
 training_dataset = {
-    '1': ['6_f','9_f','15','20'],
-    '2': ['3_f'],
-    '3': ['2_f','4','6','8','7']}
+    '1': ['6_f', '9_f', '15', '20']
+#    '2': ['3_f'],
+#    '3': ['2_f','4','6','8','7']}
+}
 
 # training_dataset = {
 #     '3': ['7','8']}
@@ -22,7 +23,7 @@ training = ub.batch_loading(dataset_dir, training_dataset)
 
 validation_dataset = {
     '1': ['21_f'],
-    '3': ['7','11_f']
+#    '3': ['7','11_f']
 }
 
 # validation_dataset = {
