@@ -21,7 +21,7 @@ training_dataset = {
 training = ub.batch_loading(dataset_dir, training_dataset)
 
 validation_dataset = {
-    '1': ['11','21_f'],
+    '1': ['21_f'],
     '3': ['7','11_f']
 }
 
@@ -30,4 +30,5 @@ validation_dataset = {
 validation = ub.batch_loading(dataset_dir, validation_dataset)
 
 m3=mod.MV3D()
+
 m3.train(max_iter=10000, pre_trained=True,train_set=training,validation_set=validation)
