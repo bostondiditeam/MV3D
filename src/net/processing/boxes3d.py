@@ -127,7 +127,7 @@ def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
             zs = qs[:,2].reshape(8,1)
             qs = (qs/zs)
             projections[n] = qs[:,0:2]
-            return projections
+        return projections
 
     else:
         num = len(boxes3d)
@@ -139,7 +139,7 @@ def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
                 box2d,out_range=convert_points_to_croped_image(box2d)
                 if np.sum(out_range==False)>=2:
                     projections[n]=box2d
-            return projections
+        return projections
 
 
 
