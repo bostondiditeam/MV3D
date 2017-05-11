@@ -66,6 +66,7 @@ class batch_loading:
         self.train_fronts = []
         self.train_gt_labels = []
         self.train_gt_boxes3d = []
+        self.current_batch_file_names = []
 
     def get_shape(self):
 
@@ -129,12 +130,15 @@ class batch_loading:
             self.num_frame_used = 0
             self.load_once = False
         # if there are still frames left
+        self.current_batch_file_names = self.load_file_names
         frame_end = min(self.num_frame_used + size, self.cache_num)
         train_rgbs = self.train_rgbs[self.num_frame_used:frame_end]
         train_tops = self.train_tops[self.num_frame_used:frame_end]
         train_fronts = self.train_fronts[self.num_frame_used:frame_end]
         train_gt_labels = self.train_gt_labels[self.num_frame_used:frame_end]
         train_gt_boxes3d = self.train_gt_boxes3d[self.num_frame_used:frame_end]
+        handle_id = self.current_batch_file_names[self.num_frame_used:frame_end]
+        handle_id = ['/'.join(name.split('/')[-3:]) for name in handle_id]
         print("start index is here: ", self.num_frame_used)
         self.num_frame_used = frame_end
         if self.num_frame_used >= self.size:
@@ -172,6 +176,7 @@ class batch_loading:
                 # print("after reloop: ", self.batch_start_index)
 
             print('The loaded file name here: ', loaded_file_names)
+            self.current_batch_file_names = loaded_file_names
             self.train_rgbs, self.train_tops, self.train_fronts, self.train_gt_labels, self.train_gt_boxes3d = \
                 load(loaded_file_names, is_testset=self.is_testset)
             self.num_frame_used = 0
@@ -188,18 +193,30 @@ class batch_loading:
             train_gt_labels = self.train_gt_labels[self.num_frame_used:frame_end]
             train_gt_boxes3d = self.train_gt_boxes3d[self.num_frame_used:frame_end]
         # print("start index is here: ", self.num_frame_used)
+        handle_id = self.current_batch_file_names[self.num_frame_used:frame_end]
+        handle_id = ['/'.join(name.split('/')[-3:]) for name in handle_id]
+        # print('handle id here: ', handle_id)
         self.num_frame_used = frame_end
         # return number of batches according to current size.
-        return train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d
+        return train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, handle_id
 
+    def get_date_and_driver(self, handle_id):
+        date_n_driver = ['/'.join(item.split('/')[0:2]) for item in handle_id]
+        return date_n_driver
+
+    def get_frame_info(self, handle_id):
+        return handle_id
 
     def load(self, size, batch=True, shuffled=False):
         if batch:
-            train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = self.load_batch(size, shuffled)
+            train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, frame_id = self.load_batch(size,
+                                                                                                          shuffled)
         else:
-            train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = self.load_test_frames(size, shuffled)
+            train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, frame_id =  \
+                self.load_test_frames(size, shuffled)
 
-        return train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d
+        return np.array(train_rgbs), np.array(train_tops), np.array(train_fronts), np.array(train_gt_labels), \
+               np.array(train_gt_boxes3d), frame_id
 
 
 if __name__ == '__main__':
