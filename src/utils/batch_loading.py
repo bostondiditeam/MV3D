@@ -68,6 +68,7 @@ class batch_loading:
         self.train_gt_boxes3d = []
         self.current_batch_file_names = []
 
+
     def get_shape(self):
 
         # print("file name is here: ", self.load_file_names[0])
@@ -139,12 +140,12 @@ class batch_loading:
         train_gt_boxes3d = self.train_gt_boxes3d[self.num_frame_used:frame_end]
         handle_id = self.current_batch_file_names[self.num_frame_used:frame_end]
         handle_id = ['/'.join(name.split('/')[-3:]) for name in handle_id]
-        print("start index is here: ", self.num_frame_used)
+        # print("start index is here: ", self.num_frame_used)
         self.num_frame_used = frame_end
         if self.num_frame_used >= self.size:
             self.num_frame_used = 0
         # return number of batches according to current size.
-        return train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d
+        return train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, handle_id
 
 
     # size is for loading how many frames per time.
@@ -175,7 +176,7 @@ class batch_loading:
                 self.batch_start_index = start_offset
                 # print("after reloop: ", self.batch_start_index)
 
-            print('The loaded file name here: ', loaded_file_names)
+            # print('The loaded file name here: ', loaded_file_names)
             self.current_batch_file_names = loaded_file_names
             self.train_rgbs, self.train_tops, self.train_fronts, self.train_gt_labels, self.train_gt_boxes3d = \
                 load(loaded_file_names, is_testset=self.is_testset)
@@ -239,5 +240,5 @@ if __name__ == '__main__':
     batches = batch_loading(dataset_dir, dates_to_drivers, load_indexs, is_testset=True)
 
     for i in range(1000):
-        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = batches.load(1, False)
+        train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, handle_id = batches.load(1, False)
 
