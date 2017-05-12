@@ -76,6 +76,10 @@ elif __C.DATA_SETS_TYPE ==  'didi':
     __C.IMAGE_HEIGHT=1096 #pixel
     __C.IMAGE_WIDTH=1368
 
+# if timer is needed.
+__C.TRAINING_TIMER = True
+__C.TRACKING_TIMER = False
+__C.DATAPY_TIMER = False
 
 # print(cfg.RAW_DATA_SETS_DIR)
 # print(cfg.PREPROCESSED_DATA_SETS_DIR)

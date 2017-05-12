@@ -19,7 +19,7 @@ from config import cfg
 import config
 from net.processing.boxes import non_max_suppress
 import utils.batch_loading as dataset
-
+from utils.timer import timer
 
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
@@ -310,9 +310,14 @@ class MV3D(object):
                 summary_writer.close()
 
             loss_smooth_step=20
+            ckpt_save_step=200
 
             rate = 0.01
             loss_sum = np.zeros(4)
+
+            if cfg.TRAINING_TIMER:
+                time_it = timer()
+
             for iter in range(max_iter):
 
                 batch_rgb_images, batch_top_view, batch_front_view, \
@@ -382,8 +387,11 @@ class MV3D(object):
 
                 loss_sum+= np.array([t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss])
 
-                if iter%200==0:
+                if iter%ckpt_save_step==0:
                     saver.save(sess, os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt'))
+                    if cfg.TRAINING_TIMER:
+                        self.log.write('It takes %0.2f secs to train %d iterations. \n' %\
+                                       (time_it.time_diff_per_n_loops(), ckpt_save_step))
 
                 if iter%loss_smooth_step==0:
                     loss_smooth=loss_sum/loss_smooth_step
@@ -436,6 +444,9 @@ class MV3D(object):
                                    batch_front_view,
                                    batch_rgb_images, rgb, batch_gt_boxes3d, top_image)
 
+            if cfg.TRAINING_TIMER:
+                self.log.write('It takes %0.2f secs to train the dataset. \n' % \
+                               (time_it.total_time()))
 
 
     def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):

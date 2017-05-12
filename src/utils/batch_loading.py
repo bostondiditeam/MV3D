@@ -71,7 +71,7 @@ class batch_loading:
 
     def get_shape(self):
 
-        # print("file name is here: ", self.load_file_names[0])
+        #print("file name is here: ", self.load_file_names[0])
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d = load([self.load_file_names[0]],
                                                                                        is_testset=self.is_testset)
 
