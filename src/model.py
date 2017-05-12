@@ -78,6 +78,7 @@ class MV3D(object):
         utilfile.makedirs(cfg.CHECKPOINT_DIR)
         utilfile.makedirs(os.path.join(cfg.CHECKPOINT_DIR,'reg'))
         self.log = utilfile.Logger(cfg.LOG_DIR+'/log.txt', mode='a')
+        self.track_log = utilfile.Logger(cfg.LOG_DIR + '/tracking_log.txt', mode='a')
 
         self.validation_set=None
         self.log_num=0
@@ -389,7 +390,7 @@ class MV3D(object):
 
                 if iter%ckpt_save_step==0:
                     saver.save(sess, os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt'))
-                    if cfg.TRAINING_TIMER:
+                    if cfg.TRAINING_TIMER and iter!=0:
                         self.log.write('It takes %0.2f secs to train %d iterations. \n' %\
                                        (time_it.time_diff_per_n_loops(), ckpt_save_step))
 
@@ -463,7 +464,7 @@ class MV3D(object):
 
 
 
-    def tacking(self, top_view, front_view, rgb_image,top_image=None):
+    def tracking(self, top_view, front_view, rgb_image,top_image=None):
         lables=[] #todo add lables output
         np_reshape = lambda np_array: np_array.reshape(1, *(np_array.shape))
         top_view=np_reshape(top_view)

@@ -12,6 +12,7 @@ import cv2
 import numpy as np
 import net.utility.draw as draw
 import skvideo.io
+from utils.timer import timer
 
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
@@ -28,12 +29,21 @@ def pred_and_save(tracklet_pred_dir, dataset):
 
     vid_in = skvideo.io.FFmpegWriter(os.path.join(cfg.LOG_DIR,'output.mp4'))
 
+    # timer
+    timer_step = 100
+    if cfg.TRACKING_TIMER:
+        time_it = timer()
+
+
     for i in range(dataset.size):
         rgb, top, front, _, _,_= dataset.load(1)
-        t1=time.time()
-        boxes3d,probs=m3.tacking(top[0],front[0],rgb[0])
-        t2=time.time()
-        print('time= '+ str(t2-t1))
+
+        boxes3d,probs=m3.tracking(top[0],front[0],rgb[0])
+
+        # time timer_step iterations. Turn it on/off in config.py
+        if cfg.TRACKING_TIMER and i%timer_step ==0 and i!=0:
+            m3.track_log.write('It takes %0.2f secs for inferring %d frames. \n' % \
+                                   (time_it.time_diff_per_n_loops(), timer_step))
 
         # for debugging: save image and show image.
         top_image = data.draw_top_image(top[0])
@@ -62,6 +72,11 @@ def pred_and_save(tracklet_pred_dir, dataset):
     vid_in.close()
 
     tracklet.write_tracklet()
+
+    if cfg.TRACKING_TIMER:
+        m3.log.write('It takes %0.2f secs for inferring the whole test dataset. \n' % \
+                       (time_it.total_time()))
+
     print("tracklet file named tracklet_labels.xml is written successfully.")
     return tracklet.path
 

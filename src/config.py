@@ -78,7 +78,7 @@ elif __C.DATA_SETS_TYPE ==  'didi':
 
 # if timer is needed.
 __C.TRAINING_TIMER = True
-__C.TRACKING_TIMER = False
+__C.TRACKING_TIMER = True
 __C.DATAPY_TIMER = False
 
 # print(cfg.RAW_DATA_SETS_DIR)
