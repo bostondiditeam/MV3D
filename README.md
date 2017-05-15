@@ -9,7 +9,7 @@ To clone,
 
 To pull, use 
 
-    $git pull --recurse-submodules  https://github.com/bostondiditeam/MV3D.git
+    $git pull --recurse-submodules  
     
 
 # Contents
