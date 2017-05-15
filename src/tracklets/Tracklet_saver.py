@@ -45,13 +45,16 @@ class Tracklet_saver():
 
 if __name__ == '__main__':
     #a test case
-    os.makedirs('./test_output/',exist_ok=True)
+    os.makedirs('./test_output/', exist_ok=True)
     a = Tracklet_saver('./test_output/')
-    size = [4.2418,1.4478*10,1.5748*4]
+    # The size is for obstacle car, the order for size is [height, width, length]
+    size = [1.5748, 1.4478, 4.2418]
+    # for tx, ty, tz for different poses.
     transition = [0,3,0]
+    # for rx, ry, rz for different poses.
     rotation = [0, 0, 0]
-    # for i in range(243,260):
-    #     a.add_tracklet(i, size, transition, rotation)
+    # which frames you want the above posed in. Like the belowing example, I want to write size, transition and
+    # rotation defined above to be in frame 324 to frame 647, then I define it in the following way.
     for i in range(324,647):
         a.add_tracklet(i, size, transition, rotation)
     a.write_tracklet()

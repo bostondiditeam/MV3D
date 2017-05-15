@@ -16,18 +16,20 @@ To pull, use
 - Key facts
 - Workflow
 - How to run
-- Todos
+- Todo
 - Issues
 
 # Key facts
 
 # Workflow
+Please refer to [here](https://drive.google.com/file/d/0B47OwD8fbxJNWWFmVUJ4OUV4RUE/view?usp=sharing)
 
 # Key Dependency
 - A Nvidia GPU card with computation capability > 3
 - CUDA
-- Python3.5
+- Python3.5 for MV3D related code
 - Tensorflow-GPU(version>1.0)
+- Python2.7 for ROS related script
 
 # File Structure
 ```
@@ -53,8 +55,11 @@ To pull, use
 │   ├── tracking.py   <--- prediction after training. 
 │   ├── tracklets
 │   └── train.py    <--- training the whole network. 
-└── utils    <-- all related tools put here, like ros bag data into kitti format
-    └── bag_to_kitti  <--- Take lidar value from ROS bag and save it as bin files.
+│── utils    <-- all related tools put here, like ros bag data into kitti format
+│    └── bag_to_kitti  <--- Take lidar value from ROS bag and save it as bin files.
+└── external_models    <-- use as a submodule, basically code from other repos.
+    └── didi-competition  <--- Code from Udacity's challenge repo with slightly modification, sync with Udacity's new
+     updates regularly. 
 ```
 
 # Related data are organized in this way. (Under /data directory)
@@ -148,6 +153,11 @@ sudo chmod 755 ./make.sh
 python data.py # for process raw data to input network input format
 python train.py # training the network. 
 ```
+
+# Some other readme.md files inside this repo:
+- How to extract and sync data from ROS bags [Under utils/bag_to_kitti](./utils/bag_to_kitti/README.md)
+- How to generate tracklet files [Under src/tracklets/](./src/tracklets/README.md) 
+
 
 # Issue
 - Not related to this repo, but if you are using Amazon CarND AWS AMI (Ubuntu 16.04 and with tensorflow-gpu 0.12 
