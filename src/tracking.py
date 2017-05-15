@@ -17,7 +17,7 @@ from utils.timer import timer
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
 
-def pred_and_save(tracklet_pred_dir, dataset):
+def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=27//2):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
 
@@ -26,8 +26,8 @@ def pred_and_save(tracklet_pred_dir, dataset):
     m3=mod.MV3D()
     m3.tracking_init(top_shape,front_shape,rgb_shape)
 
-
-    vid_in = skvideo.io.FFmpegWriter(os.path.join(cfg.LOG_DIR,'output.mp4'))
+    if generate_video:
+        vid_in = skvideo.io.FFmpegWriter(os.path.join(cfg.LOG_DIR,'output.mp4'))
 
     # timer
     timer_step = 100
@@ -48,28 +48,26 @@ def pred_and_save(tracklet_pred_dir, dataset):
         # for debugging: save image and show image.
         top_image = data.draw_top_image(top[0])
         rgb_image = rgb[0]
+
+        frame_num=0
         if len(boxes3d)!=0:
             top_image = data.draw_box3d_on_top(top_image, boxes3d[:,:,:], color=(80, 80, 0), thickness=3)
             rgb_image = draw.draw_boxed3d_to_rgb(rgb_image, boxes3d[:,:,:], color=(0, 0, 80), thickness=3)
             translation, size, rotation = boxes3d_for_evaluation(boxes3d[:,:,:])
             for j in range(len(translation)):
-                tracklet.add_tracklet(i, size[j], translation[j], rotation[j])
+                frame_num = i-frame_offset
+                if frame_num >=0:
+                    tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
         rgb_image = cv2.resize(rgb_image, (500, 400))
         resize_scale=top_image.shape[0]/rgb_image.shape[0]
         rgb_image = cv2.resize(rgb_image,(int(rgb_image.shape[1]*resize_scale), top_image.shape[0]))
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
         new_image = np.concatenate((top_image, rgb_image), axis = 1)
-        imsave('%5d_image'%i, new_image, 'testset')
-        vid_in.writeFrame(new_image)
+        imsave('%5d_image'%frame_num, new_image, 'testset')
 
-        # file_name='tacking_test_img_{}'.format(i)
-        # img_tracking=draw_boxed3d_to_rgb(rgbs[0],boxes3d)
-        # path=os.path.join(cfg.LOG_DIR,file_name)
-        # imsave(path,img_tracking)
-        # print(path+' save ok')
-
-        # save boxes3d as tracklet files.
-    vid_in.close()
+        if generate_video:
+            vid_in.writeFrame(new_image)
+            vid_in.close()
 
     tracklet.write_tracklet()
 
