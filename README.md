@@ -2,6 +2,16 @@
 
 * The MV3D implementation progress report can be found [here](https://docs.google.com/document/d/1V-Go2kCxD58CIXKz3yk34pWeOnLca-0gqOw1JmfchrA/edit?usp=sharing) 
 
+
+To clone,
+
+    $git clone --recursive  https://github.com/bostondiditeam/MV3D.git
+
+To pull, use 
+
+    $git pull --recurse-submodules  
+    
+
 # Contents
 - Key facts
 - Workflow
@@ -126,11 +136,15 @@ sess = tf.Session()
 print(tf.__version__) # version more than v1. 
 ```
 It runs without error message and show　＂successfully opened CUDA library libcublas.so.8.0 locally＂, then it is in CUDA successfully.
+
+
 ```
 cd src
 source activate didi
 sudo chmod 755 ./make.sh
 ./make.sh
+# prerequisite for next step, i.e. running preprocessing using data.py, is to 
+# follow steps in utils/bag_to_kitti if using didi data
 python data.py # for process raw data to input network input format
 python train.py # training the network. 
 ```
