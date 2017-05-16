@@ -86,7 +86,7 @@ def convert_points_to_croped_image(img_points):
     bottom=cfg.IMAGE_CROP_BOTTOM
 
     croped_img_h=proj.image_height-top-bottom
-    croped_img_w=proj.image_height-left-right
+    croped_img_w=proj.image_width-left-right
 
 
     img_points[:,1] -= top
