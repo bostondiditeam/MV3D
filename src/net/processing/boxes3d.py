@@ -352,7 +352,8 @@ def box3d_to_rgb_projection_cv2(points):
                               [0.000000, 1393.652271, 559.626310],
                               [0.000000, 0.000000, 1.000000]])
 
-
+    #https://github.com/zxf8665905/lidar-camera-calibration/blob/master/Calibration.ipynb
+    #Out[17]:
     x=np.array([ -1.50231172e-03,  -4.00842946e-01,  -5.30289086e-01,
         -2.41054475e+00,   2.41781181e+00,  -2.46716659e+00])
     tx, ty, tz, rx, ry, rz = x
