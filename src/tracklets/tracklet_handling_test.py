@@ -5,7 +5,7 @@ import numpy
 from config import *
 import os
 from kitti_data.io import read_objects
-from net.processing.boxes3d import boxes3d_for_evaluation
+from net.processing.boxes3d import boxes3d_decompose
 from tracklets.Tracklet_saver import Tracklet_saver
 from data import obj_to_gt_boxes3d
 
@@ -27,7 +27,7 @@ def test_case_first_frame():
         frame1 = objects[frame_no]
         coordinate_3d_1, _ = obj_to_gt_boxes3d(frame1)
 
-        translation1, size1, rotation1 = boxes3d_for_evaluation(coordinate_3d_1)
+        translation1, size1, rotation1 = boxes3d_decompose(coordinate_3d_1)
 
 
         size = size1

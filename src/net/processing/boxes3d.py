@@ -294,7 +294,7 @@ def regularise_box3d(boxes3d):
 
     return reg_boxes3d
 
-def boxes3d_for_evaluation(boxes3d):
+def boxes3d_decompose(boxes3d):
 
     # translation
     T_x = np.sum(boxes3d[:, 0:4, 0], 1) / 4.0
@@ -370,5 +370,5 @@ def box3d_to_rgb_projection_cv2(points):
 if __name__ == '__main__':
     # test boxes3d_for_evaluation
     gt_boxes3d=np.load('gt_boxes3d_135.npy')
-    translation, size, rotation =boxes3d_for_evaluation(gt_boxes3d[0])
+    translation, size, rotation =boxes3d_decompose(gt_boxes3d[0])
     print(translation,size,rotation)
