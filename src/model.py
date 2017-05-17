@@ -292,7 +292,8 @@ class MV3D(object):
         sess=self.training_sess
         saver = tf.train.Saver(keep_checkpoint_every_n_hours=0.2, max_to_keep=10)
         with sess.as_default():
-            if pre_trained==True and not tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR)==None:
+            pretrained_model_path = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt')
+            if pre_trained==True and os.path.isfile(pretrained_model_path):
                 saver.restore(sess, tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
             else:
                 sess.run( tf.global_variables_initializer(), { blocks.IS_TRAIN_PHASE : True } )
@@ -389,7 +390,7 @@ class MV3D(object):
                 loss_sum+= np.array([t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss])
 
                 if iter%ckpt_save_step==0:
-                    saver.save(sess, os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt'))
+                    saver.save(sess, pretrained_model_path)
                     if cfg.TRAINING_TIMER and iter!=0:
                         self.log.write('It takes %0.2f secs to train %d iterations. \n' %\
                                        (time_it.time_diff_per_n_loops(), ckpt_save_step))
