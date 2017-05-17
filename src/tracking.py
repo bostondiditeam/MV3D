@@ -13,6 +13,10 @@ import numpy as np
 import net.utility.draw as draw
 import skvideo.io
 from utils.timer import timer
+from time import gmtime, strftime
+from task import copy_weigths
+
+log_dir = os.path.join(cfg.LOG_DIR, 'tracking',strftime("%Y_%m_%d_%H_%M_%S", gmtime()))
 
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
@@ -20,6 +24,7 @@ from utils.timer import timer
 def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=17):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
+    os.makedirs (os.path.join(log_dir,'image'),exist_ok=True)
 
 
     top_shape, front_shape, rgb_shape=dataset.get_shape()
@@ -27,7 +32,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
     m3.tracking_init(top_shape,front_shape,rgb_shape)
 
     if generate_video:
-        vid_in = skvideo.io.FFmpegWriter(os.path.join(cfg.LOG_DIR,'output.mp4'))
+        vid_in = skvideo.io.FFmpegWriter(os.path.join(log_dir,'output.mp4'))
 
     # timer
     timer_step = 100
@@ -66,7 +71,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
         rgb_image = cv2.resize(rgb_image,(int(rgb_image.shape[1]*resize_scale), top_image.shape[0]))
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
         new_image = np.concatenate((top_image, rgb_image), axis = 1)
-        imsave('%5d_image'%frame_num, new_image, 'testset')
+        cv2.imwrite(os.path.join(log_dir,'image','%5d_image.jpg'%frame_num), new_image)
 
         if generate_video:
             vid_in.writeFrame(new_image)
@@ -85,7 +90,10 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
 from tracklets.evaluate_tracklets import tracklet_score
 
 if __name__ == '__main__':
-    tracklet_pred_dir = cfg.PREDICTED_XML_DIR
+
+
+    tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
+    os.makedirs(tracklet_pred_dir,exist_ok=True)
 
     dataset = {
         'Round1Test': ['19_f2']
@@ -105,4 +113,5 @@ if __name__ == '__main__':
         tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
         print("scores are save under {} directory.".format(tracklet_pred_dir))
 
+    copy_weigths(os.path.join(log_dir, 'pretrained_model'))
     print("Completed")
