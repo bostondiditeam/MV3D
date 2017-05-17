@@ -34,8 +34,12 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
     if cfg.TRACKING_TIMER:
         time_it = timer()
 
-
+    frame_num = 0
     for i in range(dataset.size):
+        frame_num = i - frame_offset
+        if frame_num < 0:
+            continue
+
         rgb, top, front, _, _,_= dataset.load(1)
 
         boxes3d,probs=m3.tracking(top[0],front[0],rgb[0])
@@ -49,15 +53,12 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
         top_image = data.draw_top_image(top[0])
         rgb_image = rgb[0]
 
-        frame_num=0
+
         if len(boxes3d)!=0:
             top_image = data.draw_box3d_on_top(top_image, boxes3d[:,:,:], color=(80, 80, 0), thickness=3)
             rgb_image = draw.draw_boxed3d_to_rgb(rgb_image, boxes3d[:,:,:], color=(0, 0, 80), thickness=3)
             translation, size, rotation = boxes3d_decompose(boxes3d[:, :, :])
             for j in range(len(translation)):
-                frame_num = i-frame_offset
-                if frame_num <0:
-                    continue
                 tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
         rgb_image = cv2.resize(rgb_image, (500, 400))
         resize_scale=top_image.shape[0]/rgb_image.shape[0]
