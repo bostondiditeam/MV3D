@@ -17,7 +17,7 @@ from utils.timer import timer
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
 
-def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=27//2):
+def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=17):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
 
@@ -36,11 +36,12 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
 
     frame_num = 0
     for i in range(dataset.size):
+
+        rgb, top, front, _, _,_= dataset.load(1)
+
         frame_num = i - frame_offset
         if frame_num < 0:
             continue
-
-        rgb, top, front, _, _,_= dataset.load(1)
 
         boxes3d,probs=m3.tracking(top[0],front[0],rgb[0])
 
@@ -86,11 +87,11 @@ from tracklets.evaluate_tracklets import tracklet_score
 if __name__ == '__main__':
     tracklet_pred_dir = cfg.PREDICTED_XML_DIR
 
-    dates = ['Round1Test']
-    drivers = ['19_f2']
-    frames_index = None
+    dataset = {
+        'Round1Test': ['19_f2']
+               }
 
-    dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, {'Round1Test': ['19_f2'],},is_testset=True)
+    dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR,dataset,is_testset=True)
 
     # generate tracklet file
     print("tracklet_pred_dir: " + tracklet_pred_dir)
