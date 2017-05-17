@@ -278,7 +278,7 @@ class MV3D(object):
         learning_rate = tf.placeholder(tf.float32, shape=[])
         solver = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=0.9)
 
-        solver_step = solver.minimize(top_cls_loss+0.01*top_reg_loss+0.1*fuse_cls_loss+0.01*fuse_reg_loss+l2)
+        solver_step = solver.minimize(top_cls_loss+0.05*top_reg_loss+fuse_cls_loss+0.05*fuse_reg_loss+0.*l2)
 
 
         iter_debug=40
