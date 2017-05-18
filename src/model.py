@@ -508,7 +508,7 @@ class MV3D(object):
         fuse_probs, fuse_deltas = \
             self.tracking_sess.run([ self.net['fuse_probs'], self.net['fuse_deltas'] ],fd2)
 
-        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.1)
+        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.5)
 
         # #debug
         # predicted_bbox = nud.draw_boxed3d_to_rgb(rgb_image[0], boxes3d)
