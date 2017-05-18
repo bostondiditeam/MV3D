@@ -13,10 +13,10 @@ import numpy as np
 import net.utility.draw as draw
 import skvideo.io
 from utils.timer import timer
-from time import gmtime, strftime
+from time import localtime, strftime
 from task import copy_weigths
 
-log_dir = os.path.join(cfg.LOG_DIR, 'tracking',strftime("%Y_%m_%d_%H_%M_%S", gmtime()))
+log_dir = os.path.join(cfg.LOG_DIR, 'tracking',strftime("%Y_%m_%d_%H_%M_%S", localtime()))
 
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
