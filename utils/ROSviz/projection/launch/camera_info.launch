@@ -1,0 +1,3 @@
+<launch>
+	<node name="CameraInfo" pkg="projection" type="camera_info_node.py" args="$(find projection)/scripts/ost.yaml"/>
+</launch>

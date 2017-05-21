@@ -1,0 +1,9 @@
+<launch>
+    <arg name="bag" />
+    <param name="use_sim_time" value="true" />
+    <node name="rosbag" pkg="rosbag" type="play" args="-l --clock $(arg bag)"/>
+	<node name="projection" pkg="projection" type="projection.py" args="$(arg bag) $(find projection)/scripts/ost.yaml"/>
+    <node name="image_view" pkg="image_view" type="image_view" args="">
+        <remap from="image" to="/image_bbox"/>
+    </node>
+</launch>
