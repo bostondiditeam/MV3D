@@ -1,6 +1,8 @@
 import os
 import numpy as np
+np.random.seed(7)
 import tensorflow as tf
+tf.set_random_seed(7)
 from sklearn.utils import shuffle
 import glob
 import net.utility.draw  as nud
@@ -88,6 +90,17 @@ class MV3D(object):
     def proposal(self):
         pass
 
+    def anchors_details(self,pos_indes, top_inds):
+        return 'anchors: positive= {} total= {}\n'.format(len(pos_indes), len(top_inds))
+
+
+    def RPN_poposal_details(self, top_rois, labels):
+        total = len(top_rois)
+        fp = np.sum(labels==0)
+        pos = total - fp
+        info ='RPN proposals: positive= {} total= {}'.format(pos,total)
+        return info
+
     def log_rpn(self, subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds, batch_top_labels,
                 batch_top_pos_inds, batch_top_targets, batch_proposals, batch_proposal_scores):
 
@@ -124,27 +137,31 @@ class MV3D(object):
         sess=self.training_sess
 
         batch_top_rois_2 = batch_proposals[batch_proposal_scores > 0.1, :]
-        batch_rois3d_2 = project_to_roi3d(batch_top_rois_2)
-        batch_front_rois_2 = project_to_front_roi(batch_rois3d_2)
-        batch_rgb_rois_2 = project_to_rgb_roi(batch_rois3d_2)
+        if len(batch_top_rois_2)==0:
+            boxes3d_2= np.zeros((0,8,3))
+        else:
 
-        fd2_2 = {
-            **fd1,
+            batch_rois3d_2 = project_to_roi3d(batch_top_rois_2)
+            batch_front_rois_2 = project_to_front_roi(batch_rois3d_2)
+            batch_rgb_rois_2 = project_to_rgb_roi(batch_rois3d_2)
 
-            net['top_view']: batch_top_view,
-            net['front_view']: batch_front_view,
-            net['rgb_images']: batch_rgb_images,
+            fd2_2 = {
+                **fd1,
 
-            net['top_rois']: batch_top_rois_2,
-            net['front_rois']: batch_front_rois_2,
-            net['rgb_rois']: batch_rgb_rois_2,
+                net['top_view']: batch_top_view,
+                net['front_view']: batch_front_view,
+                net['rgb_images']: batch_rgb_images,
 
-        }
+                net['top_rois']: batch_top_rois_2,
+                net['front_rois']: batch_front_rois_2,
+                net['rgb_rois']: batch_rgb_rois_2,
 
-        batch_fuse_probs_2, batch_fuse_deltas_2 = \
-            sess.run([net['fuse_probs'], net['fuse_deltas']], fd2_2)
-        probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2,
-                                      score_threshold=0.5)
+            }
+
+            batch_fuse_probs_2, batch_fuse_deltas_2 = \
+                sess.run([net['fuse_probs'], net['fuse_deltas']], fd2_2)
+            probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2,
+                                          score_threshold=0.5)
 
         predict_rgb_view = draw_box3d_on_image_with_gt(rgb, boxes3d_2, batch_gt_boxes3d)
         predict_top_view = box.draw_box3d_on_top(top_image, boxes3d_2, color=(80, 0, 0))
@@ -249,8 +266,7 @@ class MV3D(object):
         log_subdir = 'validation'
         top_image = data.draw_top_image(batch_top_view[0])
         rgb = batch_rgb_images[0]
-        log_info_str = self.validation_set.get_frame_info(frame_id)[0]
-
+        log_info_str = self.validation_set.get_frame_info(frame_id)[0]+'\n'
 
         self.log_info(log_subdir,log_info_str)
         self.log_rpn(log_subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds,
@@ -290,7 +306,7 @@ class MV3D(object):
         # solver_step = solver.minimize(
         #     top_cls_loss + 0.005 * top_reg_loss + fuse_cls_loss + 0.5* fuse_reg_loss)
         solver_step = solver.minimize(
-            0.*top_cls_loss + 0. * top_reg_loss + 0.* fuse_cls_loss + 1.*fuse_reg_loss)
+            0.*top_cls_loss + 1. * top_reg_loss + 0.* fuse_cls_loss + 0.*fuse_reg_loss)
 
 
         iter_debug=40
@@ -405,7 +421,7 @@ class MV3D(object):
 
                 loss_sum+= np.array([t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss])
 
-                if iter%ckpt_save_step==0:
+                if iter%ckpt_save_step==1:
                     saver.save(sess, pretrained_model_path)
                     if cfg.TRAINING_TIMER and iter!=0:
                         self.log.write('It takes %0.2f secs to train %d iterations. \n' %\
@@ -430,14 +446,17 @@ class MV3D(object):
                 if 1 and iter%iter_debug==0:
                     self.log_num+=1
                     self.log_num=self.log_num%self.log_max
-                    log_info_str=train_set.get_frame_info(frame_id)[0]
+                    frame_info = train_set.get_frame_info(frame_id)[0]
+                    log_info_str = 'frame info: '+ frame_info +'\n'
+                    log_info_str += self.anchors_details(batch_top_pos_inds, batch_top_inds)
+                    log_info_str += self.RPN_poposal_details(batch_top_rois, batch_fuse_labels)
 
                     log_subdir= str(self.log_num)
                     top_image = data.draw_top_image(batch_top_view[0])
                     rgb       = batch_rgb_images[idx]
 
 
-
+                    # history
                     self.log_info(log_subdir,log_info_str)
                     self.log_rpn(log_subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds,
                             batch_top_labels,
