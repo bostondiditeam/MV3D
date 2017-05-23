@@ -8,8 +8,7 @@
 
 * Download the project to the `src` of your catkin workspace. For example,
 ```
-cd ~/catkin_ws/src/
-git clone https://github.com/preritj/projection.git
+cp -r projection ~/catkin_ws/src/
 ```
 
 * Make sure all python files in source directory (`~/catkin_ws/src/projection/scripts/*.py`) are executable. 
