@@ -19,7 +19,8 @@ def read_objects(tracklet_file, frames_index):
 
         # this part is inspired by kitti object development kit matlab code: computeBox3D
         h,w,l = tracklet.size
-        if cfg.DATA_SETS_TYPE == 'didi':
+        if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
+            l*=1.6
             h, w = h*1.1, l
             trackletBox = np.array([
                 [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
@@ -30,12 +31,6 @@ def read_objects(tracklet_file, frames_index):
                 [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
                 [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
                 [0.0, 0.0, 0.0, 0.0, h, h, h, h]])
-        elif cfg.DATA_SETS_TYPE == 'test':
-            h, w = l, l
-            trackletBox = np.array([  # in velodyne coordinates around zero point and without orientation yet\
-                [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
-                [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
-                [-h/2, -h/2, -h/2, -2/h, h, h, h, h]])
         else:
             raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
 

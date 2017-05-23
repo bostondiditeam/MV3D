@@ -80,8 +80,8 @@ def lidar_to_top(lidar):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
     Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)//TOP_Z_DIVISION)+1
-    height  = Yn - Y0
-    width   = Xn - X0
+    height  = Xn - X0
+    width   = Yn - Y0
     channel = Zn - Z0  + 2
     # print('height,width,channel=%d,%d,%d'%(height,width,channel))
     top = np.zeros(shape=(height,width,channel), dtype=np.float32)
@@ -121,7 +121,7 @@ def lidar_to_top(lidar):
                 pass
             pass
 
-    top[:,:,Zn+1] = np.log(top[:,:,Zn+1]+1)/math.log(64)
+        top[:,:,Zn+1] = np.log(top[:,:,Zn+1]+1)/math.log(64)
 
 
 
@@ -315,7 +315,7 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
 
         objs = objects[count]
         gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-        img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
+        img = draw.draw_box3d_on_camera(rgb, gt_boxes3d)
         cv2.imwrite(os.path.join(dataset_dir,'%05d.png' % n), img)
         count += 1
     print('gt box image save done\n')

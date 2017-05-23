@@ -166,6 +166,7 @@ def draw_top_feature_map(top_dir, gt_boxes3d_dir, mark_dir, index):
     fig   = mlab.figure(figure=None, bgcolor=(0,0,0), fgcolor=None, engine=None, size=(500, 500))
 
     count=0
+    channel_num=int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
     for file in sorted(glob.glob(top_dir + '/*.npy')):
         if count != index:
             count += 1
@@ -180,12 +181,13 @@ def draw_top_feature_map(top_dir, gt_boxes3d_dir, mark_dir, index):
         for i in range(top.shape[0]):
             for j in range(top.shape[1]):
                 if top[i, j, 7] != 0:
-                    for height_i in range(6):
-                        x = (TOP_X_MAX - TOP_X_MIN)/2. - i * TOP_X_DIVISION
-                        y = (TOP_Y_MAX - TOP_Y_MIN)/2. - j * TOP_Y_DIVISION
-                        intensity=top[i,j,6]
-                        z=top[i,j,height_i]
-                        feature_map_points.append(np.array([x,y,z,intensity]))
+                    for height_i in range(channel_num):
+                        z = top[i, j, height_i]
+                        if z != 0:
+                            x = (TOP_X_MAX - TOP_X_MIN)/2. - i * TOP_X_DIVISION
+                            y = (TOP_Y_MAX - TOP_Y_MIN)/2. - j * TOP_Y_DIVISION
+                            intensity=top[i,j,6]
+                            feature_map_points.append(np.array([x,y,z,intensity]))
         feature_map_points=np.array(feature_map_points)
 
         mlab.clf(fig)

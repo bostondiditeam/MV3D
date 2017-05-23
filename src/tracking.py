@@ -1,6 +1,6 @@
 import model as mod
 import data
-from net.utility.draw import imsave ,draw_boxed3d_to_rgb
+from net.utility.draw import imsave ,draw_box3d_on_camera
 from net.processing.boxes3d import boxes3d_decompose
 from tracklets.Tracklet_saver import Tracklet_saver
 import argparse
@@ -62,7 +62,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
 
         if len(boxes3d)!=0:
             top_image = data.draw_box3d_on_top(top_image, boxes3d[:,:,:], color=(80, 80, 0), thickness=3)
-            rgb_image = draw.draw_boxed3d_to_rgb(rgb_image, boxes3d[:,:,:], color=(0, 0, 80), thickness=3)
+            rgb_image = draw.draw_box3d_on_camera(rgb_image, boxes3d[:, :, :], color=(0, 0, 80), thickness=3)
             translation, size, rotation = boxes3d_decompose(boxes3d[:, :, :])
             for j in range(len(translation)):
                 tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])

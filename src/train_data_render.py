@@ -140,7 +140,7 @@ def train_data_render(gt_boxes3d_dir, gt_labels_dir, rgb_dir, top_dir, lidar_dir
 
         lidar_to_top(lidar)
         if len(boxes3d) > 0:
-            rgb_image = draw.draw_boxed3d_to_rgb(rgb_image, boxes3d, color=(0, 0, 255), thickness=1)
+            rgb_image = draw.draw_box3d_on_camera(rgb_image, boxes3d, color=(0, 0, 255), thickness=1)
             #rgb_image_undistort = draw.draw_boxed3d_to_rgb(rgb_image_undistort, boxes3d, color=(0, 0, 80), thickness=3)
             top_image_boxed = data.draw_box3d_on_top(top_image, boxes3d[:, :, :], color=(255, 255, 0), thickness=1)
 

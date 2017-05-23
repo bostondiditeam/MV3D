@@ -44,20 +44,12 @@ __C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_T
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 
-__C.IMAGE_FUSION_DIABLE = True
+__C.IMAGE_FUSION_DIABLE = False
+
+__C.USE_RESNET_AS_BASENET = True
 
 # image crop config
-if __C.DATA_SETS_TYPE   ==  'test':
-    # __C.IMAGE_CROP_LEFT     =0 #pixel
-    # __C.IMAGE_CROP_RIGHT    =0
-    # __C.IMAGE_CROP_TOP      =400
-    # __C.IMAGE_CROP_BOTTOM   =100
-
-    __C.IMAGE_CROP_LEFT     =0  #pixel
-    __C.IMAGE_CROP_RIGHT    =0
-    __C.IMAGE_CROP_TOP      =0
-    __C.IMAGE_CROP_BOTTOM   =0
-elif __C.DATA_SETS_TYPE ==  'didi':
+if __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE   ==  'test':
     __C.IMAGE_CROP_LEFT     =0 #pixel
     __C.IMAGE_CROP_RIGHT    =0
     __C.IMAGE_CROP_TOP      =400

@@ -8,8 +8,8 @@ import net.processing.projection as proj
 def top_to_lidar_coords(xx,yy):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
-    y = Xn*TOP_Y_DIVISION-(xx+0.5)*TOP_Y_DIVISION + TOP_Y_MIN
-    x = Yn*TOP_X_DIVISION-(yy+0.5)*TOP_X_DIVISION + TOP_X_MIN
+    y = Yn*TOP_Y_DIVISION-(xx+0.5)*TOP_Y_DIVISION + TOP_Y_MIN
+    x = Xn*TOP_X_DIVISION-(yy+0.5)*TOP_X_DIVISION + TOP_X_MIN
 
     return x,y
 
@@ -111,7 +111,7 @@ def convert_points_to_croped_image(img_points):
 
 
 
-def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
+def box3d_to_rgb_box(boxes3d, Mt=None, Kt=None):
     if (cfg.DATA_SETS_TYPE == 'kitti'):
         if Mt is None: Mt = np.array(MATRIX_Mt)
         if Kt is None: Kt = np.array(MATRIX_Kt)
