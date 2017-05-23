@@ -1,0 +1,100 @@
+#!/usr/bin/env python
+
+from __future__ import print_function
+import rospy, tf
+from sensor_msgs.msg import Image, CameraInfo
+import cv2, cv_bridge
+from image_geometry import PinholeCameraModel
+import numpy as np
+from camera_info import *
+
+
+def drawBbox(img, corners) :
+    image = np.copy(img)
+    #fig = plt.figure(figsize=(10,5))
+    color=(255,255,0)
+    thickness = 10
+    #plt.imshow(img)
+    for i in range(4) :
+        pt1, pt2 = corners[2*i], corners[2*i+1]
+        cv2.line(image, tuple(pt1.astype(int)), tuple(pt2.astype(int)), 
+                 color=color, thickness=thickness)
+
+        pt1, pt2 = corners[i+4*(i/2)], corners[2+i]
+        cv2.line(image, tuple(pt1.astype(int)), tuple(pt2.astype(int)), 
+                 color=color, thickness=thickness)
+
+        pt1, pt2 = corners[i], corners[i+4]
+        cv2.line(image, tuple(pt1.astype(int)), tuple(pt2.astype(int)), 
+                 color=color, thickness=thickness)
+        
+    return image
+
+
+def add_bbox(img_msg):
+    img = None
+    bridge = cv_bridge.CvBridge()
+    try:
+        img = bridge.imgmsg_to_cv2(img_msg, 'bgr8')
+    except cv_bridge.CvBridgeError as e:
+        rospy.logerr( 'image message to cv conversion failed :' )
+        rospy.logerr( e )
+        print( e )
+        return
+
+    tf_listener = tf.TransformListener()
+    #(translation, rotation) = tf_listener.lookupTransform(
+    #                            'lidar','camera', rospy.Time(0))
+    translation = (0.00749025, -0.40459941, -0.51372948)
+    rotation = ( -1.66780896, -1.59875352, -3.05415572)
+    translation += (1,)
+    rotationMatrix = tf.transformations.euler_matrix(*rotation)
+    rotationMatrix[:, 3] = translation  
+    dims = np.array([4.2418, 1.4478, 1.5748])
+    #outputName = rospy.resolve_name('camera_tracklet')
+    outputName = '/image_bbox'
+    imgOutput = rospy.Publisher(outputName, Image, queue_size=1)
+
+    #while not rospy.is_shutdown():
+    if rospy.has_param('obs_centroid'):
+    #try:
+        tf_from = 'obs_centroid'
+        tf_to = 'velodyne'
+        #tf_listener.waitForTransform(tf_from, tf_to, 
+        #                    rospy.Time(), rospy.Duration(0.55))
+        #(obs_centroid, _) = tf_listener.lookupTransform(tf_from,
+        #                        tf_to, rospy.Time(0))
+        obs_centroid = rospy.get_param('obs_centroid')
+        #rospy.loginfo(str(rospy.get_rostime()))
+        #rospy.loginfo(str(obs_centroid))
+        obs_centroid = np.array(obs_centroid)
+        corners = [obs_centroid  +0.5*np.array([i,j,k])*dims for i in [-1,1] 
+                    for j in [-1,1] for k in [-1,1]]
+        projected_pts = []
+        cameraModel = PinholeCameraModel()
+        cam_info = load_cam_info('ost.yaml')
+        cameraModel.fromCameraInfo(cam_info)
+        for pt in corners:
+            rotated_pt = rotationMatrix.dot(list(pt)+[1])
+            projected_pts.append(cameraModel.project3dToPixel(rotated_pt))
+        projected_pts = np.array(projected_pts)
+        out_img = drawBbox(img, projected_pts)
+        imgOutput.publish(bridge.cv2_to_imgmsg(out_img, 'bgr8'))
+    else:
+    #except (tf.LookupException, tf.ConnectivityException, 
+    #                        tf.ExtrapolationException):
+        rospy.loginfo("Couldn't find a transform")
+        imgOutput.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
+        return
+
+
+if __name__ == "__main__" :
+    try:
+        rospy.init_node('camera_bbox')
+        #inputName = rospy.resolve_name('camera')
+        inputName = '/image_raw'
+        rospy.Subscriber(inputName, Image, add_bbox, queue_size=1)
+        rospy.spin()
+
+    except rospy.ROSInterruptException:
+        pass
