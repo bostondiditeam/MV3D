@@ -88,6 +88,10 @@ class MV3D(object):
         self.log_num=0
         self.log_max = 10
 
+        # about tensorboard.
+        self.tensorboard_dir = None
+
+
     def proposal(self):
         pass
 
@@ -163,15 +167,22 @@ class MV3D(object):
                 return True
         return False
 
-    def validation_accuracy(self):
+    def validation_accuracy(self, iter_train):
         net=self.net
         sess=self.sess
         batch_size=1
 
-        top_cls_loss=net['top_cls_loss']
-        top_reg_loss=net['top_reg_loss']
-        fuse_cls_loss=net['fuse_cls_loss']
-        fuse_reg_loss=net['fuse_reg_loss']
+        # put tensorboard inside
+        summary_writer_val = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard', self.tensorboard_dir+'val'))
+
+        top_cls_loss = net['top_cls_loss']
+        tf.summary.scalar('top_cls_loss', top_cls_loss)
+        top_reg_loss = net['top_reg_loss']
+        tf.summary.scalar('top_reg_loss', top_reg_loss)
+        fuse_cls_loss = net['fuse_cls_loss']
+        tf.summary.scalar('fuse_cls_loss', fuse_cls_loss)
+        fuse_reg_loss = net['fuse_reg_loss']
+        tf.summary.scalar('fuse_reg_loss', fuse_reg_loss)
 
         loss_sum=np.zeros(4)
 
@@ -237,10 +248,11 @@ class MV3D(object):
             net['fuse_targets']: batch_fuse_targets,
         }
 
-        t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss = \
-           sess.run([top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss],fd2)
+        summ_val = tf.summary.merge_all()
+        t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss, tb_sum_val = \
+           sess.run([top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss, summ_val],fd2)
 
-
+        summary_writer_val.add_summary(tb_sum_val, iter_train)
         # debug
         time_str = strftime("%Y_%m_%d_%H_%M", localtime())
         log_subdir = 'validation/'+time_str
@@ -260,6 +272,7 @@ class MV3D(object):
                             batch_front_view,
                             batch_rgb_images, rgb, batch_gt_boxes3d, top_image)
 
+        summary_writer_val.close()
         return t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss
 
 
@@ -275,17 +288,18 @@ class MV3D(object):
 
         # put tensorboard inside
         time_str = strftime("%Y_%m_%d_%H_%M", localtime())
-        summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard', time_str))
+        self.tensorboard_dir = time_str
+        summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard', self.tensorboard_dir+'train'))
         # summary_writer.add_graph(sess.graph)
 
         top_cls_loss=net['top_cls_loss']
-        tf.summary.scalar('train_top_cls_loss', top_cls_loss)
+        tf.summary.scalar('top_cls_loss', top_cls_loss)
         top_reg_loss=net['top_reg_loss']
-        tf.summary.scalar('train_top_reg_loss', top_reg_loss)
+        tf.summary.scalar('top_reg_loss', top_reg_loss)
         fuse_cls_loss=net['fuse_cls_loss']
-        tf.summary.scalar('train_fuse_cls_loss', fuse_cls_loss)
+        tf.summary.scalar('fuse_cls_loss', fuse_cls_loss)
         fuse_reg_loss=net['fuse_reg_loss']
-        tf.summary.scalar('train_fuse_reg_loss', fuse_reg_loss)
+        tf.summary.scalar('fuse_reg_loss', fuse_reg_loss)
 
 
         # solver
@@ -429,7 +443,7 @@ class MV3D(object):
                     loss_sum=0
 
                     va_top_cls_loss, va_top_reg_loss,va_fuse_cls_loss, va_fuse_reg_loss =\
-                        self.validation_accuracy()
+                        self.validation_accuracy(iter)
                     self.log.write('validation:         |   %0.5f   %0.5f   |   %0.5f   %0.5f \n\n' % \
                                    ( va_top_cls_loss, va_top_reg_loss, va_fuse_cls_loss, va_fuse_reg_loss))
 
