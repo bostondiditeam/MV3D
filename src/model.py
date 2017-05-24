@@ -23,6 +23,7 @@ from net.processing.boxes import non_max_suppress
 import utils.batch_loading as dataset
 from utils.timer import timer
 from keras import backend as K
+from time import localtime, strftime
 
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
@@ -263,7 +264,8 @@ class MV3D(object):
 
 
         # debug
-        log_subdir = 'validation'
+        time_str = strftime("%Y_%m_%d_%H_%M", localtime())
+        log_subdir = 'validation/'+time_str
         top_image = data.draw_top_image(batch_top_view[0])
         rgb = batch_rgb_images[0]
         log_info_str = self.validation_set.get_frame_info(frame_id)[0]+'\n'
@@ -342,7 +344,7 @@ class MV3D(object):
                 summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'graph'), sess.graph)
                 summary_writer.close()
 
-            loss_smooth_step=20
+            loss_smooth_step=40
             ckpt_save_step=200
 
             rate = 0.01
@@ -446,30 +448,18 @@ class MV3D(object):
                 if 1 and iter%iter_debug==0:
                     self.log_num+=1
                     self.log_num=self.log_num%self.log_max
+                    time_str= strftime("%Y_%m_%d_%H_%M", localtime())
                     frame_info = train_set.get_frame_info(frame_id)[0]
                     log_info_str = 'frame info: '+ frame_info +'\n'
                     log_info_str += self.anchors_details(batch_top_pos_inds, batch_top_inds)
                     log_info_str += self.RPN_poposal_details(batch_top_rois, batch_fuse_labels)
 
-                    log_subdir= str(self.log_num)
+                    log_subdir= 'training/'+ time_str
                     top_image = data.draw_top_image(batch_top_view[0])
                     rgb       = batch_rgb_images[idx]
 
 
                     # history
-                    self.log_info(log_subdir,log_info_str)
-                    self.log_rpn(log_subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds,
-                            batch_top_labels,
-                            batch_top_pos_inds, batch_top_targets, batch_proposals, batch_proposal_scores)
-
-                    self.log_fusion_net(log_subdir ,top_image,batch_top_rois, batch_fuse_labels ,
-                       batch_fuse_targets ,rgb, batch_rgb_rois, batch_3d_rois, batch_gt_boxes3d)
-
-                    self.log_prediction( log_subdir, batch_proposals, batch_proposal_scores, fd1, batch_top_view,
-                                   batch_front_view,
-                                   batch_rgb_images, rgb, batch_gt_boxes3d, top_image)
-                    # latest
-                    log_subdir='latest'
                     self.log_info(log_subdir,log_info_str)
                     self.log_rpn(log_subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds,
                             batch_top_labels,
@@ -489,11 +479,12 @@ class MV3D(object):
 
     def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):
         # set anchor boxes
-        top_feature_shape=get_top_feature_shape(top_view_shape, self.top_stride)
-        self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.top_stride, top_view_shape[0:2], top_feature_shape[0:2])
-        self.anchors_inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
-
         self.net = mv3d_net.load(top_view_shape, front_view_shape, rgb_image_shape, self.num_class, len(self.bases))
+        self.top_stride = self.net['top_feature_stride']
+        top_feature_shape=get_top_feature_shape(top_view_shape, self.top_stride)
+        self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.top_stride, top_view_shape[0:2],
+                                                               top_feature_shape[0:2])
+        self.anchors_inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
         self.tracking_sess = tf.Session()
         saver = tf.train.Saver()
@@ -513,13 +504,13 @@ class MV3D(object):
             self.net['top_view']: top_view,
             self.net['top_anchors']: self.top_view_anchors,
             self.net['top_inside_inds']: self.anchors_inside_inds,
-            blocks.IS_TRAIN_PHASE: False,
-            K.learning_phase(): 0
+            blocks.IS_TRAIN_PHASE: True,
+            K.learning_phase(): 1
         }
 
         top_view_proposals, batch_proposal_scores = \
             self.tracking_sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
-
+        batch_proposal_scores = np.reshape(batch_proposal_scores,(-1))
         top_rois=top_view_proposals[batch_proposal_scores>0.1,:]
         if len(top_rois)==0:
             return np.zeros((0,8,3)), []

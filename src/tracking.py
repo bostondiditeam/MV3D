@@ -21,7 +21,7 @@ log_dir = os.path.join(cfg.LOG_DIR, 'tracking',strftime("%Y_%m_%d_%H_%M_%S", loc
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
 
-def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=17):
+def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=15):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
     os.makedirs (os.path.join(log_dir,'image'),exist_ok=True)
