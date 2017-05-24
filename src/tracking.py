@@ -16,7 +16,8 @@ from utils.timer import timer
 from time import localtime, strftime
 from task import copy_weigths
 
-log_dir = os.path.join(cfg.LOG_DIR, 'tracking',strftime("%Y_%m_%d_%H_%M_%S", localtime()))
+log_subdir=os.path.join('tracking',strftime("%Y_%m_%d_%H_%M_%S", localtime()))
+log_dir = os.path.join(cfg.LOG_DIR, log_subdir)
 
 # Set true if you want score after export predicted tracklet xml
 # set false if you just want to export tracklet xml
@@ -29,7 +30,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
 
     top_shape, front_shape, rgb_shape=dataset.get_shape()
     m3=mod.MV3D()
-    m3.tracking_init(top_shape,front_shape,rgb_shape)
+    m3.predict_init(top_shape, front_shape, rgb_shape)
 
     if generate_video:
         vid_in = skvideo.io.FFmpegWriter(os.path.join(log_dir,'output.mp4'))
@@ -48,7 +49,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
         if frame_num < 0:
             continue
 
-        boxes3d,probs=m3.tracking(top[0],front[0],rgb[0])
+        boxes3d,probs=m3.predict(top, front, rgb, os.path.join(log_subdir,'net_log/%d'%i))
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i%timer_step ==0 and i!=0:
@@ -64,6 +65,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
             top_image = data.draw_box3d_on_top(top_image, boxes3d[:,:,:], color=(80, 80, 0), thickness=3)
             rgb_image = draw.draw_box3d_on_camera(rgb_image, boxes3d[:, :, :], color=(0, 0, 80), thickness=3)
             translation, size, rotation = boxes3d_decompose(boxes3d[:, :, :])
+
             for j in range(len(translation)):
                 tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
         rgb_image = cv2.resize(rgb_image, (500, 400))
@@ -71,7 +73,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
         rgb_image = cv2.resize(rgb_image,(int(rgb_image.shape[1]*resize_scale), top_image.shape[0]))
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
         new_image = np.concatenate((top_image, rgb_image), axis = 1)
-        cv2.imwrite(os.path.join(log_dir,'image','%5d_image.jpg'%frame_num), new_image)
+        cv2.imwrite(os.path.join(log_dir,'image','%5d_image.jpg'%i), new_image)
 
         if generate_video:
             vid_in.writeFrame(new_image)
@@ -95,21 +97,33 @@ if __name__ == '__main__':
     tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
     os.makedirs(tracklet_pred_dir,exist_ok=True)
 
-    dataset = {
-        'Round1Test': ['19_f2']
-               }
+    if 1:
+        dataset = {
+            'Round1Test': ['19_f2']
+                   }
+        dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
-    dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR,dataset,is_testset=True)
+        # generate tracklet file
+        print("tracklet_pred_dir: " + tracklet_pred_dir)
+        pred_file = pred_and_save(tracklet_pred_dir, dataset_loader)
+        if_score = False
+    else:
+        dataset = {
+            '1': ['15']
+        }
+        dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR,dataset,is_testset=True)
 
-    # generate tracklet file
-    print("tracklet_pred_dir: " + tracklet_pred_dir)
-    pred_file = pred_and_save(tracklet_pred_dir, dataset_loader)
-    if_score = False
+        # generate tracklet file
+        print("tracklet_pred_dir: " + tracklet_pred_dir)
+        pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, frame_offset=0)
+        if_score = True
+
+
 
     if(if_score):
         # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
         #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, '2011_09_26', '2011_09_26_drive_0005_sync', 'tracklet_labels.xml')
+        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, '3', '7', 'tracklet_labels.xml')
         tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
         print("scores are save under {} directory.".format(tracklet_pred_dir))
 

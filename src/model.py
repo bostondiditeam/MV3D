@@ -102,18 +102,24 @@ class MV3D(object):
         info ='RPN proposals: positive= {} total= {}'.format(pos,total)
         return info
 
-    def log_rpn(self, subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds, batch_top_labels,
-                batch_top_pos_inds, batch_top_targets, batch_proposals, batch_proposal_scores):
+    def log_rpn(self, subdir, top_image, top_inds=None, top_labels=None,top_pos_inds=None,
+                top_targets=None, proposals=None, proposal_scores=None, gt_top_boxes=None, gt_labels=None):
 
-        img_gt = draw_rpn_gt(top_image, batch_gt_top_boxes, batch_gt_labels)
-        img_label = draw_rpn_labels(top_image, self.top_view_anchors, batch_top_inds, batch_top_labels)
-        img_target = draw_rpn_targets(top_image, self.top_view_anchors, batch_top_pos_inds, batch_top_targets)
-        nud.imsave('img_rpn_gt', img_gt,subdir)
-        nud.imsave('img_rpn_label', img_label,subdir)
-        nud.imsave('img_rpn_target', img_target,subdir)
+        if gt_top_boxes is not None:
+            img_gt = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
+            nud.imsave('img_rpn_gt', img_gt, subdir)
 
-        rpn_proposal = draw_rpn_proposal(top_image, batch_proposals, batch_proposal_scores, draw_num=20)
-        nud.imsave(os.path.join(subdir, 'img_rpn_proposal'), rpn_proposal)
+        if  top_inds is not None:
+            img_label = draw_rpn_labels(top_image, self.top_view_anchors, top_inds, top_labels)
+            nud.imsave('img_rpn_label', img_label, subdir)
+
+        if top_pos_inds is not None:
+            img_target = draw_rpn_targets(top_image, self.top_view_anchors, top_pos_inds, top_targets)
+            nud.imsave('img_rpn_target', img_target, subdir)
+
+        if proposals is not None:
+            rpn_proposal = draw_rpn_proposal(top_image, proposals, proposal_scores, draw_num=20)
+            nud.imsave('img_rpn_proposal', rpn_proposal,subdir)
 
     def log_fusion_net(self, subdir, top_image, batch_top_rois, batch_fuse_labels,
                        batch_fuse_targets, rgb, batch_rgb_rois, batch_rois3d, batch_gt_boxes3d):
@@ -134,38 +140,10 @@ class MV3D(object):
     def log_prediction(self, subdir, batch_proposals, batch_proposal_scores, fd1, batch_top_view, batch_front_view,
                        batch_rgb_images, rgb, batch_gt_boxes3d, top_image):
 
-        net=self.training_net
-        sess=self.training_sess
+        boxes3d, lables=self.predict(batch_top_view, batch_front_view, batch_rgb_images,subdir)
 
-        batch_top_rois_2 = batch_proposals[batch_proposal_scores > 0.1, :]
-        if len(batch_top_rois_2)==0:
-            boxes3d_2= np.zeros((0,8,3))
-        else:
-
-            batch_rois3d_2 = project_to_roi3d(batch_top_rois_2)
-            batch_front_rois_2 = project_to_front_roi(batch_rois3d_2)
-            batch_rgb_rois_2 = project_to_rgb_roi(batch_rois3d_2)
-
-            fd2_2 = {
-                **fd1,
-
-                net['top_view']: batch_top_view,
-                net['front_view']: batch_front_view,
-                net['rgb_images']: batch_rgb_images,
-
-                net['top_rois']: batch_top_rois_2,
-                net['front_rois']: batch_front_rois_2,
-                net['rgb_rois']: batch_rgb_rois_2,
-
-            }
-
-            batch_fuse_probs_2, batch_fuse_deltas_2 = \
-                sess.run([net['fuse_probs'], net['fuse_deltas']], fd2_2)
-            probs_2, boxes3d_2 = rcnn_nms(batch_fuse_probs_2, batch_fuse_deltas_2, batch_rois3d_2,
-                                          score_threshold=0.5)
-
-        predict_rgb_view = draw_box3d_on_image_with_gt(rgb, boxes3d_2, batch_gt_boxes3d)
-        predict_top_view = box.draw_box3d_on_top(top_image, boxes3d_2, color=(80, 0, 0))
+        predict_rgb_view = draw_box3d_on_image_with_gt(rgb, boxes3d, batch_gt_boxes3d)
+        predict_top_view = box.draw_box3d_on_top(top_image, boxes3d, color=(80, 0, 0))
         nud.imsave('predict_rgb_view' , predict_rgb_view, subdir)
         nud.imsave( 'predict_top_view' , predict_top_view,subdir)
 
@@ -186,8 +164,8 @@ class MV3D(object):
         return False
 
     def validation_accuracy(self):
-        net=self.training_net
-        sess=self.training_sess
+        net=self.net
+        sess=self.sess
         batch_size=1
 
         top_cls_loss=net['top_cls_loss']
@@ -218,7 +196,7 @@ class MV3D(object):
         fd1={
             net['top_view']: batch_top_view,
             net['top_anchors']:self.top_view_anchors,
-            net['top_inside_inds']: self.inside_inds,
+            net['top_inside_inds']: self.anchors_inside_inds,
 
             blocks.IS_TRAIN_PHASE:  True,
             K.learning_phase(): 1
@@ -228,7 +206,7 @@ class MV3D(object):
 
         ## generate  train rois  for RPN
         batch_top_inds, batch_top_pos_inds, batch_top_labels, batch_top_targets  = \
-            rpn_target ( self.top_view_anchors, self.inside_inds, batch_gt_labels,  batch_gt_top_boxes)
+            rpn_target (self.top_view_anchors, self.anchors_inside_inds, batch_gt_labels, batch_gt_top_boxes)
 
         batch_top_rois, batch_fuse_labels, batch_fuse_targets  = \
              rcnn_target(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
@@ -271,9 +249,9 @@ class MV3D(object):
         log_info_str = self.validation_set.get_frame_info(frame_id)[0]+'\n'
 
         self.log_info(log_subdir,log_info_str)
-        self.log_rpn(log_subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds,
-                     batch_top_labels,
-                     batch_top_pos_inds, batch_top_targets, batch_proposals, batch_proposal_scores)
+        self.log_rpn(log_subdir, top_image, batch_top_inds,batch_top_labels,
+                     batch_top_pos_inds, batch_top_targets, batch_proposals,
+                     batch_proposal_scores, batch_gt_top_boxes, batch_gt_labels)
 
         self.log_fusion_net(log_subdir, top_image, batch_top_rois, batch_fuse_labels,
                             batch_fuse_targets, rgb, batch_rgb_rois, batch_rois3d, batch_gt_boxes3d)
@@ -293,7 +271,7 @@ class MV3D(object):
 
 
         net=mv3d_net.load(top_shape,front_shape,rgb_shape,self.num_class,len(self.bases))
-        self.training_net=net
+        self.net=net
         top_cls_loss=net['top_cls_loss']
         top_reg_loss=net['top_reg_loss']
         fuse_cls_loss=net['fuse_cls_loss']
@@ -318,8 +296,8 @@ class MV3D(object):
         self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
         self.log.write('-------------------------------------------------------------------------------------\n')
 
-        self.training_sess = tf.Session()
-        sess=self.training_sess
+        self.sess = tf.Session()
+        sess=self.sess
         saver = tf.train.Saver()
         with sess.as_default():
             pretrained_model_path = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt')
@@ -336,9 +314,9 @@ class MV3D(object):
             # set anchor boxes
             self.top_stride=net['top_feature_stride']
             top_feature_shape=get_top_feature_shape(top_shape, self.top_stride)
-            self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.top_stride, top_shape[0:2],
+            self.top_view_anchors, self.anchors_inside_inds = make_anchors(self.bases, self.top_stride, top_shape[0:2],
                                                                    top_feature_shape[0:2])
-            self.inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
+            self.anchors_inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
             if 0:
                 summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'graph'), sess.graph)
@@ -376,7 +354,7 @@ class MV3D(object):
                 fd1={
                     net['top_view']: batch_top_view,
                     net['top_anchors']:self.top_view_anchors,
-                    net['top_inside_inds']: self.inside_inds,
+                    net['top_inside_inds']: self.anchors_inside_inds,
 
                     learning_rate:   rate,
                     blocks.IS_TRAIN_PHASE:  True,
@@ -387,7 +365,7 @@ class MV3D(object):
 
                 ## generate  train rois  for RPN
                 batch_top_inds, batch_top_pos_inds, batch_top_labels, batch_top_targets  = \
-                    rpn_target ( self.top_view_anchors, self.inside_inds, batch_gt_labels,  batch_gt_top_boxes)
+                    rpn_target (self.top_view_anchors, self.anchors_inside_inds, batch_gt_labels, batch_gt_top_boxes)
 
                 batch_top_rois, batch_fuse_labels, batch_fuse_targets  = \
                      rcnn_target(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
@@ -461,9 +439,9 @@ class MV3D(object):
 
                     # history
                     self.log_info(log_subdir,log_info_str)
-                    self.log_rpn(log_subdir, top_image, batch_gt_top_boxes, batch_gt_labels, batch_top_inds,
-                            batch_top_labels,
-                            batch_top_pos_inds, batch_top_targets, batch_proposals, batch_proposal_scores)
+                    self.log_rpn(log_subdir, top_image, batch_top_inds,batch_top_labels,
+                            batch_top_pos_inds, batch_top_targets, batch_proposals, batch_proposal_scores,
+                                 batch_gt_top_boxes, batch_gt_labels)
 
                     self.log_fusion_net(log_subdir ,top_image,batch_top_rois, batch_fuse_labels ,
                        batch_fuse_targets ,rgb, batch_rgb_rois, batch_3d_rois, batch_gt_boxes3d)
@@ -477,41 +455,36 @@ class MV3D(object):
                                (time_it.total_time()))
 
 
-    def tracking_init(self,top_view_shape, front_view_shape, rgb_image_shape):
+    def predict_init(self, top_view_shape, front_view_shape, rgb_image_shape):
         # set anchor boxes
         self.net = mv3d_net.load(top_view_shape, front_view_shape, rgb_image_shape, self.num_class, len(self.bases))
         self.top_stride = self.net['top_feature_stride']
         top_feature_shape=get_top_feature_shape(top_view_shape, self.top_stride)
-        self.top_view_anchors, self.inside_inds = make_anchors(self.bases, self.top_stride, top_view_shape[0:2],
+        self.top_view_anchors, self.anchors_inside_inds = make_anchors(self.bases, self.top_stride, top_view_shape[0:2],
                                                                top_feature_shape[0:2])
         self.anchors_inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
-        self.tracking_sess = tf.Session()
+        self.sess = tf.Session()
         saver = tf.train.Saver()
-        saver.restore(self.tracking_sess,tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
+        saver.restore(self.sess, tf.train.latest_checkpoint(cfg.CHECKPOINT_DIR))
 
 
 
-    def tracking(self, top_view, front_view, rgb_image,top_image=None):
+    def predict(self, top_view, front_view, rgb_image ,log_subdir=None):
         lables=[] #todo add lables output
-        np_reshape = lambda np_array: np_array.reshape(1, *(np_array.shape))
-        top_view=np_reshape(top_view)
-        front_view=np_reshape(front_view)
-        rgb_image=np_reshape(rgb_image)
-
 
         fd1 = {
             self.net['top_view']: top_view,
             self.net['top_anchors']: self.top_view_anchors,
             self.net['top_inside_inds']: self.anchors_inside_inds,
-            blocks.IS_TRAIN_PHASE: True,
-            K.learning_phase(): 1
+            blocks.IS_TRAIN_PHASE: False,
+            K.learning_phase(): True
         }
 
-        top_view_proposals, batch_proposal_scores = \
-            self.tracking_sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
-        batch_proposal_scores = np.reshape(batch_proposal_scores,(-1))
-        top_rois=top_view_proposals[batch_proposal_scores>0.1,:]
+        proposals, proposal_scores = \
+            self.sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
+        proposal_scores = np.reshape(proposal_scores,(-1))
+        top_rois=proposals[proposal_scores>0.1,:]
         if len(top_rois)==0:
             return np.zeros((0,8,3)), []
 
@@ -532,11 +505,12 @@ class MV3D(object):
         }
 
         fuse_probs, fuse_deltas = \
-            self.tracking_sess.run([ self.net['fuse_probs'], self.net['fuse_deltas'] ],fd2)
+            self.sess.run([self.net['fuse_probs'], self.net['fuse_deltas']], fd2)
 
         probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.5)
 
-        # #debug
-        # predicted_bbox = nud.draw_boxed3d_to_rgb(rgb_image[0], boxes3d)
-        # nud.imsave('predicted_bbox',predicted_bbox)
+        if log_subdir:
+            top_image = data.draw_top_image(top_view[0])
+            self.log_rpn(log_subdir, top_image,proposals=proposals,proposal_scores=proposal_scores)
+
         return boxes3d,lables
