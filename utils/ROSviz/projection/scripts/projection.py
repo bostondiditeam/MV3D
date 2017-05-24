@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 import rospy, tf
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Quaternion
 from sensor_msgs.msg import Image, CameraInfo
 from nav_msgs.msg import Odometry
 from visualization_msgs.msg import Marker, InteractiveMarker,  InteractiveMarkerControl, InteractiveMarkerFeedback
@@ -11,7 +11,7 @@ from interactive_markers.menu_handler import MenuHandler
 import cv2, cv_bridge
 from image_geometry import PinholeCameraModel
 import numpy as np
-import csv, sys, os
+import csv, sys, os, copy
 from camera_info import *
 from utils import *
 
@@ -31,9 +31,108 @@ class Projection:
                 md = obs
         assert md, 'obs1 metadata not found'
         self.metadata = md
-        self.server = InteractiveMarkerServer("simple_marker")
-        self.menu_handler = MenuHandler()
-        self.menu_handler.insert( "First Entry", callback=self.processFeedback )
+        self.server = InteractiveMarkerServer("obstacle_marker")
+        #self.menu_handler = MenuHandler()
+        #self.menu_handler.insert( "First Entry", callback=self.processFeedback )
+        self.br = tf.TransformBroadcaster()
+
+        self.offset = [0,0,0]
+        self.rotation_offset = [0,0,0,1]
+        self.orient = (0,0,0,1)
+    
+        self.marker = Marker()
+        self.marker.type = Marker.CUBE
+        self.marker.header.frame_id = "obs_centroid"
+    
+        md = self.metadata
+        self.marker.scale.x = md['l']
+        self.marker.scale.y = md['w']
+        self.marker.scale.z = md['h']
+    
+    
+        self.marker.color.r = 0.2
+        self.marker.color.g = 0.5
+        self.marker.color.b = 0.2
+        self.marker.color.a = 0.7
+       
+
+        self.velodyne_marker = self.setup_marker(frame = "velodyne",
+                            name = "capture vehicle", translation=True)
+        self.obs_marker = self.setup_marker(frame = "obs_centroid",
+                            name = "obstacle vehicle", translation=False)
+
+    def setup_marker(self, frame="velodyne", name = "capture vehicle", translation=True):
+        int_marker = InteractiveMarker()
+        int_marker.header.frame_id = frame
+        int_marker.name = name
+        int_marker.description = name
+        int_marker.scale = 3
+
+        marker_control = InteractiveMarkerControl()
+        marker_control.always_visible = True
+        marker_control.markers.append(self.marker)
+        int_marker.controls.append(marker_control)
+    
+        control = InteractiveMarkerControl()
+        control.name = "rotate_x"
+        control.orientation.w = 1
+        control.orientation.x = 1
+        control.orientation.y = 0
+        control.orientation.z = 0
+        control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
+        int_marker.controls.append(control)
+
+        control = InteractiveMarkerControl()
+        control.name = "rotate_z"
+        control.orientation.w = 1
+        control.orientation.x = 0
+        control.orientation.y = 1
+        control.orientation.z = 0
+        control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
+        int_marker.controls.append(control)
+
+        control = InteractiveMarkerControl()
+        control.name = "rotate_y"
+        control.orientation.w = 1
+        control.orientation.x = 0
+        control.orientation.y = 0
+        control.orientation.z = 1
+        control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
+        int_marker.controls.append(control)
+
+        if not translation :
+            #int_marker.pose.position = Point(0,0,0)
+            return int_marker
+
+        control = InteractiveMarkerControl()
+        control.name = "move_x"
+        control.orientation.w = 1
+        control.orientation.x = 1
+        control.orientation.y = 0
+        control.orientation.z = 0
+        control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
+        int_marker.controls.append(control)
+    
+
+        control = InteractiveMarkerControl()
+        control.name = "move_z"
+        control.orientation.w = 1
+        control.orientation.x = 0
+        control.orientation.y = 1
+        control.orientation.z = 0
+        control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
+        int_marker.controls.append(control)
+
+
+        control = InteractiveMarkerControl()
+        control.name = "move_y"
+        control.orientation.w = 1
+        control.orientation.x = 0
+        control.orientation.y = 0
+        control.orientation.z = 1
+        control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
+        int_marker.controls.append(control)
+        return int_marker
 
     def reset(self):
         self.last_cap_r = None
@@ -87,14 +186,22 @@ class Projection:
             cap_to_obs_centroid = cap_to_obs + obs_r_to_centroid
             velo_to_front = np.array([-1.0922, 0, -0.0508])
             cap_to_obs_centroid += velo_to_front
-            self.obs_centroid = cap_to_obs_centroid
+            self.obs_centroid = cap_to_obs_centroid + np.array(self.offset)
+            
+
+            R = tf.transformations.quaternion_matrix(self.rotation_offset)
+            rotated_centroid = R.dot(list(self.obs_centroid)+[1])
+            self.obs_centroid = rotated_centroid[:3]
             
                         
-            br = tf.TransformBroadcaster()
-            br.sendTransform(tuple(self.obs_centroid), (0,0,0,1), now, 
+            #br = tf.TransformBroadcaster()
+            now = rospy.get_rostime() 
+            self.br.sendTransform(tuple(self.obs_centroid), (0,0,0,1), now, 
                             'obs_centroid', 'velodyne')
-            self.add_bbox_lidar('obs_centroid', 'obstacle vehicle')
-            self.add_bbox_lidar('velodyne', 'capture vehicle')
+            self.obs_marker.header.frame_id = 'obs_centroid'
+            self.obs_marker.pose.position = Point(0,0,0)
+            self.obs_marker.pose.orientation = Quaternion(*self.orient)
+            self.add_bbox_lidar()
 
 
     def add_bbox(self):
@@ -138,8 +245,10 @@ class Projection:
             return
     
         # get bbox 
-        corners = [obs_centroid  +0.5*np.array([i,j,k])*dims for i in [-1,1] 
+        R = tf.transformations.quaternion_matrix(self.orient)
+        corners = [0.5*np.array([i,j,k])*dims for i in [-1,1] 
                     for j in [-1,1] for k in [-1,1]]
+        corners = [obs_centroid + R.dot(list(c)+[1])[:3] for c in corners]
         projected_pts = []
         cameraModel = PinholeCameraModel()
         cam_info = load_cam_info(self.calib_file)
@@ -154,162 +263,36 @@ class Projection:
 
 
     def processFeedback(self, feedback ):
-        p = feedback.pose.position 
-        print(p.x, p.y, p.z)
-        s = "Feedback from marker '" + feedback.marker_name
-        s += "' / control '" + feedback.control_name + "'"
-    
-        mp = ""
-        if feedback.mouse_point_valid:
-            mp = " at " + str(feedback.mouse_point.x)
-            mp += ", " + str(feedback.mouse_point.y)
-            mp += ", " + str(feedback.mouse_point.z)
-            mp += " in frame " + feedback.header.frame_id
-    
-        if feedback.event_type == InteractiveMarkerFeedback.BUTTON_CLICK:
-            rospy.loginfo( s + ": button click" + mp + "." )
-        elif feedback.event_type == InteractiveMarkerFeedback.MENU_SELECT:
-            rospy.loginfo( s + ": menu item " + str(feedback.menu_entry_id) + " clicked" + mp + "." )
-        elif feedback.event_type == InteractiveMarkerFeedback.POSE_UPDATE:
-            rospy.loginfo( s + ": pose changed")
-        elif feedback.event_type == InteractiveMarkerFeedback.MOUSE_DOWN:
-            rospy.loginfo( s + ": mouse down" + mp + "." )
-        elif feedback.event_type == InteractiveMarkerFeedback.MOUSE_UP:
-            rospy.loginfo( s + ": mouse up" + mp + "." )
+        p = feedback.pose.orientation
+        self.rotation_offset = [p.x, p.y, p.z, p.w]
+        p = feedback.pose.position
+        self.offset = [p.x, p.y, p.z]
         self.server.applyChanges()
     
+    def obs_processFeedback(self, feedback ):
+        p = feedback.pose.orientation
+        self.orient = (p.x, p.y, p.z, p.w)
+        now = rospy.get_rostime()
+        self.br.sendTransform(tuple(self.obs_centroid), (0,0,0,1), now, 
+                            'obs_centroid', 'velodyne')
+        self.marker.pose.orientation = Quaternion(*self.orient)
+        self.server.applyChanges()
     
-    def add_bbox_lidar(self, frame_id, frame_name):
+    def add_bbox_lidar(self):
         if self.obs_centroid is None :
             return
     
         now = rospy.get_rostime() 
-        #now = rospy.Time.now()
+        self.velodyne_marker.header.stamp = now #rospy.get_rostime()
+        self.obs_marker.header.stamp = now #rospy.get_rostime()
+        
+        # tell the server to call processFeedback() when feedback arrives for it
+        self.server.insert(self.velodyne_marker, self.processFeedback)
+        self.server.applyChanges()
+        self.server.insert(self.obs_marker, self.obs_processFeedback)
+        #self.menu_handler.apply(self.server, self.int_marker.name)
     
-        #br = tf.TransformBroadcaster()
-        #br.sendTransform(tuple(self.obs_centroid), (0,0,0,1), now, i
-        #                    'obs_centroid', 'velodyne')
-    
-        # create an interactive marker server on the topic namespace simple_marker
-        #server = InteractiveMarkerServer("simple_marker")
-    
-        int_marker = InteractiveMarker()
-        #int_marker.header.frame_id = "obs_centroid"
-        int_marker.header.frame_id = frame_id
-        #int_marker.pose.position = Point(0,0,0)
-        int_marker.header.stamp = rospy.get_rostime()
-        int_marker.name = frame_name
-        int_marker.description = frame_name
-        int_marker.scale = 5
-    
-        marker = Marker()
-        marker.type = Marker.CUBE
-        marker.header.frame_id = "obs_centroid"
-        #marker.header.frame_id = "velodyne"
-        #marker.header.stamp = now
-        #marker.action = Marker.ADD
-    
-        md = self.metadata
-        marker.scale.x = md['l']
-        marker.scale.y = md['w']
-        marker.scale.z = md['h']
-    
-        #int_marker.scale.x = md['l']
-        #int_marker.scale.y = md['w']
-        #int_marker.scale.z = md['h']
-    
-        marker.color.r = 0.2
-        marker.color.g = 0.5
-        marker.color.b = 0.2
-        marker.color.a = 0.7
-    
-        #marker.lifetime = rospy.Duration()
-        #int_marker.lifetime = rospy.Duration()
-    
-        #pub = rospy.Publisher("obs_bbox", Marker, queue_size=10)
-        #pub.publish(marker)
-        marker_control = InteractiveMarkerControl()
-        marker_control.always_visible = True
-        #marker_control.interaction_mode = InteractiveMarkerControl.BUTTON
-        marker_control.markers.append(marker)
-        int_marker.controls.append(marker_control)
-    
-        control = InteractiveMarkerControl()
-        control.name = "rotate_x"
-        control.orientation.w = 1
-        control.orientation.x = 1
-        control.orientation.y = 0
-        control.orientation.z = 0
-        control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
-        int_marker.controls.append(control)
-
-
-        control = InteractiveMarkerControl()
-        control.name = "move_x"
-        control.orientation.w = 1
-        control.orientation.x = 1
-        control.orientation.y = 0
-        control.orientation.z = 0
-        control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
-        int_marker.controls.append(control)
-    
-        control = InteractiveMarkerControl()
-        control.name = "rotate_z"
-        control.orientation.w = 1
-        control.orientation.x = 0
-        control.orientation.y = 1
-        control.orientation.z = 0
-        control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
-        int_marker.controls.append(control)
-
-
-        control = InteractiveMarkerControl()
-        control.name = "move_z"
-        control.orientation.w = 1
-        control.orientation.x = 0
-        control.orientation.y = 1
-        control.orientation.z = 0
-        control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
-        int_marker.controls.append(control)
-
-
-        control = InteractiveMarkerControl()
-        control.name = "rotate_y"
-        control.orientation.w = 1
-        control.orientation.x = 0
-        control.orientation.y = 0
-        control.orientation.z = 1
-        control.interaction_mode = InteractiveMarkerControl.ROTATE_AXIS
-        int_marker.controls.append(control)
-
-
-        control = InteractiveMarkerControl()
-        control.name = "move_y"
-        control.orientation.w = 1
-        control.orientation.x = 0
-        control.orientation.y = 0
-        control.orientation.z = 1
-        control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
-        int_marker.controls.append(control)
-       # # add the control to the interactive marker
-       # int_marker.controls.append( box_control )
-    
-       # # create a control which will move the box
-       # # this control does not contain any markers,
-       # # which will cause RViz to insert two arrows
-       # rotate_control = InteractiveMarkerControl()
-       # rotate_control.name = "move_x"
-       # rotate_control.interaction_mode = InteractiveMarkerControl.MOVE_AXIS
-    
-       # # add the control to the interactive marker
-       # int_marker.controls.append(rotate_control)
-    
-       # # add the interactive marker to our collection &
-       # # tell the server to call processFeedback() when feedback arrives for it
-        self.server.insert(int_marker, self.processFeedback)
-        self.menu_handler.apply(self.server, int_marker.name)
-    
-       # # 'commit' changes and send to all clients
+        # 'commit' changes and send to all clients
         self.server.applyChanges()
     
 
@@ -330,6 +313,8 @@ if __name__ == "__main__" :
         p = Projection(md_path, calib_file)    
         p.track_obstacle()
         p.add_bbox()
+        #p.add_bbox_lidar("obs_centroid","obs_centroid")
+        #p.server.applyChanges()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
