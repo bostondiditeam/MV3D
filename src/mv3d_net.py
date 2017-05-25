@@ -80,7 +80,7 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
     :param inds_inside: 
     :param num_bases: 
     :return: 
-            top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores
+            top_features, top_scores, top_probs, top_deltas, proposals, propos al_scores
     """
     stride=1.
     #with tf.variable_scope('top-preprocess') as scope:

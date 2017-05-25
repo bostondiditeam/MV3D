@@ -32,7 +32,7 @@ __C.DATA_SETS_TYPE='didi'       #['didi','kitti','test']
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
 
 if __C.DATA_SETS_TYPE=='test':
-    __C.DATA_SETS_DIR = osp.abspath('/home/stu/round12_data_test')
+    __C.DATA_SETS_DIR = osp.abspath('/home/stu/round12_data')
 else:
     __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data')
 
