@@ -20,7 +20,7 @@ def read_objects(tracklet_file, frames_index):
         # this part is inspired by kitti object development kit matlab code: computeBox3D
         h,w,l = tracklet.size
         if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
-            l*=1.6
+            l *= cfg.TRACKLET_GTBOX_LENGTH_SCALE
             h, w = h*1.1, l
             trackletBox = np.array([
                 [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \

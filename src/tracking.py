@@ -1,6 +1,6 @@
 import model as mod
-import data
-from net.utility.draw import imsave ,draw_box3d_on_camera
+from data import draw_top_image,draw_box3d_on_top
+from net.utility.draw import imsave ,draw_box3d_on_camera, draw_box3d_on_camera
 from net.processing.boxes3d import boxes3d_decompose
 from tracklets.Tracklet_saver import Tracklet_saver
 import argparse
@@ -54,14 +54,16 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
                                    (time_it.time_diff_per_n_loops(), timer_step))
 
         # for debugging: save image and show image.
-        top_image = data.draw_top_image(top[0])
+        top_image = draw_top_image(top[0])
         rgb_image = rgb[0]
 
 
         if len(boxes3d)!=0:
-            top_image = data.draw_box3d_on_top(top_image, boxes3d[:,:,:], color=(80, 80, 0), thickness=3)
-            rgb_image = draw.draw_box3d_on_camera(rgb_image, boxes3d[:, :, :], color=(0, 0, 80), thickness=3)
+            top_image = draw_box3d_on_top(top_image, boxes3d[:,:,:], color=(80, 80, 0), thickness=3)
+            rgb_image = draw_box3d_on_camera(rgb_image, boxes3d[:, :, :], color=(0, 0, 80), thickness=3)
             translation, size, rotation = boxes3d_decompose(boxes3d[:, :, :])
+            #todo: remove it after gtbox is ok
+            size[:,1:3] = size[:,1:3]/cfg.TRACKLET_GTBOX_LENGTH_SCALE
 
             for j in range(len(translation)):
                 tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
@@ -107,8 +109,10 @@ if __name__ == '__main__':
         print("tracklet_pred_dir: " + tracklet_pred_dir)
         pred_file = pred_and_save(tracklet_pred_dir, dataset_loader)
     else:
+        car='3'
+        data='7'
         dataset = {
-            '1': ['15']
+            car: [data]
         }
         dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR,dataset,is_testset=True)
 
@@ -116,12 +120,9 @@ if __name__ == '__main__':
         print("tracklet_pred_dir: " + tracklet_pred_dir)
         pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, frame_offset=0)
 
-
-
-    if(if_score):
         # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
         #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, '3', '7', 'tracklet_labels.xml')
+        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
         tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
         print("scores are save under {} directory.".format(tracklet_pred_dir))
 

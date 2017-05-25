@@ -127,8 +127,6 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
 
 #------------------------------------------------------------------------------
 def rgb_feature_net(input):
-    if cfg.IMAGE_FUSION_DIABLE==True:
-        return None
 
     stride=1.
     #with tf.variable_scope('rgb-preprocess') as scope:
@@ -166,11 +164,9 @@ def rgb_feature_net(input):
 
 
     print ('rgb : scale=%f, stride=%d'%(1./stride, stride))
-    return feature
+    return feature, stride
 
 def rgb_feature_net_r(input):
-    if cfg.IMAGE_FUSION_DIABLE==True:
-        return None
 
     #with tf.variable_scope('rgb-preprocess') as scope:
     #   input = input-128
@@ -213,6 +209,7 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
     input = None
     with tf.variable_scope('fuse-input') as scope:
+        feature_names=['top_feature','front_feature','rgb_feature']
         for n in range(num):
             feature     = feature_list[n][0]
             roi         = feature_list[n][1]
@@ -223,6 +220,8 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
             roi_features,  roi_idxs = tf_roipooling(feature,roi, pool_height, pool_width, pool_scale, name='%d/pool'%n)
             roi_features = flatten(roi_features)
+            tf.summary.histogram(feature_names[n],roi_features)
+
             if input is None:
                 input = roi_features
             else:
@@ -305,7 +304,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
 
     # top feature
 
-    if cfg.USE_RESNET_AS_BASENET==True:
+    if cfg.USE_RESNET_AS_TOP_BASENET==True:
         top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
             top_feature_net_r(top_view, top_anchors, top_inside_inds, len_bases)
     else:
@@ -320,23 +319,27 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     top_cls_loss, top_reg_loss = rpnloss.rpn_loss(top_scores, top_deltas, top_inds, top_pos_inds, top_labels, top_targets)
 
 
+    if cfg.USE_RESNET_AS_RGB_BASENET==True:
+        rgb_features,rgb_stride= rgb_feature_net_r(rgb_images)
+    else:
+        rgb_features, rgb_stride = rgb_feature_net(rgb_images)
 
     front_features = front_feature_net(front_view)
-    rgb_features = rgb_feature_net(rgb_images)
 
-    rgb_pool_heigth = None
-    rgb_pool_width = None
+    #debug roi pooling
+    # with tf.variable_scope('after') as scope:
+    #     roi_rgb, roi_idxs = tf_roipooling(rgb_images, rgb_rois, 100, 200, 1)
+    #     tf.summary.image('roi_rgb',roi_rgb)
+
+
+
     if cfg.IMAGE_FUSION_DIABLE==True:
-        rgb_pool_heigth=0
-        rgb_pool_width = 0
-    else:
-        rgb_pool_heigth=6
-        rgb_pool_width = 6
+        top_rois *= 0
     fuse_scores, fuse_probs, fuse_deltas = \
         fusion_net(
             ([top_features, top_rois, 6, 6, 1. / top_feature_stride],
              [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
-             [rgb_features, rgb_rois, rgb_pool_heigth, rgb_pool_width, 1. / stride],),
+             [rgb_features, rgb_rois, 6, 6, 1. / rgb_stride],),
             num_class, out_shape)
 
     fuse_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='fuse_label')
