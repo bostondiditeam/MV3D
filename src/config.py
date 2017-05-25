@@ -46,7 +46,9 @@ __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 
 __C.IMAGE_FUSION_DIABLE = False
 
-__C.USE_RESNET_AS_BASENET = True
+__C.USE_RESNET_AS_TOP_BASENET = True
+__C.USE_RESNET_AS_RGB_BASENET = False
+__C.TRACKLET_GTBOX_LENGTH_SCALE = 1.6
 
 # image crop config
 if __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE   ==  'test':
