@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /InteractiveMarkers1
       Splitter Ratio: 0.5
     Tree Height: 156
   - Class: rviz/Selection
@@ -66,7 +65,7 @@ Visualization Manager:
       Max Color: 255; 255; 255
       Max Intensity: 100
       Min Color: 0; 0; 0
-      Min Intensity: 0
+      Min Intensity: 1
       Name: PointCloud2
       Position Transformer: XYZ
       Queue Size: 10
@@ -91,14 +90,13 @@ Visualization Manager:
       Transport Hint: raw
       Unreliable: false
       Value: true
-    - Class: rviz/InteractiveMarkers
-      Enable Transparency: true
+    - Class: rviz/MarkerArray
       Enabled: true
-      Name: InteractiveMarkers
-      Show Axes: true
-      Show Descriptions: true
-      Show Visual Aids: true
-      Update Topic: /obstacle_marker/update
+      Marker Topic: /bbox
+      Name: MarkerArray
+      Namespaces:
+        "": true
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
@@ -124,24 +122,24 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 62.2828636
+      Distance: 84.6033173
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.0599999987
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 2.59195566
-        Y: -1.4053266
-        Z: -16.0620861
+        X: 13.1005878
+        Y: -0.324132681
+        Z: -22.3290596
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.0500000007
       Name: Current View
       Near Clip Distance: 0.00999999978
-      Pitch: 1.46979642
+      Pitch: 1.56979632
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.16539168
+      Yaw: 3.19038701
     Saved: ~
 Window Geometry:
   Displays:
@@ -161,5 +159,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1468
-  X: 247
-  Y: 144
+  X: 169
+  Y: 147

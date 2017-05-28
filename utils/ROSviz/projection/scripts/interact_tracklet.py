@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import rospy, tf
+import rospy, rosbag, tf
 from geometry_msgs.msg import Point, Quaternion
 from sensor_msgs.msg import Image, CameraInfo
 from nav_msgs.msg import Odometry
@@ -12,17 +12,55 @@ import cv2, cv_bridge
 from image_geometry import PinholeCameraModel
 import numpy as np
 import csv, sys, os, copy
+from collections import defaultdict
+import PyKDL as kd
 from camera_info import *
 from utils import *
+from parse_tracklet import *
 
+
+CAMERA_TOPICS = ["/image_raw"]
+
+class Frame():
+    def __init__(self, trans, rotq, object_type, size):
+        self.trans = trans
+        self.rotq = rotq
+        self.object_type = object_type
+        self.size = size
+
+def extract_bag_timestamps(bag_file):
+    timestamp_map = {}
+    index = 0
+    with rosbag.Bag(bag_file, "r") as bag:
+        for topic, msg, ts in bag.read_messages(topics=CAMERA_TOPICS):
+            timestamp_map[msg.header.stamp.to_nsec()] = index
+            index += 1
+    return timestamp_map
+
+
+def generate_frame_map(tracklets):
+        # map all tracklets to one timeline
+    frame_map = defaultdict(list)
+    for t in tracklets:
+        for i in range(t.num_frames):
+            frame_index = i + t.first_frame
+            rot = t.rots[i]
+            rotq = kd.Rotation.RPY(rot[0], rot[1], rot[2]).GetQuaternion()
+            frame_map[frame_index].append(
+                Frame(
+                    t.trans[i],
+                    rotq,
+                    t.object_type,
+                    t.size))
+    return frame_map
 
 
 class Projection:
 
-    def __init__(self, md_path, calib_file):
-        self.reset()
-        self.current_time = rospy.Time()
+    def __init__(self, bag_file, md_path, calib_file, tracklets):
+        self.timestamp_map = extract_bag_timestamps(bag_file)
         self.calib_file = calib_file
+        self.frame_map = generate_frame_map(tracklets)
         
         md = None
         metadata = load_metadata(md_path)
@@ -40,7 +78,7 @@ class Projection:
     
         self.marker = Marker()
         self.marker.type = Marker.CUBE
-        self.marker.header.frame_id = "obs_centroid"
+        self.marker.header.frame_id = "velodyne"
     
         md = self.metadata
         self.marker.scale.x = md['l']
@@ -52,11 +90,15 @@ class Projection:
         self.marker.color.g = 0.5
         self.marker.color.b = 0.2
         self.marker.color.a = 0.7
-       
+        
+        outputName = '/image_bbox'
+        self.imgOutput = rospy.Publisher(outputName, Image, queue_size=1)
+        #self.markOutput = rospy.Publisher("bbox", Marker, queue_size=1)
+
 
         self.velodyne_marker = self.setup_marker(frame = "velodyne",
                             name = "capture vehicle", translation=True)
-        self.obs_marker = self.setup_marker(frame = "obs_centroid",
+        self.obs_marker = self.setup_marker(frame = "velodyne",
                             name = "obstacle vehicle", translation=False)
 
     def setup_marker(self, frame="velodyne", name = "capture vehicle", translation=True):
@@ -132,82 +174,12 @@ class Projection:
         int_marker.controls.append(control)
         return int_marker
 
-    def reset(self):
-        self.last_cap_r = None
-        self.last_cap_f = None
-        self.last_cap_yaw = None
-        self.obs_centroid = None
-
-    def track_obstacle(self) :
-        obj_topics = {
-            'cap_r': '/objects/capture_vehicle/rear/gps/rtkfix',
-            'cap_f': '/objects/capture_vehicle/front/gps/rtkfix',
-            'obs_r': '/objects/obs1/rear/gps/rtkfix'
-        }
-
-        for obj in obj_topics:
-            rospy.Subscriber(obj_topics[obj],
-                         Odometry,
-                         self.handle_msg,
-                         obj)
-        
-    def handle_msg(self, msg, who):
-        assert isinstance(msg, Odometry)
-    
-        now = rospy.get_rostime()
-        if now < self.current_time :
-            self.reset()
-        self.current_time = now
-    
-        if who == 'cap_r':
-            self.last_cap_r = rtk_position_to_numpy(msg)
-        elif who == 'cap_f' and self.last_cap_r is not None:
-            cap_f = rtk_position_to_numpy(msg)
-            cap_r = self.last_cap_r
-    
-            self.last_cap_f = cap_f
-            self.last_cap_yaw = get_yaw(cap_f, cap_r)
-        elif who == 'obs_r' and self.last_cap_f is not None and self.last_cap_yaw is not None:
-            md = self.metadata
-    
-            # find obstacle rear RTK to centroid vector
-            lrg_to_gps = [md['gps_l'], -md['gps_w'], md['gps_h']]
-            lrg_to_centroid = [md['l'] / 2., -md['w'] / 2., md['h'] / 2.]
-            obs_r_to_centroid = np.subtract(lrg_to_centroid, lrg_to_gps)
-    
-            # in the fixed GPS frame 
-            cap_f = self.last_cap_f
-            obs_r = rtk_position_to_numpy(msg)
-            
-            # in the capture vehicle velodyne frame
-            cap_to_obs = np.dot(rotMatZ(-self.last_cap_yaw), obs_r - cap_f)
-            cap_to_obs_centroid = cap_to_obs + obs_r_to_centroid
-            velo_to_front = np.array([-1.0922, 0, -0.0508])
-            cap_to_obs_centroid += velo_to_front
-            self.obs_centroid = cap_to_obs_centroid + np.array(self.offset)
-            
-
-            R = tf.transformations.quaternion_matrix(self.rotation_offset)
-            rotated_centroid = R.dot(list(self.obs_centroid)+[1])
-            self.obs_centroid = rotated_centroid[:3]
-            
-                        
-            #br = tf.TransformBroadcaster()
-            now = rospy.get_rostime() 
-            self.br.sendTransform(tuple(self.obs_centroid), (0,0,0,1), now, 
-                            'obs_centroid', 'velodyne')
-            self.obs_marker.header.frame_id = 'obs_centroid'
-            self.obs_marker.pose.position = Point(0,0,0)
-            self.obs_marker.pose.orientation = Quaternion(*self.orient)
-            self.add_bbox_lidar()
-
-
     def add_bbox(self):
         inputName = '/image_raw'
         rospy.Subscriber(inputName, Image, self.handle_img_msg, queue_size=1)
-         
 
     def handle_img_msg(self, img_msg):
+        now = rospy.get_rostime()
         img = None
         bridge = cv_bridge.CvBridge()
         try:
@@ -217,7 +189,22 @@ class Projection:
             rospy.logerr( e )
             print( e )
             return
-    
+   
+        self.frame_index = self.timestamp_map[img_msg.header.stamp.to_nsec()]
+        f = self.frame_map[self.frame_index][0]
+        obs_centroid = np.array(f.trans) + np.array(self.offset)
+        R = tf.transformations.quaternion_matrix(self.rotation_offset)
+        rotated_centroid = R.dot(list(obs_centroid)+[1])
+        obs_centroid = rotated_centroid[:3]
+        #self.orient = list(f.rotq)
+ 
+        self.marker.header.stamp = now
+        self.marker.pose.position = Point(*list(obs_centroid))
+        self.marker.pose.orientation = Quaternion(*self.orient)
+        self.obs_marker.pose.position = Point(*list(obs_centroid))
+        self.obs_marker.pose.orientation = Quaternion(*self.orient)
+        self.add_bbox_lidar()
+
         tx, ty, tz, yaw, pitch, roll = [0.00749025, -0.40459941, -0.51372948, 
                                         -1.66780896, -1.59875352, -3.05415572]
         translation = [tx, ty, tz, 1]
@@ -226,10 +213,8 @@ class Projection:
         md = self.metadata
         dims = np.array([md['l'], md['w'], md['h']])
         outputName = '/image_bbox'
-        imgOutput = rospy.Publisher(outputName, Image, queue_size=1)
-        obs_centroid = self.obs_centroid
    
-        if self.obs_centroid is None:
+        if obs_centroid is None:
             rospy.loginfo("Couldn't find obstacle centroid")
             imgOutput.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
             return
@@ -239,7 +224,7 @@ class Projection:
 
         # case when obstacle is not in camera frame
         if obs_centroid[0]<2.5 :
-            imgOutput.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
+            self.imgOutput.publish(bridge.cv2_to_imgmsg(img, 'bgr8'))
             return
     
         # get bbox 
@@ -257,8 +242,7 @@ class Projection:
         projected_pts = np.array(projected_pts)
         center = np.mean(projected_pts, axis=0)
         out_img = drawBbox(img, projected_pts)
-        imgOutput.publish(bridge.cv2_to_imgmsg(out_img, 'bgr8'))
-
+        self.imgOutput.publish(bridge.cv2_to_imgmsg(out_img, 'bgr8'))
 
     def processFeedback(self, feedback ):
         p = feedback.pose.orientation
@@ -270,27 +254,21 @@ class Projection:
     def obs_processFeedback(self, feedback ):
         p = feedback.pose.orientation
         self.orient = (p.x, p.y, p.z, p.w)
-        now = rospy.get_rostime()
-        self.br.sendTransform(tuple(self.obs_centroid), (0,0,0,1), now, 
-                            'obs_centroid', 'velodyne')
         self.marker.pose.orientation = Quaternion(*self.orient)
         self.server.applyChanges()
     
     def add_bbox_lidar(self):
-        if self.obs_centroid is None :
-            return
+        #if obs_centroid is None :
+        #    return
     
         now = rospy.get_rostime() 
-        self.velodyne_marker.header.stamp = now #rospy.get_rostime()
-        self.obs_marker.header.stamp = now #rospy.get_rostime()
+        self.velodyne_marker.header.stamp = now 
+        self.obs_marker.header.stamp = now 
         
         # tell the server to call processFeedback() when feedback arrives for it
         self.server.insert(self.velodyne_marker, self.processFeedback)
         self.server.applyChanges()
         self.server.insert(self.obs_marker, self.obs_processFeedback)
-        #self.menu_handler.apply(self.server, self.int_marker.name)
-    
-        # 'commit' changes and send to all clients
         self.server.applyChanges()
     
 
@@ -299,17 +277,21 @@ class Projection:
 if __name__ == "__main__" :
     argv = rospy.myargv()
     rospy.init_node('projection')
-    assert len(argv) == 3, 'usage: \n{} <bag_file> <calib_file>'.format(argv[0])
+    assert len(argv) == 4, 'usage: \n{} <bag_file> <tracklet_file> <calib_file>'.format(argv[0])
     
-    bag_dir = os.path.dirname(argv[1])
+    bag_file = argv[1]
+    bag_dir = os.path.dirname(bag_file)
     md_path = os.path.join(bag_dir, 'metadata.csv')
-    calib_file = argv[2]
+    tracklet_file = argv[2] 
+    calib_file = argv[3]
     assert os.path.isfile(md_path), 'Metadata file %s does not exist' % md_path
+    assert os.path.isfile(tracklet_file), 'Tracklet file %s does not exist' % tracklet_file
     assert os.path.isfile(calib_file), 'Calibration file %s does not exist' % calib_file
 
+    tracklets = parse_xml(tracklet_file)
+
     try :
-        p = Projection(md_path, calib_file)    
-        p.track_obstacle()
+        p = Projection(bag_file, md_path, calib_file, tracklets)    
         p.add_bbox()
         rospy.spin()
     except rospy.ROSInterruptException:
