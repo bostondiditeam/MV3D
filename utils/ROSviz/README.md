@@ -63,7 +63,8 @@ If `marker_name` is  `capture vehicle`, it corresponds to rotation/translation a
 Here is a sample output from one of the training bags :
 ![](demo/demo.png) 
  
- *  **Tracklet visualization and interaction**
+ *  **Visualization and interaction using GPS**
+ 
  This final option is similar to previous one, except that it directly uses GPS information from obstacle to find bounding boxes instead of using tracklet files.
  
 To play the rosbag : 
