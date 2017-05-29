@@ -65,7 +65,7 @@ def read_objects(tracklet_file, frames_index):
 
             # re-create 3D bounding box in velodyne coordinate system
             yaw = rotation[2]   # other rotations are 0 in all xml files I checked
-            assert np.abs(rotation[:2]).sum() == 0, 'object rotations other than yaw given!'
+            #assert np.abs(rotation[:2]).sum() == 0, 'object rotations other than yaw given!'
             rotMat = np.array([\
               [np.cos(yaw), -np.sin(yaw), 0.0], \
               [np.sin(yaw),  np.cos(yaw), 0.0], \

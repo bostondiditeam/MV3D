@@ -307,7 +307,7 @@ class MV3D(object):
 
         # solver_step = solver.minimize(
         #     top_cls_loss + 0.005 * top_reg_loss + fuse_cls_loss + 0.5* fuse_reg_loss)
-        total_loss = .1 *top_cls_loss + .1 * top_reg_loss + .5* fuse_cls_loss + .5*fuse_reg_loss
+        total_loss = .1 *top_cls_loss + .02 * top_reg_loss + 0 * fuse_cls_loss + 0*fuse_reg_loss
         tf.summary.scalar('total_loss', total_loss)
         solver_step = solver.minimize(total_loss)
 
@@ -526,7 +526,7 @@ class MV3D(object):
         fuse_probs, fuse_deltas = \
             self.sess.run([self.net['fuse_probs'], self.net['fuse_deltas']], fd2)
 
-        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.5)
+        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.2)
 
         if log_subdir:
             top_image = data.draw_top_image(top_view[0])
