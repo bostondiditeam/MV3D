@@ -34,6 +34,8 @@ For example, to play bag 6_f.bag in folder 1, use
 
 Bag plays at a default rate of 0.1, you can set it to a different value using 
 `roslaunch launch/tracklet.launch bag:=1/6_f rate:=0.5`  
+
+It is also possible to specify frame offset. In particular, the test set has an offset of 16 frames. So, additionally specify `offset:=16` in the `roslaunch` command. 
 Please see `launch/tracklet.launch` for more details.
 
 Here is a screenshot using round 1 test bag :

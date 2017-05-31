@@ -18,6 +18,7 @@ import PyKDL as kd
 from camera_info import *
 from utils import *
 from parse_tracklet import *
+import argparse
 
 # https://stackoverflow.com/questions/470690/how-to-automatically-generate-n-distinct-colors
 kelly_colors_dict = dict(
@@ -88,6 +89,7 @@ class Projection:
         self.timestamp_map = extract_bag_timestamps(bag_file)
         self.calib_file = calib_file
         self.frame_map = generate_frame_map(tracklets)
+        self.offset = None
         
         md = None
         metadata = load_metadata(md_path)
@@ -103,6 +105,8 @@ class Projection:
         self.imgOutput = rospy.Publisher(outputName, Image, queue_size=1)
         self.markOutput = rospy.Publisher("bbox", MarkerArray, queue_size=1)
 
+    def add_offset(self, offset):
+        self.offset = offset
 
     def add_bbox(self):
         inputName = '/image_raw'
@@ -136,6 +140,8 @@ class Projection:
             return
 
         self.frame_index = self.timestamp_map[img_msg.header.stamp.to_nsec()]
+        if self.offset :
+            self.frame_index -= self.offset
         out_img = np.copy(img)
         for i, f in enumerate(self.frame_map[self.frame_index]):
             #f = self.frame_map[self.frame_index][0]
@@ -213,15 +219,19 @@ class Projection:
 
 
 if __name__ == "__main__" :
-    argv = rospy.myargv()
+    parser = argparse.ArgumentParser(description="visulaize tracklet")
+    parser.add_argument('bag', type=str, nargs='?', default='', help='bag filename')
+    parser.add_argument('tracklet', type=str, nargs='?', default='', help='tracklet filename')
+    parser.add_argument('calib', type=str, nargs='?', default='', help='calibration filename')
+    parser.add_argument('--offset', type=int, help='Number of frames to offset')
+    args = parser.parse_args(rospy.myargv()[1:])
     rospy.init_node('projection')
-    assert len(argv) == 4, 'usage: \n{} <bag_file> <tracklet_file> <calib_file>'.format(argv[0])
     
-    bag_file = argv[1]
+    bag_file = args.bag
     bag_dir = os.path.dirname(bag_file)
     md_path = os.path.join(bag_dir, 'metadata.csv')
-    tracklet_file = argv[2] 
-    calib_file = argv[3]
+    tracklet_file = args.tracklet
+    calib_file = args.calib
     assert os.path.isfile(md_path), 'Metadata file %s does not exist' % md_path
     assert os.path.isfile(tracklet_file), 'Tracklet file %s does not exist' % tracklet_file
     assert os.path.isfile(calib_file), 'Calibration file %s does not exist' % calib_file
@@ -229,7 +239,9 @@ if __name__ == "__main__" :
     tracklets = parse_xml(tracklet_file)
 
     try :
-        p = Projection(bag_file, md_path, calib_file, tracklets)    
+        p = Projection(bag_file, md_path, calib_file, tracklets)
+        if args.offset :
+            p.add_offset(args.offset)    
         p.add_bbox()
         rospy.spin()
     except rospy.ROSInterruptException:
