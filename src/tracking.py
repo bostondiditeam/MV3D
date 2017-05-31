@@ -19,7 +19,7 @@ from task import copy_weigths
 log_subdir=os.path.join('tracking',strftime("%Y_%m_%d_%H_%M_%S", localtime()))
 log_dir = os.path.join(cfg.LOG_DIR, log_subdir)
 
-def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=15):
+def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=16):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
     os.makedirs (os.path.join(log_dir,'image'),exist_ok=True)
@@ -98,11 +98,9 @@ if __name__ == '__main__':
 
     # Set true if you want score after export predicted tracklet xml
     # set false if you just want to export tracklet xml
-    if_score = False
+    if_score = True
     if 1:
-        dataset = {
-            'Round1Test': ['19_f2']
-                   }
+        dataset = {'Round1Test': ['19_f2']}
         dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
         # generate tracklet file
