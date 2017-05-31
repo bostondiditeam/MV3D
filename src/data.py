@@ -80,8 +80,8 @@ def lidar_to_top(lidar):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
     Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)//TOP_Z_DIVISION)+1
-    height  = Yn - Y0
-    width   = Xn - X0
+    height  = Xn - X0
+    width   = Yn - Y0
     channel = Zn - Z0  + 2
     # print('height,width,channel=%d,%d,%d'%(height,width,channel))
     top = np.zeros(shape=(height,width,channel), dtype=np.float32)
@@ -121,7 +121,7 @@ def lidar_to_top(lidar):
                 pass
             pass
 
-    top[:,:,Zn+1] = np.log(top[:,:,Zn+1]+1)/math.log(64)
+        top[:,:,Zn+1] = np.log(top[:,:,Zn+1]+1)/math.log(64)
 
 
 
@@ -315,7 +315,7 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
 
         objs = objects[count]
         gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
-        img = draw.draw_boxed3d_to_rgb(rgb, gt_boxes3d)
+        img = draw.draw_box3d_on_camera(rgb, gt_boxes3d)
         cv2.imwrite(os.path.join(dataset_dir,'%05d.png' % n), img)
         count += 1
     print('gt box image save done\n')
@@ -400,16 +400,16 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         if 1 and objects!=None:  ## preprocess boxes3d  --------------------
             preprocess_bbox(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
-        if 0: ##draw top image with bbox
+        if 1: ##draw top image with bbox
             draw_top_view_image(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
 
         # dump lidar data
-        if 0:
+        if 1:
             dump_lidar(save_preprocess_dir, dataset, date, drive, frames_index, overwrite=False)
 
-        if 0 and objects!= None: #dump gt boxes
-            dump_bbox_on_camera_image(save_preprocess_dir, dataset, objects, date, drive, frames_index, overwrite=False)
+        if 1 and objects!= None: #dump gt boxes
+            dump_bbox_on_camera_image(save_preprocess_dir, dataset, objects, date, drive, frames_index, overwrite=True)
 
         ############# analysis ###########################
         # if 0: ## make mean
@@ -484,8 +484,8 @@ if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     if (cfg.DATA_SETS_TYPE == 'didi'):
         #dates=['1','2','3']
-        dates = ['Round1Test']
-        drivers= None
+        dates = ['1']
+        drivers= ['19']
         frames_index=None
     elif cfg.DATA_SETS_TYPE == 'kitti':
         dates = ['2011_09_26']

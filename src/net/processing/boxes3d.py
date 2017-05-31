@@ -8,8 +8,8 @@ import net.processing.projection as proj
 def top_to_lidar_coords(xx,yy):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
-    y = Xn*TOP_Y_DIVISION-(xx+0.5)*TOP_Y_DIVISION + TOP_Y_MIN
-    x = Yn*TOP_X_DIVISION-(yy+0.5)*TOP_X_DIVISION + TOP_X_MIN
+    y = Yn*TOP_Y_DIVISION-(xx+0.5)*TOP_Y_DIVISION + TOP_Y_MIN
+    x = Xn*TOP_X_DIVISION-(yy+0.5)*TOP_X_DIVISION + TOP_X_MIN
 
     return x,y
 
@@ -111,7 +111,7 @@ def convert_points_to_croped_image(img_points):
 
 
 
-def box3d_to_rgb_projections(boxes3d, Mt=None, Kt=None):
+def box3d_to_rgb_box(boxes3d, Mt=None, Kt=None):
     if (cfg.DATA_SETS_TYPE == 'kitti'):
         if Mt is None: Mt = np.array(MATRIX_Mt)
         if Kt is None: Kt = np.array(MATRIX_Kt)
@@ -297,9 +297,14 @@ def regularise_box3d(boxes3d):
 def boxes3d_decompose(boxes3d):
 
     # translation
-    T_x = np.sum(boxes3d[:, 0:4, 0], 1) / 4.0
-    T_y = np.sum(boxes3d[:, 0:4, 1], 1) / 4.0
-    T_z = np.sum(boxes3d[:, 0:4, 2], 1) / 4.0
+    if cfg.DATA_SETS_TYPE == 'didi':
+        T_x = np.sum(boxes3d[:, 0:8, 0], 1) / 8.0
+        T_y = np.sum(boxes3d[:, 0:8, 1], 1) / 8.0
+        T_z = np.sum(boxes3d[:, 0:8, 2], 1) / 8.0
+    elif cfg.DATA_SETS_TYPE == 'KITTI':
+        T_x = np.sum(boxes3d[:, 0:4, 0], 1) / 4.0
+        T_y = np.sum(boxes3d[:, 0:4, 1], 1) / 4.0
+        T_z = np.sum(boxes3d[:, 0:4, 2], 1) / 4.0
 
     Points0 = boxes3d[:, 0, 0:2]
     Points1 = boxes3d[:, 1, 0:2]
