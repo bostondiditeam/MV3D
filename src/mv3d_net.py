@@ -334,7 +334,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
 
 
     if cfg.IMAGE_FUSION_DIABLE==True:
-        top_rois *= 0
+        rgb_rois *= 0
     fuse_scores, fuse_probs, fuse_deltas = \
         fusion_net(
             ([top_features, top_rois, 6, 6, 1. / top_feature_stride],

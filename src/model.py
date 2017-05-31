@@ -526,7 +526,7 @@ class MV3D(object):
         fuse_probs, fuse_deltas = \
             self.sess.run([self.net['fuse_probs'], self.net['fuse_deltas']], fd2)
 
-        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.5)
+        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.2)
 
         if log_subdir:
             top_image = data.draw_top_image(top_view[0])
