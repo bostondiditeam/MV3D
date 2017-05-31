@@ -28,7 +28,6 @@ class Tracklet_saver():
         keys = ['tx', 'ty', 'tz', 'rx', 'ry', 'rz']
         values = [translation[0], translation[1], translation[2], rotation[0], rotation[1], rotation[2]]
         pose = {k: v for k, v in zip(keys, values)}
-        # print("what is its type: ", type(first_pose['tx']))
         obs_tracklet.poses = [pose]
         pass
 
@@ -36,8 +35,11 @@ class Tracklet_saver():
     # size is [h, w, l]
     def add_tracklet(self, first_frame_nb, size, transition, rotation):
         obs_tracklet = Tracklet(object_type='Car', l=size[2], w=size[1], h=size[0], first_frame=first_frame_nb)
-        self.add_tracklet_pose(obs_tracklet, transition, rotation)
-        self.collection.tracklets.append(obs_tracklet)
+        # self.add_tracklet_pose(obs_tracklet, transition, rotation)
+        # self.collection.tracklets.append(obs_tracklet)
+        if 0<transition[1]<8:
+            self.add_tracklet_pose(obs_tracklet, transition, rotation)
+            self.collection.tracklets.append(obs_tracklet)
 
     def write_tracklet(self):
         self.collection.write_xml(self.path)

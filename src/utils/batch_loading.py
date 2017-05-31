@@ -90,7 +90,7 @@ class batch_loading:
         for date, drivers in dates_to_drivers.items():
             for driver in drivers:
                 # file_prefix is something like /home/stu/data/preprocessed/didi/lidar/2011_09_26_0001_*
-                file_prefix = os.path.join(data_seg, "top", driver, date)
+                file_prefix = os.path.join(data_seg, "top", date, driver)
                 driver_files = get_file_names(data_seg, "top", driver, date)
                 if len(driver_files) == 0:
                     raise ValueError('Directory has no data starts from {}, please revise.'.format(file_prefix))

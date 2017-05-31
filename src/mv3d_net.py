@@ -5,6 +5,8 @@ from net.roipooling_op import roi_pool as tf_roipooling
 import net.rpn_loss_op as rpnloss
 import net.rcnn_loss_op as rcnnloss
 from config import cfg
+from net.resnet import ResnetBuilder
+from keras.models import Model
 
 
 def top_feature_net(input, anchors, inds_inside, num_bases):
@@ -22,28 +24,28 @@ def top_feature_net(input, anchors, inds_inside, num_bases):
 
     with tf.variable_scope('top-block-1') as scope:
         block = conv2d_bn_relu(input, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
-        block = conv2d_bn_relu(block, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
+        block = conv2d_bn_relu(block, num_kernels=16, kernel_size=(1,1), stride=[1,1,1,1], padding='SAME', name='2')
         block = conv2d_bn_relu(block, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
         block = maxpool(block, kernel_size=(2,2), stride=[1,2,2,1], padding='SAME', name='4' )
         stride *=2
 
     with tf.variable_scope('top-block-2') as scope:
         block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
-        block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
+        block = conv2d_bn_relu(block, num_kernels=32, kernel_size=(1,1), stride=[1,1,1,1], padding='SAME', name='2')
         block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
         block = maxpool(block, kernel_size=(2,2), stride=[1,2,2,1], padding='SAME', name='4' )
         stride *=2
 
     with tf.variable_scope('top-block-3') as scope:
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
-        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
+        block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(1,1), stride=[1,1,1,1], padding='SAME', name='2')
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
         block = maxpool(block, kernel_size=(2,2), stride=[1,2,2,1], padding='SAME', name='4' )
         stride *=2
 
     with tf.variable_scope('top-block-4') as scope:
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
-        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
+        block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(1,1), stride=[1,1,1,1], padding='SAME', name='2')
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
 
 
@@ -68,14 +70,63 @@ def top_feature_net(input, anchors, inds_inside, num_bases):
     feature = block
 
     print ('top: scale=%f, stride=%d'%(1./stride, stride))
-    return feature, scores, probs, deltas, rois, roi_scores
+    return feature, scores, probs, deltas, rois, roi_scores, stride
+
+
+def top_feature_net_r(input, anchors, inds_inside, num_bases):
+    """
+    :param input: 
+    :param anchors: 
+    :param inds_inside: 
+    :param num_bases: 
+    :return: 
+            top_features, top_scores, top_probs, top_deltas, proposals, propos al_scores
+    """
+    stride=1.
+    #with tf.variable_scope('top-preprocess') as scope:
+    #    input = input
+    batch_size, img_height, img_width, img_channel = input.get_shape().as_list()
+
+    with tf.variable_scope('resnet-block-1') as scope:
+        print('build_resnet')
+        resnet = ResnetBuilder.build_resnet_50([img_channel, img_height, img_width], 1)
+
+        resnet_input = resnet.get_layer('input_1').input
+        resnet_output = resnet.get_layer('add_7').output
+        resnet_f = Model(inputs=resnet_input, outputs=resnet_output)  # add_7
+        # print(resnet_f.summary())
+        block = resnet_f(input)
+        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME', name='2')
+        stride = 8
+
+
+    with tf.variable_scope('top') as scope:
+        # up     = upsample2d(block, factor = 2, has_bias=True, trainable=True, name='1')
+        # up     = block
+        up = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME', name='2')
+        scores = conv2d(up, num_kernels=2 * num_bases, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',name='score')
+        probs = tf.nn.softmax(tf.reshape(scores, [-1, 2]), name='prob')
+        deltas = conv2d(up, num_kernels=4 * num_bases, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',name='delta')
+
+    #<todo> flip to train and test mode nms (e.g. different nms_pre_topn values): use tf.cond
+    with tf.variable_scope('top-nms') as scope:    #non-max
+
+        img_scale = 1
+        rois, roi_scores = tf_rpn_nms( probs, deltas, anchors, inds_inside,
+                                       stride, img_width, img_height, img_scale,
+                                       nms_thresh=0.7, min_size=stride, nms_pre_topn=500, nms_post_topn=100,
+                                       name ='nms')
+
+    #<todo> feature = upsample2d(block, factor = 4,  ...)
+    feature = block
+
+    print ('top: scale=%f, stride=%d'%(1./stride, stride))
+    return feature, scores, probs, deltas, rois, roi_scores, stride
 
 
 
 #------------------------------------------------------------------------------
 def rgb_feature_net(input):
-    if cfg.IMAGE_FUSION_DIABLE==True:
-        return None
 
     stride=1.
     #with tf.variable_scope('rgb-preprocess') as scope:
@@ -113,7 +164,33 @@ def rgb_feature_net(input):
 
 
     print ('rgb : scale=%f, stride=%d'%(1./stride, stride))
-    return feature
+    return feature, stride
+
+def rgb_feature_net_r(input):
+
+    #with tf.variable_scope('rgb-preprocess') as scope:
+    #   input = input-128
+
+    batch_size, img_height, img_width, img_channel = input.get_shape().as_list()
+
+    with tf.variable_scope('resnet-block-1') as scope:
+        print('build_resnet')
+        resnet = ResnetBuilder.build_resnet_50([img_channel, img_height, img_width], 1)
+
+        resnet_input = resnet.get_layer('input_1').input
+        resnet_output = resnet.get_layer('add_7').output
+        resnet_f = Model(inputs=resnet_input, outputs=resnet_output)  # add_7
+        # print(resnet_f.summary())
+        block = resnet_f(input)
+        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME', name='2')
+        stride = 8
+
+    #<todo> feature = upsample2d(block, factor = 4,  ...)
+    feature = block
+
+
+    print ('rgb : scale=%f, stride=%d'%(1./stride, stride))
+    return feature, stride
 
 #------------------------------------------------------------------------------
 def front_feature_net(input):
@@ -127,6 +204,51 @@ def front_feature_net(input):
 #   [rgb_features,     rgb_rois,     6,6,1./stride],)
 #
 def fusion_net(feature_list, num_class, out_shape=(8,3)):
+
+    num=len(feature_list)
+
+    input = None
+    with tf.variable_scope('fuse-input') as scope:
+        feature_names=['top_feature','front_feature','rgb_feature']
+        for n in range(num):
+            feature     = feature_list[n][0]
+            roi         = feature_list[n][1]
+            pool_height = feature_list[n][2]
+            pool_width  = feature_list[n][3]
+            pool_scale  = feature_list[n][4]
+            if (pool_height==0 or pool_width==0): continue
+
+            roi_features,  roi_idxs = tf_roipooling(feature,roi, pool_height, pool_width, pool_scale, name='%d/pool'%n)
+            roi_features = flatten(roi_features)
+            tf.summary.histogram(feature_names[n],roi_features)
+
+            if input is None:
+                input = roi_features
+            else:
+                input = concat([input,roi_features], axis=1, name='%d/cat'%n)
+
+    with tf.variable_scope('fuse-block-1') as scope:
+        block = linear_bn_relu(input, num_hiddens=512, name='1')
+        block = linear_bn_relu(block, num_hiddens=512, name='2')
+        block = linear_bn_relu(block, num_hiddens=512, name='3')
+        block = linear_bn_relu(block, num_hiddens=512, name='4')
+
+    #include background class
+    with tf.variable_scope('fuse') as scope:
+        dim = np.product([*out_shape])
+        scores  = linear(block, num_hiddens=num_class,     name='score')
+        probs   = tf.nn.softmax (scores, name='prob')
+        deltas  = linear(block, num_hiddens=dim*num_class, name='box')
+        deltas  = tf.reshape(deltas,(-1,num_class,*out_shape))
+
+    return  scores, probs, deltas
+
+# feature_list:
+# ( [top_features,     top_rois,     6,6,1./stride],
+#   [front_features,   front_rois,   0,0,1./stride],  #disable by 0,0
+#   [rgb_features,     rgb_rois,     6,6,1./stride],)
+#
+def fusion_net_2fc(feature_list, num_class, out_shape=(8,3)):
 
     num=len(feature_list)
 
@@ -165,6 +287,7 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
 
 
+
 def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     out_shape = (8, 3)
     stride = 8
@@ -181,8 +304,12 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
 
     # top feature
 
-    top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores = \
-        top_feature_net(top_view, top_anchors, top_inside_inds, len_bases)
+    if cfg.USE_RESNET_AS_TOP_BASENET==True:
+        top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
+            top_feature_net_r(top_view, top_anchors, top_inside_inds, len_bases)
+    else:
+        top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
+            top_feature_net(top_view, top_anchors, top_inside_inds, len_bases)
 
     # RRN
     top_inds = tf.placeholder(shape=[None], dtype=tf.int32, name='top_ind')
@@ -192,23 +319,27 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     top_cls_loss, top_reg_loss = rpnloss.rpn_loss(top_scores, top_deltas, top_inds, top_pos_inds, top_labels, top_targets)
 
 
+    if cfg.USE_RESNET_AS_RGB_BASENET==True:
+        rgb_features,rgb_stride= rgb_feature_net_r(rgb_images)
+    else:
+        rgb_features, rgb_stride = rgb_feature_net(rgb_images)
 
     front_features = front_feature_net(front_view)
-    rgb_features = rgb_feature_net(rgb_images)
 
-    rgb_pool_heigth = None
-    rgb_pool_width = None
+    #debug roi pooling
+    # with tf.variable_scope('after') as scope:
+    #     roi_rgb, roi_idxs = tf_roipooling(rgb_images, rgb_rois, 100, 200, 1)
+    #     tf.summary.image('roi_rgb',roi_rgb)
+
+
+
     if cfg.IMAGE_FUSION_DIABLE==True:
-        rgb_pool_heigth=0
-        rgb_pool_width = 0
-    else:
-        rgb_pool_heigth=6
-        rgb_pool_width = 6
+        rgb_rois *= 0
     fuse_scores, fuse_probs, fuse_deltas = \
         fusion_net(
-            ([top_features, top_rois, 6, 6, 1. / stride],
+            ([top_features, top_rois, 6, 6, 1. / top_feature_stride],
              [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
-             [rgb_features, rgb_rois, rgb_pool_heigth, rgb_pool_width, 1. / stride],),
+             [rgb_features, rgb_rois, 6, 6, 1. / rgb_stride],),
             num_class, out_shape)
 
     fuse_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='fuse_label')
@@ -249,7 +380,9 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
 
         'fuse_probs':fuse_probs,
         'fuse_scores':fuse_scores,
-        'fuse_deltas':fuse_deltas
+        'fuse_deltas':fuse_deltas,
+
+        'top_feature_stride':top_feature_stride
 
     }
 
