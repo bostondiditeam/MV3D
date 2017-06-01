@@ -1,8 +1,8 @@
 import os
 import numpy as np
-np.random.seed(7)
+# np.random.seed(7)
 import tensorflow as tf
-tf.set_random_seed(7)
+# tf.set_random_seed(7)
 from sklearn.utils import shuffle
 import glob
 import net.utility.draw  as nud
@@ -11,7 +11,7 @@ import net.blocks as blocks
 import data
 import net.processing.boxes3d  as box
 from net.rpn_target_op import make_bases, make_anchors, rpn_target
-from net.rcnn_target_op import rcnn_target
+from net.rcnn_target_op import rcnn_target,rcnn_target2
 from net.rpn_nms_op     import draw_rpn_proposal
 from net.rcnn_nms_op    import rcnn_nms, draw_rcnn_nms, draw_rcnn,draw_box3d_on_image_with_gt,draw_fusion_target
 from net.rpn_target_op  import draw_rpn_gt, draw_rpn_targets, draw_rpn_labels
@@ -24,6 +24,8 @@ import utils.batch_loading as dataset
 from utils.timer import timer
 from keras import backend as K
 from time import localtime, strftime
+import cv2
+import time
 
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
@@ -89,12 +91,23 @@ class MV3D(object):
         self.log_max = 10
 
         # about tensorboard.
-        tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
-        self.train_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard', tb_dir + '_train'))
-        self.val_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard', tb_dir + '_val'))
+        self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
+        self.train_summary_writer = None
+        self.val_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_val'))
         self.tensorboard_dir = None
         self.summ = None
 
+        self.rpn_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_rpn')
+
+        self.fusion_net_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_fusion_net')
+
+        self.all_net_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR)
+        os.makedirs(self.rpn_checkpoint_dir, exist_ok=True)
+        os.makedirs(self.fusion_net_checkpoint_dir, exist_ok=True)
+        os.makedirs(self.all_net_checkpoint_dir, exist_ok=True)
+
+        self.sess=None
+        self.use_pretrain_weights=[]
 
     def proposal(self):
         pass
@@ -129,21 +142,32 @@ class MV3D(object):
             rpn_proposal = draw_rpn_proposal(top_image, proposals, proposal_scores, draw_num=20)
             nud.imsave('img_rpn_proposal', rpn_proposal,subdir)
 
-    def log_fusion_net(self, subdir, top_image, batch_top_rois, batch_fuse_labels,
-                       batch_fuse_targets, rgb, batch_rgb_rois, batch_rois3d, batch_gt_boxes3d):
+    def log_fusion_net_target(self, subdir, top_image, batch_top_rois, batch_fuse_labels,
+                              batch_fuse_targets, rgb, batch_rgb_rois, batch_rois3d, batch_gt_boxes3d):
         img_label = draw_rcnn_labels(top_image, batch_top_rois, batch_fuse_labels)
         img_target = draw_rcnn_targets(top_image, batch_top_rois, batch_fuse_labels, batch_fuse_targets)
         nud.imsave('img_rcnn_label', img_label,subdir)
         nud.imsave('img_rcnn_target', img_target,subdir)
 
-        img_rgb_rois = box.draw_boxes(rgb, batch_rgb_rois[:, 1:5], color=(255, 0, 255), thickness=1)
+        img_rgb_rois = box.draw_boxes(rgb, batch_rgb_rois[np.where(batch_fuse_labels == 0), 1:5][0],
+                                      color=(0, 0, 255), thickness=1)
+        img_rgb_rois = box.draw_boxes(img_rgb_rois, batch_rgb_rois[np.where(batch_fuse_labels == 1), 1:5][0],
+                                      color=(255, 255, 255), thickness=3)
         nud.imsave('img_rgb_rois', img_rgb_rois, subdir)
 
         #labels, deltas, rois3d, top_img, cam_img, class_color
         top_img, cam_img = draw_fusion_target(batch_fuse_labels, batch_fuse_targets, batch_rois3d,
-                                              top_image, rgb, [[0,255,0],[255,0,0]])
+                                              top_image, rgb, [[10,20,10],[255,0,0]])
         nud.imsave('fusion_target_rgb' , cam_img, subdir)
         nud.imsave( 'fusion_target_top' , top_img,subdir)
+
+    def log_fusion_net_detail(self, subdir, fuse_probs, fuse_deltas):
+        dir = os.path.join(cfg.LOG_DIR, subdir)
+        os.makedirs(dir, exist_ok=True)
+        with open(os.path.join(dir, 'fusion_net_detail.txt'), 'w') as info_file:
+            info_file.write('index, fuse_probs, fuse_deltas\n')
+            for i,prob in enumerate(fuse_probs):
+                    info_file.write('{}, {}, {}\n'.format(i,prob,fuse_deltas[i]))
 
     def log_prediction(self, subdir, batch_proposals, batch_proposal_scores, fd1, batch_top_view, batch_front_view,
                        batch_rgb_images, rgb, batch_gt_boxes3d, top_image):
@@ -153,7 +177,7 @@ class MV3D(object):
         predict_rgb_view = draw_box3d_on_image_with_gt(rgb, boxes3d, batch_gt_boxes3d)
         predict_top_view = box.draw_box3d_on_top(top_image, boxes3d, color=(80, 0, 0))
         nud.imsave('predict_rgb_view' , predict_rgb_view, subdir)
-        # nud.imsave( 'predict_top_view' , predict_top_view,subdir)
+        nud.imsave( 'predict_top_view' , predict_top_view,subdir)
 
     def log_info(self, subdir, info):
         dir = os.path.join(cfg.LOG_DIR, subdir)
@@ -170,6 +194,29 @@ class MV3D(object):
             else:
                 return True
         return False
+
+    def get_variables_by_scopes_name(self, scopes):
+        variables=[]
+        for scope in scopes:
+            variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
+            assert len(variables) != 0
+            variables += variables
+        return variables
+
+
+    def get_rpn_variables(self):
+        rpn_scopes = ['resnet-block-1', 'top']
+        return self.get_variables_by_scopes_name(rpn_scopes)
+
+    def get_fusion_net_variables(self):
+        #fuse-net
+        scopes = ['fuse-net']
+        return self.get_variables_by_scopes_name(scopes)
+
+    def get_rgb_feature_net_variables(self):
+        #'rgb-feature-net'
+        return self.get_variables_by_scopes_name(['rgb-feature-net'])
+
 
     def validation_accuracy(self, iter_train):
         net=self.net
@@ -223,7 +270,7 @@ class MV3D(object):
             rpn_target (self.top_view_anchors, self.anchors_inside_inds, batch_gt_labels, batch_gt_top_boxes)
 
         batch_top_rois, batch_fuse_labels, batch_fuse_targets  = \
-             rcnn_target(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
+             rcnn_target_xxx(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
 
         batch_rois3d	 = project_to_roi3d    (batch_top_rois)
         batch_front_rois = project_to_front_roi(batch_rois3d  )
@@ -268,8 +315,8 @@ class MV3D(object):
                      batch_top_pos_inds, batch_top_targets, batch_proposals,
                      batch_proposal_scores, batch_gt_top_boxes, batch_gt_labels)
 
-        self.log_fusion_net(log_subdir, top_image, batch_top_rois, batch_fuse_labels,
-                            batch_fuse_targets, rgb, batch_rgb_rois, batch_rois3d, batch_gt_boxes3d)
+        self.log_fusion_net_target(log_subdir, top_image, batch_top_rois, batch_fuse_labels,
+                                   batch_fuse_targets, rgb, batch_rgb_rois, batch_rois3d, batch_gt_boxes3d)
 
         self.log_prediction(log_subdir, batch_proposals, batch_proposal_scores, fd1, batch_top_view,
                             batch_front_view,
@@ -277,57 +324,140 @@ class MV3D(object):
 
         return t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss
 
+    def variables_initializer(self):
+        # uninit_vars=[]
+        # if 'all' not in self.use_pretrain_weights:
+        #     if 'rpn' not in self.use_pretrain_weights:
+        #         uninit_vars +=self.get_rpn_variables()
+        #
+        #     if 'fusion_net' not in self.use_pretrain_weights:
+        #         uninit_vars +=self.get_fusion_net_variables()
+        #
+        #     if config.cfg.USE_IMAGENET_PRE_TRAINED_MODEL == False: # todo : remove it
+        #         uninit_vars += self.get_rgb_feature_net_variables()
+        #
+        # if uninit_vars != []:
+        #     self.sess.run(tf.variables_initializer(uninit_vars),
+        #              {blocks.IS_TRAIN_PHASE: True, K.learning_phase(): 1})
 
-    def train(self, max_iter=20000, pre_trained=True, train_set =None,validation_set =None):
+        # todo : remove it
+        self.sess.run(tf.global_variables_initializer(),
+                 {blocks.IS_TRAIN_PHASE: True, K.learning_phase(): 1})
 
-        self.validation_set=validation_set
-        #for init model
-        top_shape, front_shape, rgb_shape = train_set.get_shape()
+    def load_weights(self, weights=[]):
+        path=None
+        for name in weights:
+            if name == 'all':
+                path = os.path.join(self.all_net_checkpoint_dir, 'mv3d_all_net.ckpt')
+                assert tf.train.checkpoint_exists(path) == True
+                print('load all_net pretrained model')
+                self.all_net_saver.restore(self.sess, path)
+            elif name == 'rpn':
+                path = os.path.join(self.rpn_checkpoint_dir, 'rpn.ckpt')
+                assert tf.train.checkpoint_exists(path)==True
+                print('load rpn pretrained model')
+                self.rpn_saver.restore(self.sess, path)
+
+            elif name == 'fusion_net':
+                path=os.path.join(self.fusion_net_checkpoint_dir, 'fusion_net.ckpt')
+                assert tf.train.checkpoint_exists(path) ==True
+
+                print('load fusion_net pretrained model')
+                self.fusion_net_saver.restore(self.sess, path)
+            else:
+                ValueError('unknow weigths name')
+
+    def save_weights(self, weights=[]):
+        path = None
+        sess=self.sess
+        for name in weights:
+            if name == 'all':
+                self.all_net_saver.save(sess, os.path.join(self.all_net_checkpoint_dir, 'mv3d_all_net.ckpt'))
+                print('all net model save!')
+
+            elif name == 'rpn':
+                self.rpn_saver.save(sess, os.path.join(self.rpn_checkpoint_dir, 'rpn.ckpt'))
+                print('rpn model save!')
+
+            elif name == 'fusion_net':
+                self.fusion_net_saver.save(sess, os.path.join(self.fusion_net_checkpoint_dir, 'fusion_net.ckpt'))
+                print('fusion_net model save!')
+            else:
+                ValueError('unknow weigths name')
 
 
-        net=mv3d_net.load(top_shape,front_shape,rgb_shape,self.num_class,len(self.bases))
-        self.net=net
 
-        top_cls_loss=net['top_cls_loss']
-        tf.summary.scalar('top_cls_loss', top_cls_loss)
-        top_reg_loss=net['top_reg_loss']
-        tf.summary.scalar('top_reg_loss', top_reg_loss)
-        fuse_cls_loss=net['fuse_cls_loss']
-        tf.summary.scalar('fuse_cls_loss', fuse_cls_loss)
-        fuse_reg_loss=net['fuse_reg_loss']
-        tf.summary.scalar('fuse_reg_loss', fuse_reg_loss)
-        summ = tf.summary.merge_all()
-        self.summ = summ
 
-        # solver
-        # l2 = blocks.l2_regulariser(decay=0.0005)
-        learning_rate = tf.placeholder(tf.float32, shape=[])
-        # solver = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=0.9)
-        solver = tf.train.AdamOptimizer()
 
-        # solver_step = solver.minimize(
-        #     top_cls_loss + 0.005 * top_reg_loss + fuse_cls_loss + 0.5* fuse_reg_loss)
-        total_loss = .01 *top_cls_loss + .002 * top_reg_loss + .1 * fuse_cls_loss + 1.*fuse_reg_loss
-        tf.summary.scalar('total_loss', total_loss)
-        solver_step = solver.minimize(total_loss)
-
-        iter_debug=200
-        batch_size=1
-
-        # start training here  #########################################################################################
-        self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
-        self.log.write('-------------------------------------------------------------------------------------\n')
+    def train(self, max_iter=1000, pre_trained_weights=['all'], train_set =None, validation_set =None):
 
         self.sess = tf.Session()
-        sess=self.sess
-        saver = tf.train.Saver()
+        sess = self.sess
+
         with sess.as_default():
-            pretrained_model_path = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_mode_snap.ckpt')
-            if pre_trained==True and tf.train.checkpoint_exists(pretrained_model_path):
-                print('load pretrained model')
-                saver.restore(sess, pretrained_model_path)
-            else:
-                sess.run( tf.global_variables_initializer(), { blocks.IS_TRAIN_PHASE : True ,K.learning_phase(): 1} )
+            self.validation_set=validation_set
+            #for init model
+            top_shape, front_shape, rgb_shape = train_set.get_shape()
+
+            with tf.variable_scope('MV3D'):
+                net=mv3d_net.load(top_shape,front_shape,rgb_shape,self.num_class,len(self.bases))
+                self.net=net
+
+                top_cls_loss=net['top_cls_loss']
+                tf.summary.scalar('top_cls_loss', top_cls_loss)
+                top_reg_loss=net['top_reg_loss']
+                tf.summary.scalar('top_reg_loss', top_reg_loss)
+                fuse_cls_loss=net['fuse_cls_loss']
+                tf.summary.scalar('fuse_cls_loss', fuse_cls_loss)
+                fuse_reg_loss=net['fuse_reg_loss']
+                tf.summary.scalar('fuse_reg_loss', fuse_reg_loss)
+
+
+            with tf.variable_scope('minimize_loss'):
+                # solver
+                # l2 = blocks.l2_regulariser(decay=0.0005)
+                learning_rate = tf.placeholder(tf.float32, shape=[])
+                # solver = tf.train.MomentumOptimizer(learning_rate=learning_rate, momentum=0.9)
+                solver = tf.train.AdamOptimizer()
+
+                trainning_target = 'all' # 'rpn' 'fusion_net' 'all'
+                if trainning_target=='all':
+                    total_loss = 1.*(1. * top_cls_loss + 0.05 * top_reg_loss) + 1. * fuse_cls_loss + 0.1 * fuse_reg_loss
+                    tf.summary.scalar('total_loss', total_loss)
+                    solver_step = solver.minimize(total_loss)
+
+                elif trainning_target=='rpn':
+                    total_loss = 1. * top_cls_loss + 0.05 * top_reg_loss
+                    tf.summary.scalar('top_total_loss', total_loss)
+                    solver_step = solver.minimize(total_loss,var_list=self.get_rpn_variables())
+
+                elif trainning_target=='fusion_net':
+                    total_loss =  1. * fuse_cls_loss + 0.05 * fuse_reg_loss
+                    tf.summary.scalar('fuse_total_loss', total_loss)
+                    solver_step = solver.minimize(total_loss,var_list=self.get_fusion_net_variables())
+
+            self.train_summary_writer= tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard',
+                                                                          self.tb_dir + '_train'),
+                                  graph=tf.get_default_graph())
+            summ = tf.summary.merge_all()
+            self.summ = summ
+
+
+            iter_debug=200
+            batch_size=1
+
+            # start training here  #########################################################################################
+            self.log.write('epoch     iter    rate   |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
+            self.log.write('-------------------------------------------------------------------------------------\n')
+
+            self.rpn_saver = tf.train.Saver(self.get_rpn_variables())
+            self.fusion_net_saver = tf.train.Saver(self.get_fusion_net_variables())
+            self.all_net_saver = tf.train.Saver()
+
+            self.variables_initializer()
+            self.load_weights(pre_trained_weights)
+
+
 
             proposals=net['proposals']
             proposal_scores=net['proposal_scores']
@@ -383,10 +513,11 @@ class MV3D(object):
 
                 ## generate  train rois  for RPN
                 batch_top_inds, batch_top_pos_inds, batch_top_labels, batch_top_targets  = \
-                    rpn_target (self.top_view_anchors, self.anchors_inside_inds, batch_gt_labels, batch_gt_top_boxes)
+                    rpn_target (self.top_view_anchors, self.anchors_inside_inds, batch_gt_labels,
+                                batch_gt_top_boxes)
 
                 batch_top_rois, batch_fuse_labels, batch_fuse_targets  = \
-                     rcnn_target(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
+                    rcnn_target2(  batch_proposals, batch_gt_labels, batch_gt_top_boxes, batch_gt_boxes3d )
 
                 batch_3d_rois	 = project_to_roi3d    (batch_top_rois)
                 batch_front_rois = project_to_front_roi(batch_3d_rois  )
@@ -414,29 +545,43 @@ class MV3D(object):
                     net['fuse_targets']: batch_fuse_targets,
                 }
 
-                _, t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss, tb_sum = \
-                   sess.run([solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss, summ],fd2)
+                _, t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss = \
+                   sess.run([solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss],fd2)
 
                 loss_sum+= np.array([t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss])
 
-                if iter%ckpt_save_step==1:
-                    saver.save(sess, pretrained_model_path)
+                if iter>=ckpt_save_step and iter%ckpt_save_step==0:
+                    # saver.save(sess, pretrained_model_path)
+                    print('save_weights')
+                    self.save_weights([trainning_target])
+
+
                     if cfg.TRAINING_TIMER and iter!=1:
                         self.log.write('It takes %0.2f secs to train %d iterations. \n' %\
                                        (time_it.time_diff_per_n_loops(), ckpt_save_step))
-                    print('model save!')
+
 
                 if iter%loss_smooth_step==0:
                     loss_smooth=loss_sum/loss_smooth_step
                     self.log.write('%3.1f   %d   %0.4f   |   %0.5f   %0.5f   |   %0.5f   %0.5f \n' %\
                         (epoch, idx, rate, loss_smooth[0], loss_smooth[1],loss_smooth[2], loss_smooth[3]))
                     loss_sum=0
+                    _, _, _, _, tb_sum = \
+                        sess.run([top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss, summ], fd2)
                     self.train_summary_writer.add_summary(tb_sum, iter)
 
-                    va_top_cls_loss, va_top_reg_loss,va_fuse_cls_loss, va_fuse_reg_loss =\
-                        self.validation_accuracy(iter)
-                    self.log.write('validation:         |   %0.5f   %0.5f   |   %0.5f   %0.5f \n\n' % \
-                                   ( va_top_cls_loss, va_top_reg_loss, va_fuse_cls_loss, va_fuse_reg_loss))
+                    # va_top_cls_loss, va_top_reg_loss,va_fuse_cls_loss, va_fuse_reg_loss =\
+                    #     self.validation_accuracy(iter)
+                    # self.log.write('validation:         |   %0.5f   %0.5f   |   %0.5f   %0.5f \n\n' % \
+                    #                ( va_top_cls_loss, va_top_reg_loss, va_fuse_cls_loss, va_fuse_reg_loss))
+
+                if 1 and  iter%100 == 3:
+                    run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+                    run_metadata = tf.RunMetadata()
+                    _ = sess.run([solver_step],feed_dict=fd2,options=run_options,run_metadata=run_metadata)
+
+                    self.train_summary_writer.add_run_metadata(run_metadata, 'step%d' % iter)
+                    print('add RunMetadata ')
 
                 #debug: ------------------------------------
                 if 1 and iter%iter_debug==0:
@@ -459,12 +604,13 @@ class MV3D(object):
                             batch_top_pos_inds, batch_top_targets, batch_proposals, batch_proposal_scores,
                                  batch_gt_top_boxes, batch_gt_labels)
 
-                    self.log_fusion_net(log_subdir ,top_image,batch_top_rois, batch_fuse_labels ,
-                       batch_fuse_targets ,rgb, batch_rgb_rois, batch_3d_rois, batch_gt_boxes3d)
+                    self.log_fusion_net_target(log_subdir, top_image, batch_top_rois, batch_fuse_labels,
+                                               batch_fuse_targets, rgb, batch_rgb_rois, batch_3d_rois, batch_gt_boxes3d)
 
                     self.log_prediction( log_subdir, batch_proposals, batch_proposal_scores, fd1, batch_top_view,
                                    batch_front_view,
                                    batch_rgb_images, rgb, batch_gt_boxes3d, top_image)
+
 
             if cfg.TRAINING_TIMER:
                 self.log.write('It takes %0.2f secs to train the dataset. \n' % \
@@ -503,7 +649,7 @@ class MV3D(object):
         proposals, proposal_scores = \
             self.sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
         proposal_scores = np.reshape(proposal_scores,(-1))
-        top_rois=proposals[proposal_scores>0.1,:]
+        top_rois=proposals
         if len(top_rois)==0:
             return np.zeros((0,8,3)), []
 
@@ -526,10 +672,17 @@ class MV3D(object):
         fuse_probs, fuse_deltas = \
             self.sess.run([self.net['fuse_probs'], self.net['fuse_deltas']], fd2)
 
-        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.2)
+        probs, boxes3d = rcnn_nms(fuse_probs, fuse_deltas, rois3d, score_threshold=0.5)
 
         if log_subdir:
             top_image = data.draw_top_image(top_view[0])
             self.log_rpn(log_subdir, top_image,proposals=proposals,proposal_scores=proposal_scores)
+            self.log_fusion_net_detail( log_subdir, fuse_probs, fuse_deltas)
+            text_lables= ['No.%d class:1 prob: %.4f' % (i,prob) for i,prob in enumerate(probs)]
+            img_boxes3d_prediction = nud.draw_box3d_on_camera(rgb_image[0], boxes3d, text_lables=text_lables)
+            new_size=(img_boxes3d_prediction.shape[1]//2,img_boxes3d_prediction.shape[0]//2)
+            img_boxes3d_prediction= cv2.resize(img_boxes3d_prediction,new_size)
+            nud.imsave('img_boxes3d_prediction', img_boxes3d_prediction, log_subdir)
+
 
         return boxes3d,lables

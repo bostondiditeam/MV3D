@@ -297,7 +297,7 @@ def regularise_box3d(boxes3d):
 def boxes3d_decompose(boxes3d):
 
     # translation
-    if cfg.DATA_SETS_TYPE == 'didi':
+    if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
         T_x = np.sum(boxes3d[:, 0:8, 0], 1) / 8.0
         T_y = np.sum(boxes3d[:, 0:8, 1], 1) / 8.0
         T_z = np.sum(boxes3d[:, 0:8, 2], 1) / 8.0

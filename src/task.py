@@ -16,9 +16,25 @@ def task1():
     #task 1
     try_max=3
     try_count=0
-    while delta_time<600 and try_count<=try_max:
+    while delta_time<120 and try_count<=try_max:
         start_time=time.time()
-        os.system('python train.py')
+        os.system('python train.py -w "all" -i 1000')
+        delta_time=time.time()-start_time
+        print('\n\ntraining finished ,detal time : {} retry: {}'.format(delta_time,try_count) )
+
+        os.system('python tracking.py')
+        try_count += 1
+#
+
+def task2():
+    delta_time=0
+
+    #task 1
+    try_max=3
+    try_count=0
+    while delta_time<120 and try_count<=try_max:
+        start_time=time.time()
+        os.system('python train.py -w "rpn" -i 1500')
         delta_time=time.time()-start_time
         print('\n\ntraining finished ,detal time : {} retry: {}'.format(delta_time,try_count) )
 
@@ -26,7 +42,8 @@ def task1():
         try_count += 1
 
 def main():
-    for i in range(10):
+    # task2()
+    for i in range(20):
         task1()
         time.sleep(5)
 
