@@ -1,0 +1,2 @@
+fusion:lidar:radar
+-DCATKIN_DEVEL_PREFIX=/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/devel -DCMAKE_INSTALL_PREFIX=/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/install -G Unix Makefiles
