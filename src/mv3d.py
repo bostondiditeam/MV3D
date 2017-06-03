@@ -88,14 +88,6 @@ class MV3D(object):
         self.log = utilfile.Logger(cfg.LOG_DIR+'/log.txt', mode='a')
         self.track_log = utilfile.Logger(cfg.LOG_DIR + '/tracking_log.txt', mode='a')
 
-
-        # about tensorboard.
-        self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
-        self.train_summary_writer = None
-        self.val_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_val'))
-        self.tensorboard_dir = None
-        self.summ = None
-
         self.rpn_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_rpn')
 
         self.fusion_net_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_fusion_net')
@@ -357,6 +349,13 @@ class Trainer(MV3D):
         self.train_set = train_set
         self.validation_set = validation_set
 
+        # about tensorboard.
+        self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
+        self.train_summary_writer = None
+        self.val_summary_writer = None
+        self.tensorboard_dir = None
+        self.summ = None
+
         # saver
         with self.sess.as_default():
 
@@ -397,9 +396,13 @@ class Trainer(MV3D):
                     tf.summary.scalar('fuse_total_loss', total_loss)
                     self.solver_step = solver.minimize(total_loss, var_list=self.get_fusion_net_variables())
 
+            # summary.FileWriter
             self.train_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard',
                                                                            self.tb_dir + '_train'),
                                                               graph=tf.get_default_graph())
+            self.val_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard',
+                                                                         self.tb_dir + '_val'))
+
             summ = tf.summary.merge_all()
             self.summ = summ
 
