@@ -201,11 +201,11 @@ def rgb_feature_net_x(input):
 
     print('build Xception')
     with tf.variable_scope('xception_model'):
-        base_model= xcep.Xception(include_top=False, weights='imagenet',
+        base_model= xcep.Xception(include_top=False, weights=None,
                                   input_shape=(img_height, img_width, img_channel ))
     # print(base_model.summary())
 
-        base_model_input = base_model.get_layer('input_2').input
+        base_model_input = base_model.get_layer('input_1').input
         base_model_output = base_model.get_layer('block12_sepconv3_bn').output
     # print(model.summary())
 
