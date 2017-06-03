@@ -1,0 +1,8 @@
+prefix=/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/devel
+
+Name: fusion
+Description: Description of fusion
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/devel/lib 
+Requires: 

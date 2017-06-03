@@ -32,8 +32,6 @@ class Projection:
         assert md, 'obs1 metadata not found'
         self.metadata = md
         self.server = InteractiveMarkerServer("obstacle_marker")
-        #self.menu_handler = MenuHandler()
-        #self.menu_handler.insert( "First Entry", callback=self.processFeedback )
         self.br = tf.TransformBroadcaster()
 
         self.offset = [0,0,0]
@@ -313,8 +311,6 @@ if __name__ == "__main__" :
         p = Projection(md_path, calib_file)    
         p.track_obstacle()
         p.add_bbox()
-        #p.add_bbox_lidar("obs_centroid","obs_centroid")
-        #p.server.applyChanges()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass

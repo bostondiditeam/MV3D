@@ -11,9 +11,9 @@ import csv, sys, os
 from camera_info import *
 
 
-def drawBbox(img, corners) :
+def drawBbox(img, corners, color=(255,255,0)) :
     image = np.copy(img)
-    color=(255,255,0)
+    #color=(255,255,0)
     thickness = 10
     for i in range(4) :
         pt1, pt2 = corners[2*i], corners[2*i+1]

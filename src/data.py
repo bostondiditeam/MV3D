@@ -74,12 +74,13 @@ def lidar_to_top(lidar):
     prs=lidar[:,3]
     qxs=((pxs-TOP_X_MIN)//TOP_X_DIVISION).astype(np.int32)
     qys=((pys-TOP_Y_MIN)//TOP_Y_DIVISION).astype(np.int32)
-    qzs=((pzs-TOP_Z_MIN)//TOP_Z_DIVISION).astype(np.int32)
+    #qzs=((pzs-TOP_Z_MIN)//TOP_Z_DIVISION).astype(np.int32)
+    qzs=(pzs-TOP_Z_MIN)/TOP_Z_DIVISION
     quantized = np.dstack((qxs,qys,qzs,prs)).squeeze()
 
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
-    Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)//TOP_Z_DIVISION)+1
+    Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
     height  = Xn - X0
     width   = Yn - Y0
     channel = Zn - Z0  + 2
@@ -91,37 +92,33 @@ def lidar_to_top(lidar):
     # histogram.fill.numpy({"x": qxs, "y": qys, "z": qzs, "intensity": prs})
 
     if 1:  #new method
-        for z in range(Zn):
-            iz = np.where (quantized[:,2]==z)
-            quantized_z = quantized[iz]
+        for x in range(Xn):
+            ix  = np.where (quantized[:,0]==x)
+            quantized_x = quantized[ix]
+            if len(quantized_x) == 0 : continue
+            yy = -x
 
             for y in range(Yn):
-                iy  = np.where (quantized_z[:,1]==y)
-                quantized_zy = quantized_z[iy]
+                iy  = np.where (quantized_x[:,1]==y)
+                quantized_xy = quantized_x[iy]
+                count = len(quantized_xy)
+                if  count==0 : continue
+                xx = -y
 
-                for x in range(Xn):
-                    ix  = np.where (quantized_zy[:,0]==x)
-                    quantized_zyx = quantized_zy[ix]
-                    if len(quantized_zyx)>0:
-                        yy,xx,zz = -x,-y, z
+                top[yy,xx,Zn+1] = min(1, np.log(count+1)/math.log(32))
+                max_height_point = np.argmax(quantized_xy[:,2])
+                top[yy,xx,Zn]=quantized_xy[max_height_point, 3]
 
-                        #height per slice
-                        max_height = max(0,np.max(quantized_zyx[:,2])-TOP_Z_MIN)
-                        top[yy,xx,zz]=max_height
+                for z in range(Zn):
+                    iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<=z+1))
+                    quantized_xyz = quantized_xy[iz]
+                    if len(quantized_xyz) == 0 : continue
+                    zz = z
 
-                        #intensity
-                        max_intensity = np.max(quantized_zyx[:,3])
-                        top[yy,xx,Zn]=max_intensity
+                    #height per slice
+                    max_height = max(0,np.max(quantized_xyz[:,2])-z)
+                    top[yy,xx,zz]=max_height
 
-                        #density
-                        count = len(idx)
-                        top[yy,xx,Zn+1]+=count
-
-                    pass
-                pass
-            pass
-
-        top[:,:,Zn+1] = np.log(top[:,:,Zn+1]+1)/math.log(64)
 
 
 
@@ -485,8 +482,8 @@ if __name__ == '__main__':
     if (cfg.DATA_SETS_TYPE == 'didi'):
         #dates=['1','2','3']
         dates = ['1']
-        drivers= ['19']
-        frames_index=None
+        drivers= ['6_f']
+        frames_index=[0]  #None
     elif cfg.DATA_SETS_TYPE == 'kitti':
         dates = ['2011_09_26']
         drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019',
