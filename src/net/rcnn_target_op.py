@@ -72,7 +72,7 @@ def rcnn_target(rois, gt_labels, gt_boxes, gt_boxes3d):
 # gt_boxes_3d : (x1,y1,z1,  x2,y2,z2,  ....    x8,y8,z8,  label)
 
 
-def rcnn_target2(rois, gt_labels, gt_boxes, gt_boxes3d):
+def fusion_target(rois, gt_labels, gt_boxes, gt_boxes3d):
 
     # Include "ground-truth" in the set of candidate rois
     rois = rois.reshape(-1,5)  # Proposal (i, x1, y1, x2, y2) coming from RPN

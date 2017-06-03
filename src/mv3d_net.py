@@ -555,7 +555,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
                                                   top_labels, top_targets)
 
 
-    with tf.variable_scope('rgb_feature_net') as scope:
+    with tf.variable_scope('image_feature') as scope:
         if cfg.RGB_BASENET =='resnet':
             rgb_features, rgb_stride= rgb_feature_net_r(rgb_images)
         elif cfg.RGB_BASENET =='xception':
