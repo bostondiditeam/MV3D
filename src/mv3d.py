@@ -338,6 +338,9 @@ class Predictor(MV3D):
     def __call__(self, top_view, front_view, rgb_image):
         return self.predict(top_view, front_view, rgb_image)
 
+    def log(self,prefix, log_subdir):
+        self.predict_log(prefix, log_subdir)
+
 
 
 

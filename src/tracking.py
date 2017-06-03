@@ -45,8 +45,8 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
         if frame_num < 0:
             continue
 
-        boxes3d,probs=predict(top, front, rgb, os.path.join(log_subdir,'net_log/%d'%i))
-        # boxes3d, probs = m3.predict(top, front, rgb)
+        boxes3d,probs=predict(top, front, rgb)
+        predict.log('%d_'%i,log_subdir)
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i%timer_step ==0 and i!=0:
