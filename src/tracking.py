@@ -1,4 +1,4 @@
-import model as mod
+import mv3d
 from data import draw_top_image,draw_box3d_on_top
 from net.utility.draw import imsave ,draw_box3d_on_camera, draw_box3d_on_camera
 from net.processing.boxes3d import boxes3d_decompose
@@ -26,8 +26,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
 
 
     top_shape, front_shape, rgb_shape=dataset.get_shape()
-    m3=mod.MV3D()
-    m3.predict_init(top_shape, front_shape, rgb_shape)
+    predict=mv3d.Predictor(top_shape, front_shape, rgb_shape)
 
     if generate_video:
         vid_in = skvideo.io.FFmpegWriter(os.path.join(log_dir,'output.mp4'))
@@ -46,11 +45,12 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
         if frame_num < 0:
             continue
 
-        boxes3d,probs=m3.predict(top, front, rgb, os.path.join(log_subdir,'net_log/%d'%i))
+        boxes3d,probs=predict(top, front, rgb)
+        predict.log('%d_'%i,log_subdir)
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i%timer_step ==0 and i!=0:
-            m3.track_log.write('It takes %0.2f secs for inferring %d frames. \n' % \
+            predict.track_log.write('It takes %0.2f secs for inferring %d frames. \n' % \
                                    (time_it.time_diff_per_n_loops(), timer_step))
 
         # for debugging: save image and show image.
@@ -66,6 +66,8 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
             size[:,1:3] = size[:,1:3]/cfg.TRACKLET_GTBOX_LENGTH_SCALE
 
             for j in range(len(translation)):
+                if 0<translation[j,1]<8:
+                    tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
         resize_scale=top_image.shape[0]/rgb_image.shape[0]
         rgb_image = cv2.resize(rgb_image,(int(rgb_image.shape[1]*resize_scale), top_image.shape[0]))
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
@@ -79,7 +81,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
     tracklet.write_tracklet()
 
     if cfg.TRACKING_TIMER:
-        m3.log.write('It takes %0.2f secs for inferring the whole test dataset. \n' % \
+        predict.log.write('It takes %0.2f secs for inferring the whole test dataset. \n' % \
                        (time_it.total_time()))
 
     print("tracklet file named tracklet_labels.xml is written successfully.")

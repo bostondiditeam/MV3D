@@ -1,4 +1,4 @@
-import model as mod
+import mv3d as mod
 import glob
 from config import *
 import utils.batch_loading as ub
