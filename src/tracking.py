@@ -66,8 +66,6 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
             size[:,1:3] = size[:,1:3]/cfg.TRACKLET_GTBOX_LENGTH_SCALE
 
             for j in range(len(translation)):
-                tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
-        rgb_image = cv2.resize(rgb_image, (500, 400))
         resize_scale=top_image.shape[0]/rgb_image.shape[0]
         rgb_image = cv2.resize(rgb_image,(int(rgb_image.shape[1]*resize_scale), top_image.shape[0]))
         rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)

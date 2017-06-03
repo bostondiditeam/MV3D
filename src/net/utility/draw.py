@@ -31,7 +31,12 @@ def imsave(name, image,subdir=''):
 def npsave(name,numpy_array):
     np.save(os.path.join(cfg.LOG_DIR,name),numpy_array)
 
-def draw_box3d_on_camera(rgb, boxes3d, color=(255, 0, 255), thickness=1):
+def draw_box3d_on_camera(rgb, boxes3d, color=(255, 0, 255), thickness=1, text_lables=[]):
     projections = box3d.box3d_to_rgb_box(boxes3d)
     rgb = box3d.draw_rgb_projections(rgb, projections, color=color, thickness=thickness)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    for i,text in enumerate(text_lables):
+        text_pos = (np.min(projections[i,:, 0]), max(np.min(projections[i,:, 1]), 15) )
+        cv2.putText(rgb, text, text_pos, font, 0.5, (0, 255, 0), 1, cv2.LINE_AA)
+
     return rgb

@@ -38,7 +38,7 @@ else:
 
 __C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', __C.DATA_SETS_TYPE)
 __C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
-__C.PREPROCESSING_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
+__C.PREPROCESSING_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessing', __C.DATA_SETS_TYPE)
 __C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_TYPE)
 
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
@@ -47,7 +47,14 @@ __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 __C.IMAGE_FUSION_DIABLE = True
 
 __C.USE_RESNET_AS_TOP_BASENET = True
-__C.USE_RESNET_AS_RGB_BASENET = False
+
+__C.IMAGE_FUSION_DIABLE = False
+__C.RGB_BASENET = 'xception'  # 'resnet' 、'xception' 'VGG'
+if __C.RGB_BASENET == 'xception':
+    __C.USE_IMAGENET_PRE_TRAINED_MODEL = True
+else:
+    __C.USE_IMAGENET_PRE_TRAINED_MODEL =False
+
 __C.TRACKLET_GTBOX_LENGTH_SCALE = 1.6
 
 # image crop config

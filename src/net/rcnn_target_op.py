@@ -67,6 +67,62 @@ def rcnn_target(rois, gt_labels, gt_boxes, gt_boxes3d):
 
     return rois, labels, targets
 
+
+# gt_boxes    : (x1,y1,  x2,y2  label)  #projected 2d
+# gt_boxes_3d : (x1,y1,z1,  x2,y2,z2,  ....    x8,y8,z8,  label)
+
+
+def rcnn_target2(rois, gt_labels, gt_boxes, gt_boxes3d):
+
+    # Include "ground-truth" in the set of candidate rois
+    rois = rois.reshape(-1,5)  # Proposal (i, x1, y1, x2, y2) coming from RPN
+    num           = len(gt_boxes)
+    zeros         = np.zeros((num, 1), dtype=np.float32)
+    extended_rois = np.vstack((rois, np.hstack((zeros, gt_boxes))))
+    assert np.all(extended_rois[:, 0] == 0), 'Only single image batches are supported'
+
+
+    rois_per_image    = CFG.TRAIN.RCNN_BATCH_SIZE
+    fg_rois_per_image = np.round(CFG.TRAIN.RCNN_FG_FRACTION * rois_per_image)
+
+    # overlaps: (rois x gt_boxes)
+    overlaps = bbox_overlaps(
+        np.ascontiguousarray(extended_rois[:,1:5], dtype=np.float),
+        np.ascontiguousarray(gt_boxes, dtype=np.float)
+    )
+    max_overlaps  = overlaps.max(axis=1)
+    gt_assignment = overlaps.argmax(axis=1)
+    labels        = gt_labels[gt_assignment]
+
+    # Select foreground RoIs as those with >= FG_THRESH overlap
+    fg_inds = np.where(max_overlaps >= CFG.TRAIN.RCNN_FG_THRESH_LO)[0]
+    # fg_rois_per_this_image = int(min(10, fg_inds.size))
+    # if fg_inds.size > 0:
+    #     fg_inds = np.random.choice(fg_inds, size=fg_rois_per_this_image, replace=False)
+
+    # Select false positive
+    fp_inds = np.where((max_overlaps < 0.01))[0]
+    # fp_rois_per_this_image = int(min(10, fp_inds.size))
+    # if fp_inds.size > 0:
+    #     fp_inds = np.random.choice(fp_inds, size=fp_rois_per_this_image, replace=False)
+
+
+    # The indices that we're selecting (both fg and bg)
+    keep   = np.append(fg_inds, fp_inds)
+    rois   = extended_rois[keep]
+    labels = labels[keep]                # Select sampled values from various arrays:
+    labels[fg_inds.size:] = 0  # Clamp la bels for the background RoIs to 0
+
+
+    gt_boxes3d = gt_boxes3d[gt_assignment[keep]]
+    et_boxes=rois[:,1:5]
+
+    et_boxes3d = top_box_to_box3d(et_boxes)
+    targets = box3d_transform(et_boxes3d, gt_boxes3d)
+    targets[np.where(labels == 0), :, :] = 0
+
+    return rois, labels, targets
+
 def proprosal_to_top_rois(rois):
 
     # Include "ground-truth" in the set of candidate rois
@@ -147,8 +203,8 @@ def draw_rcnn_labels(image, rois,  labels, darker=0.7):
 
     for i in fg_label_inds:
         a = boxes[i]
-        cv2.rectangle(img_label,(a[0], a[1]), (a[2], a[3]), (255,0,255), 1)
-        cv2.circle(img_label,(a[0], a[1]),2, (255,0,255), -1)
+        cv2.rectangle(img_label,(a[0], a[1]), (a[2], a[3]), (0,0,255), 1)
+        cv2.circle(img_label,(a[0], a[1]),2, (0,0,255), -1)
 
     return img_label
 
