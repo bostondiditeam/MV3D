@@ -46,7 +46,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
             continue
 
         boxes3d,probs=predict(top, front, rgb)
-        predict.log('%d_'%i,log_subdir)
+        predict.dump_log(log_subdir=log_subdir,n_frame=i)
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i%timer_step ==0 and i!=0:
@@ -81,8 +81,8 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset
     tracklet.write_tracklet()
 
     if cfg.TRACKING_TIMER:
-        predict.log.write('It takes %0.2f secs for inferring the whole test dataset. \n' % \
-                       (time_it.total_time()))
+        predict.log_msg.write('It takes %0.2f secs for inferring the whole test dataset. \n' % \
+                              (time_it.total_time()))
 
     print("tracklet file named tracklet_labels.xml is written successfully.")
     return tracklet.path
