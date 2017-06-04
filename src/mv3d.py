@@ -418,6 +418,7 @@ class Trainer(MV3D):
         self.val_summary_writer = None
         self.tensorboard_dir = None
         self.summ = None
+        self.iter_debug = 200
 
         # saver
         with self.sess.as_default():
@@ -523,10 +524,11 @@ class Trainer(MV3D):
         self.summary_image(top_img, scope_name+'/fusion_target_top', step=self.n_global_step)
 
 
-    def log_prediction(self, batch_top_view, batch_front_view, batch_rgb_images):
+    def log_prediction(self, batch_top_view, batch_front_view, batch_rgb_images,
+                       log_rpn=False, step=None, scope_name=''):
 
         boxes3d, lables = self.predict(batch_top_view, batch_front_view, batch_rgb_images)
-        self.predict_log(self.log_subdir)
+        self.predict_log(self.log_subdir,log_rpn=log_rpn, step=step, scope_name=scope_name)
 
 
     def log_info(self, subdir, info):
@@ -544,7 +546,6 @@ class Trainer(MV3D):
         with sess.as_default():
             #for init model
 
-            iter_debug=200
             batch_size=1
 
             validation_step=40
@@ -747,7 +748,8 @@ class Trainer(MV3D):
                 _, t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss = \
                     sess.run([self.solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss],
                              feed_dict=fd2)
-        if log: self.log_prediction(batch_top_view, batch_front_view, batch_rgb_images)
+        if log: self.log_prediction(batch_top_view, batch_front_view, batch_rgb_images,
+                                    step=self.n_global_step, scope_name=scope_name)
 
         return t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss
 
