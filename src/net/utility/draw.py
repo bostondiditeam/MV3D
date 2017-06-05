@@ -37,6 +37,6 @@ def draw_box3d_on_camera(rgb, boxes3d, color=(255, 0, 255), thickness=1, text_la
     font = cv2.FONT_HERSHEY_SIMPLEX
     for i,text in enumerate(text_lables):
         text_pos = (np.min(projections[i,:, 0]), max(np.min(projections[i,:, 1]), 15) )
-        cv2.putText(rgb, text, text_pos, font, 0.7, (0, 255, 0), 1, cv2.LINE_AA)
+        cv2.putText(rgb, text, text_pos, font, 0.7, (0, 255, 100), 1, cv2.LINE_AA)
 
     return rgb

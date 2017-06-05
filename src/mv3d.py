@@ -26,6 +26,8 @@ from keras import backend as K
 from time import localtime, strftime
 import cv2
 import time
+import io
+import matplotlib.pyplot as plt
 
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
@@ -85,7 +87,7 @@ class MV3D(object):
         # output dir, etc
         utilfile.makedirs(cfg.CHECKPOINT_DIR)
         utilfile.makedirs(os.path.join(cfg.CHECKPOINT_DIR,'reg'))
-        self.log = utilfile.Logger(cfg.LOG_DIR+'/log.txt', mode='a')
+        self.log_msg = utilfile.Logger(cfg.LOG_DIR + '/log.txt', mode='a')
         self.track_log = utilfile.Logger(cfg.LOG_DIR + '/tracking_log.txt', mode='a')
 
         self.rpn_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_rpn')
@@ -112,6 +114,8 @@ class MV3D(object):
 
         self.log_subdir = None
         self.top_image = None
+        self.time_str = None
+        self.frame_info =None
 
 
         self.batch_top_inds = None
@@ -123,6 +127,14 @@ class MV3D(object):
         self.batch_gt_top_boxes = None
         self.batch_gt_labels = None
 
+
+        # default_summary_writer
+        self.default_summary_writer = None
+
+
+    def gc(self):
+        self.log_subdir = None
+        self.top_image = None
         self.time_str = None
         self.frame_info =None
 
@@ -141,10 +153,10 @@ class MV3D(object):
             K.learning_phase(): True
         }
 
-        self.proposals, self.proposal_scores = \
+        self.batch_proposals, self.batch_proposal_scores = \
             self.sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
-        self.proposal_scores = np.reshape(self.proposal_scores, (-1))
-        self.top_rois = self.proposals
+        self.batch_proposal_scores = np.reshape(self.batch_proposal_scores, (-1))
+        self.top_rois = self.batch_proposals
         if len(self.top_rois) == 0:
             return np.zeros((0, 8, 3)), []
 
@@ -170,15 +182,23 @@ class MV3D(object):
 
         return self.boxes3d, self.lables
 
-    def predict_log(self, prefix, log_subdir):
-        top_image = data.draw_top_image(self.top_view[0])
-        self.log_rpn()
+
+    def predict_log(self, log_subdir, log_rpn=False, step=None, scope_name=''):
+        self.top_image = data.draw_top_image(self.top_view[0])
+        self.top_image = self.top_image_padding(self.top_image)
+        if log_rpn: self.log_rpn(step=step ,scope_name=scope_name)
         self.log_fusion_net_detail(log_subdir, self.fuse_probs, self.fuse_deltas)
         text_lables = ['No.%d class:1 prob: %.4f' % (i, prob) for i, prob in enumerate(self.probs)]
-        img_boxes3d_prediction = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d, text_lables=text_lables)
-        new_size = (img_boxes3d_prediction.shape[1] // 2, img_boxes3d_prediction.shape[0] // 2)
-        img_boxes3d_prediction = cv2.resize(img_boxes3d_prediction, new_size)
-        nud.imsave('%s_img_boxes3d_prediction' % (prefix), img_boxes3d_prediction, log_subdir)
+        predict_camera_view = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d, text_lables=text_lables)
+
+        new_size = (predict_camera_view.shape[1] // 2, predict_camera_view.shape[0] // 2)
+        predict_camera_view = cv2.resize(predict_camera_view, new_size)
+        # nud.imsave('predict_camera_view' , predict_camera_view, log_subdir)
+        self.summary_image(predict_camera_view, scope_name + '/predict_camera_view', step=step)
+
+        predict_top_view = data.draw_box3d_on_top(self.top_image, self.boxes3d)
+        # nud.imsave('predict_top_view' , predict_top_view, log_subdir)
+        self.summary_image(predict_top_view, scope_name + '/predict_top_view', step=step)
 
 
 
@@ -192,27 +212,6 @@ class MV3D(object):
                 return True
         return False
 
-    def keep_gt_inside_range(self, train_gt_labels, train_gt_boxes3d):
-        # todo : support batch size >1
-        assert train_gt_labels.shape[0] == train_gt_boxes3d.shape[0]
-        if train_gt_labels.shape[0] == 0:
-            return False, None, None
-
-        # get limited train_gt_boxes3d and train_gt_labels.
-        keep = np.zeros((len(train_gt_labels)), dtype=bool)
-
-        for i in range(len(train_gt_labels)):
-            if box.box3d_in_top_view(train_gt_boxes3d[i]):
-                keep[i] = 1
-
-        # if all targets are out of range in selected top view, return True.
-        if np.sum(keep) == 0:
-            return False, None, None
-
-        train_gt_labels = train_gt_labels[keep]
-        train_gt_boxes3d = train_gt_boxes3d[keep]
-
-        return True, train_gt_labels, train_gt_boxes3d
 
     def get_variables_by_scopes_name(self, scopes):
         variables=[]
@@ -308,7 +307,13 @@ class MV3D(object):
             else:
                 ValueError('unknow weigths name')
 
-    def log_rpn(self):
+    def top_image_padding(self, top_image):
+        return np.concatenate((top_image, np.zeros_like(top_image)*255,np.zeros_like(top_image)*255), 1)
+
+    def log_rpn(self,step=None, scope_name=''):
+
+
+
         top_image = self.top_image
         subdir = self.log_subdir
         top_inds = self.batch_top_inds
@@ -322,19 +327,24 @@ class MV3D(object):
 
         if gt_top_boxes is not None:
             img_gt = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
-            nud.imsave('img_rpn_gt', img_gt, subdir)
+            # nud.imsave('img_rpn_gt', img_gt, subdir)
+            self.summary_image(img_gt, scope_name + '/img_rpn_gt', step=step)
 
         if top_inds is not None:
             img_label = draw_rpn_labels(top_image, self.top_view_anchors, top_inds, top_labels)
-            nud.imsave('img_rpn_label', img_label, subdir)
+            # nud.imsave('img_rpn_label', img_label, subdir)
+            self.summary_image(img_label, scope_name+ '/img_rpn_label', step=step)
 
         if top_pos_inds is not None:
             img_target = draw_rpn_targets(top_image, self.top_view_anchors, top_pos_inds, top_targets)
-            nud.imsave('img_rpn_target', img_target, subdir)
+            # nud.imsave('img_rpn_target', img_target, subdir)
+            self.summary_image(img_target, scope_name+ '/img_rpn_target', step=step)
 
         if proposals is not None:
             rpn_proposal = draw_rpn_proposal(top_image, proposals, proposal_scores, draw_num=20)
-            nud.imsave('img_rpn_proposal', rpn_proposal, subdir)
+            # nud.imsave('img_rpn_proposal', rpn_proposal, subdir)
+            self.summary_image(rpn_proposal, scope_name + '/img_rpn_proposal',step=step)
+
 
 
     def log_fusion_net_detail(self, subdir, fuse_probs, fuse_deltas):
@@ -346,6 +356,26 @@ class MV3D(object):
                 info_file.write('{}, {}, {}\n'.format(i, prob, fuse_deltas[i]))
 
 
+    def summary_image(self, image, tag, summary_writer=None,step=None):
+
+        if summary_writer == None:
+            summary_writer=self.default_summary_writer
+
+        im_summaries = []
+        # Write the image to a string
+        s = io.BytesIO()
+        plt.imsave(s,image)
+
+        # Create an Image object
+        img_sum = tf.Summary.Image(encoded_image_string=s.getvalue(),
+                                   height=image.shape[0],
+                                   width=image.shape[1])
+        # Create a Summary value
+        im_summaries.append(tf.Summary.Value(tag=tag, image=img_sum))
+
+        # Create and write Summary
+        summary = tf.Summary(value=im_summaries)
+        summary_writer.add_summary(summary, step)
 
 
 class Predictor(MV3D):
@@ -354,13 +384,22 @@ class Predictor(MV3D):
         self.all_net_saver = tf.train.Saver()
         self.variables_initializer()
         self.load_weights(['all'])
+        self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
+        self.default_summary_writer = tf.summary.FileWriter(
+            os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_tracking'))
+        self.n_log_scope = 0
+        self.n_max_log_per_scope= 10
 
 
     def __call__(self, top_view, front_view, rgb_image):
         return self.predict(top_view, front_view, rgb_image)
 
-    def log(self,prefix, log_subdir):
-        self.predict_log(prefix, log_subdir)
+    def dump_log(self,log_subdir, n_frame):
+        n_start = n_frame - (n_frame % (self.n_max_log_per_scope))
+        n_end = n_start + self.n_max_log_per_scope -1
+
+        scope_name = 'predict_%d_%d' % (n_start, n_end)
+        self.predict_log(log_subdir=log_subdir,log_rpn=True, step=n_frame,scope_name=scope_name)
 
 
 
@@ -379,6 +418,7 @@ class Trainer(MV3D):
         self.val_summary_writer = None
         self.tensorboard_dir = None
         self.summ = None
+        self.iter_debug = 200
 
         # saver
         with self.sess.as_default():
@@ -459,27 +499,33 @@ class Trainer(MV3D):
         img_label = draw_rcnn_labels(top_image, self.batch_top_rois, self.batch_fuse_labels)
         img_target = draw_rcnn_targets(top_image, self.batch_top_rois, self.batch_fuse_labels,
                                        self.batch_fuse_targets)
-        nud.imsave('img_rcnn_label', img_label, subdir)
-        nud.imsave('img_rcnn_target', img_target, subdir)
+        # nud.imsave('img_rcnn_label', img_label, subdir)
+        # nud.imsave('img_rcnn_target', img_target, subdir)
+        self.summary_image(img_label, scope_name + '/img_rcnn_label', step=self.n_global_step)
+        self.summary_image(img_target, scope_name + '/img_rcnn_target', step=self.n_global_step)
 
         img_rgb_rois = box.draw_boxes(rgb, self.batch_rgb_rois[np.where(self.batch_fuse_labels == 0), 1:5][0],
                                       color=(0, 0, 255), thickness=1)
         img_rgb_rois = box.draw_boxes(img_rgb_rois,
                                       self.batch_rgb_rois[np.where(self.batch_fuse_labels == 1), 1:5][0],
                                       color=(255, 255, 255), thickness=3)
-        nud.imsave('img_rgb_rois', img_rgb_rois, subdir)
+        # nud.imsave('img_rgb_rois', img_rgb_rois, subdir)
+        self.summary_image(img_rgb_rois, scope_name+'/img_rgb_rois', step=self.n_global_step)
 
         # labels, deltas, rois3d, top_img, cam_img, class_color
         top_img, cam_img = draw_fusion_target(self.batch_fuse_labels, self.batch_fuse_targets, self.batch_rois3d,
                                               top_image, rgb, [[10, 20, 10], [255, 0, 0]])
-        nud.imsave('fusion_target_rgb', cam_img, subdir)
-        nud.imsave('fusion_target_top', top_img, subdir)
+        # nud.imsave('fusion_target_rgb', cam_img, subdir)
+        # nud.imsave('fusion_target_top', top_img, subdir)
+        self.summary_image(cam_img, scope_name+'/fusion_target_rgb', step=self.n_global_step)
+        self.summary_image(top_img, scope_name+'/fusion_target_top', step=self.n_global_step)
 
 
-    def log_prediction(self, batch_top_view, batch_front_view, batch_rgb_images):
+    def log_prediction(self, batch_top_view, batch_front_view, batch_rgb_images,
+                       log_rpn=False, step=None, scope_name=''):
 
         boxes3d, lables = self.predict(batch_top_view, batch_front_view, batch_rgb_images)
-        self.predict_log('',self.log_subdir)
+        self.predict_log(self.log_subdir,log_rpn=log_rpn, step=step, scope_name=scope_name)
 
 
     def log_info(self, subdir, info):
@@ -497,7 +543,6 @@ class Trainer(MV3D):
         with sess.as_default():
             #for init model
 
-            iter_debug=200
             batch_size=1
 
             validation_step=40
@@ -508,11 +553,12 @@ class Trainer(MV3D):
                 time_it = timer()
 
             # start training here  #########################################################################################
-            self.log.write('iter |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
-            self.log.write('-------------------------------------------------------------------------------------\n')
+            self.log_msg.write('iter |  top_cls_loss   reg_loss   |  fuse_cls_loss  reg_loss  total |  \n')
+            self.log_msg.write('-------------------------------------------------------------------------------------\n')
 
 
             for iter in range(1,max_iter):
+
 
                 is_validation = False
                 summary_it = False
@@ -521,13 +567,20 @@ class Trainer(MV3D):
                 log_this_iter = False
 
                 # set fit flag
-                if iter % validation_step == 0:  summary_it,is_validation,print_loss = True,True,True # summary validation loss
-                if (iter+1) % validation_step == 0:  summary_it,print_loss = True,True # summary train loss
+                if iter % validation_step == 1:  summary_it,is_validation,print_loss = True,True,True # summary validation loss
+                if (iter+1) % validation_step == 1:  summary_it,print_loss = True,True # summary train loss
                 if iter % 5 == 0: print_loss = True #print train loss
 
-                if 0 and  iter%100 == 3: summary_it,summary_runmeta = True,True
+                if 1 and  iter%300 == 3: summary_it,summary_runmeta = True,True
+
+                if iter % self.iter_debug == 0 or (iter + 1) % self.iter_debug == 0:
+                    log_this_iter = True
+                    print('summary log image')
+                    if iter % self.iter_debug == 0: is_validation =False
+                    else: is_validation =True
 
                 data_set = self.validation_set if is_validation else self.train_set
+                self.default_summary_writer = self.val_summary_writer if is_validation else self.train_summary_writer
 
                 step_name = 'validation' if is_validation else 'training'
 
@@ -546,13 +599,13 @@ class Trainer(MV3D):
                 if not is_gt_inside_range: continue
 
                 # fit_iterate log init
-                if 1 and self.n_global_step % iter_debug == 0:
+                if log_this_iter:
                     self.time_str = strftime("%Y_%m_%d_%H_%M", localtime())
                     self.frame_info = data_set.get_frame_info(self.frame_id)[0]
                     self.log_subdir = step_name + '/' + self.time_str
-                    self.top_image = data.draw_top_image(self.batch_top_view[0])
+                    top_image = data.draw_top_image(self.batch_top_view[0])
+                    self.top_image = self.top_image_padding(top_image)
 
-                    log_this_iter =True
 
                 # fit
                 t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss= \
@@ -563,8 +616,8 @@ class Trainer(MV3D):
 
 
                 if print_loss:
-                    self.log.write('%10s: |  %5d  %0.5f   %0.5f   |   %0.5f   %0.5f \n' % \
-                                   (step_name, self.n_global_step, t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss))
+                    self.log_msg.write('%10s: |  %5d  %0.5f   %0.5f   |   %0.5f   %0.5f \n' % \
+                                       (step_name, self.n_global_step, t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss))
 
 
                 if iter%ckpt_save_step==0:
@@ -574,15 +627,15 @@ class Trainer(MV3D):
 
 
                     if cfg.TRAINING_TIMER:
-                        self.log.write('It takes %0.2f secs to train %d iterations. \n' %\
-                                       (time_it.time_diff_per_n_loops(), ckpt_save_step))
-
+                        self.log_msg.write('It takes %0.2f secs to train %d iterations. \n' % \
+                                           (time_it.time_diff_per_n_loops(), ckpt_save_step))
+                self.gc()
                 self.n_global_step += 1
 
 
             if cfg.TRAINING_TIMER:
-                self.log.write('It takes %0.2f secs to train the dataset. \n' % \
-                               (time_it.total_time()))
+                self.log_msg.write('It takes %0.2f secs to train the dataset. \n' % \
+                                   (time_it.total_time()))
         self.train_summary_writer.close()
         self.val_summary_writer.close()
 
@@ -604,7 +657,7 @@ class Trainer(MV3D):
 
         self.batch_gt_top_boxes = data.box3d_to_top_box(batch_gt_boxes3d[0])
 
-        ## run proposal generation
+        ## run propsal generation
         fd1 = {
             net['top_view']: batch_top_view,
             net['top_anchors']: self.top_view_anchors,
@@ -620,7 +673,10 @@ class Trainer(MV3D):
         self.batch_top_inds, self.batch_top_pos_inds, self.batch_top_labels, self.batch_top_targets = \
             rpn_target(self.top_view_anchors, self.anchors_inside_inds, batch_gt_labels[0],
                        self.batch_gt_top_boxes)
-        if log: self.log_rpn()
+        if log:
+            step_name = 'validation' if is_validation else  'train'
+            scope_name = '%s_iter_%06d' % (step_name, self.n_global_step - (self.n_global_step % self.iter_debug))
+            self.log_rpn(step=self.n_global_step, scope_name=scope_name)
 
 
         self.batch_top_rois, self.batch_fuse_labels, self.batch_fuse_targets = \
@@ -630,7 +686,7 @@ class Trainer(MV3D):
         self.batch_front_rois = project_to_front_roi(self.batch_rois3d)
         self.batch_rgb_rois = project_to_rgb_roi(self.batch_rois3d)
 
-        if log: self.log_fusion_net_target(batch_rgb_images[0])
+        if log: self.log_fusion_net_target(batch_rgb_images[0], scope_name=scope_name)
         if log:
             log_info_str = 'frame info: ' + self.frame_info + '\n'
             log_info_str += self.anchors_details()
@@ -667,6 +723,7 @@ class Trainer(MV3D):
                 t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss, tb_sum_val = \
                     sess.run([top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss, self.summ], fd2)
                 self.val_summary_writer.add_summary(tb_sum_val, self.n_global_step)
+                print('added validation  summary ')
             else:
                 if summary_runmeta:
                     run_options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
@@ -676,10 +733,11 @@ class Trainer(MV3D):
                     sess.run([self.solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss,
                               self.summ], feed_dict=fd2, options=run_options, run_metadata=run_metadata)
                 self.train_summary_writer.add_summary(tb_sum_val, self.n_global_step)
+                print('added training  summary ')
 
                 if summary_runmeta:
                     self.train_summary_writer.add_run_metadata(run_metadata, 'step%d' % self.n_global_step)
-                    print('Add run metadata ')
+                    print('added runtime metadata.')
 
         else:
             if is_validation:
@@ -690,7 +748,8 @@ class Trainer(MV3D):
                 _, t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss = \
                     sess.run([self.solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss],
                              feed_dict=fd2)
-        if log: self.log_prediction(batch_top_view, batch_front_view, batch_rgb_images)
+        if log: self.log_prediction(batch_top_view, batch_front_view, batch_rgb_images,
+                                    step=self.n_global_step, scope_name=scope_name)
 
         return t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss
 
