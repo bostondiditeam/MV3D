@@ -25,14 +25,12 @@ def top_feature_net(input, anchors, inds_inside, num_bases):
     with tf.variable_scope('top-block-1') as scope:
         block = conv2d_bn_relu(input, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
         block = conv2d_bn_relu(block, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
-        block = conv2d_bn_relu(block, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
         block = maxpool(block, kernel_size=(2,2), stride=[1,2,2,1], padding='SAME', name='4' )
         stride *=2
 
     with tf.variable_scope('top-block-2') as scope:
         block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
         block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
-        block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
         block = maxpool(block, kernel_size=(2,2), stride=[1,2,2,1], padding='SAME', name='4' )
         stride *=2
 
@@ -135,14 +133,12 @@ def rgb_feature_net(input):
     with tf.variable_scope('rgb-block-1') as scope:
         block = conv2d_bn_relu(input, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
         block = conv2d_bn_relu(block, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
-        block = conv2d_bn_relu(block, num_kernels=32, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
         block = maxpool(block, kernel_size=(2,2), stride=[1,2,2,1], padding='SAME', name='4' )
         stride *=2
 
     with tf.variable_scope('rgb-block-2') as scope:
         block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='1')
         block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='2')
-        block = conv2d_bn_relu(block, num_kernels=64, kernel_size=(3,3), stride=[1,1,1,1], padding='SAME', name='3')
         block = maxpool(block, kernel_size=(2,2), stride=[1,2,2,1], padding='SAME', name='4' )
         stride *=2
 
@@ -205,7 +201,7 @@ def rgb_feature_net_x(input):
                                   input_shape=(img_height, img_width, img_channel ))
     # print(base_model.summary())
 
-        base_model_input = base_model.get_layer('input_1').input
+        base_model_input = base_model.get_layer('input_2').input
         base_model_output = base_model.get_layer('block12_sepconv3_bn').output
     # print(model.summary())
 

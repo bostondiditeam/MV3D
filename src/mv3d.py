@@ -192,6 +192,27 @@ class MV3D(object):
                 return True
         return False
 
+    def keep_gt_inside_range(self, train_gt_labels, train_gt_boxes3d):
+        # todo : support batch size >1
+        assert train_gt_labels.shape[0] == train_gt_boxes3d.shape[0]
+        if train_gt_labels.shape[0] == 0:
+            return False, None, None
+
+        # get limited train_gt_boxes3d and train_gt_labels.
+        keep = np.zeros((len(train_gt_labels)), dtype=bool)
+
+        for i in range(len(train_gt_labels)):
+            if box.box3d_in_top_view(train_gt_boxes3d[i]):
+                keep[i] = 1
+
+        # if all targets are out of range in selected top view, return True.
+        if np.sum(keep) == 0:
+            return False, None, None
+
+        train_gt_labels = train_gt_labels[keep]
+        train_gt_boxes3d = train_gt_boxes3d[keep]
+
+        return True, train_gt_labels, train_gt_boxes3d
 
     def get_variables_by_scopes_name(self, scopes):
         variables=[]
@@ -432,9 +453,6 @@ class Trainer(MV3D):
         return info
 
 
-
-
-
     def log_fusion_net_target(self,rgb):
         subdir = self.log_subdir
         top_image = self.top_image
@@ -496,7 +514,6 @@ class Trainer(MV3D):
 
             for iter in range(1,max_iter):
 
-
                 is_validation = False
                 summary_it = False
                 summary_runmeta = False
@@ -519,10 +536,14 @@ class Trainer(MV3D):
                 self.batch_gt_labels, self.batch_gt_boxes3d, self.frame_id = \
                     data_set.load(batch_size, shuffled=True)
 
-                # check
-                if self.batch_data_is_invalid(self.batch_gt_boxes3d[0]):
-                    continue
+                # if self.batch_data_is_invalid(self.batch_gt_boxes3d[0]):
+                #     continue
 
+                # for keeping all gt labels and gt boxes inside range, and discard gt out of selected range.
+                is_gt_inside_range, self.batch_gt_labels[0], self.batch_gt_boxes3d[0] = \
+                    self.keep_gt_inside_range(self.batch_gt_labels[0],self.batch_gt_boxes3d[0])
+
+                if not is_gt_inside_range: continue
 
                 # fit_iterate log init
                 if 1 and self.n_global_step % iter_debug == 0:
@@ -532,7 +553,6 @@ class Trainer(MV3D):
                     self.top_image = data.draw_top_image(self.batch_top_view[0])
 
                     log_this_iter =True
-
 
                 # fit
                 t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss= \
@@ -584,7 +604,7 @@ class Trainer(MV3D):
 
         self.batch_gt_top_boxes = data.box3d_to_top_box(batch_gt_boxes3d[0])
 
-        ## run propsal generation
+        ## run proposal generation
         fd1 = {
             net['top_view']: batch_top_view,
             net['top_anchors']: self.top_view_anchors,

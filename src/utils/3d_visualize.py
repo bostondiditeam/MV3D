@@ -109,6 +109,13 @@ def draw_didi_lidar(fig, lidar, is_grid=1, is_axis=1):
     #     scale_factor=1,
     #     figure=fig)
 
+if __name__ == '__main__':
+    maya = mlab.figure(1, fgcolor=(0, 0, 0), bgcolor=(1,1,1))
+    data_3d = np.load('./00313.npy')
+    draw_didi_lidar(maya, data_3d, is_grid=1, is_axis=1)
+    print('yes')
+    pass
+
 def draw_didi_boxes3d(fig, boxes3d, is_number=False, color=(1,1,1), line_width=1):
 
     if boxes3d.shape==(8,3): boxes3d=boxes3d.reshape(1,8,3)
@@ -189,18 +196,18 @@ def mark_gt_box3d( lidar_dir, gt_boxes3d_dir, mark_dir,index):
 
 
 
-# main #################################################################
-# for demo data:  /root/share/project/didi/data/didi/didi-2/Out/1/15
-
-if __name__ == '__main__':
-
-    preprocessed_dir=config.cfg.PREPROCESSED_DATA_SETS_DIR
-    dataset='/1/15'
-    lidar_dir      =preprocessed_dir+ '/lidar'+dataset
-    gt_boxes3d_dir =preprocessed_dir+'/gt_boxes3d'+dataset
-    mark_dir       =config.cfg.LOG_DIR+ '/mark-gt-box3d'
-    avi_file       =config.cfg.LOG_DIR+ '/mark-gt-box3d.avi'
-
-    mark_gt_box3d(lidar_dir,gt_boxes3d_dir,mark_dir,30)
-    # dir_to_avi(avi_file, mark_dir)
+# # main #################################################################
+# # for demo data:  /root/share/project/didi/data/didi/didi-2/Out/1/15
+#
+# if __name__ == '__main__':
+#
+#     preprocessed_dir=config.cfg.PREPROCESSED_DATA_SETS_DIR
+#     dataset='/1/15'
+#     lidar_dir      =preprocessed_dir+ '/lidar'+dataset
+#     gt_boxes3d_dir =preprocessed_dir+'/gt_boxes3d'+dataset
+#     mark_dir       =config.cfg.LOG_DIR+ '/mark-gt-box3d'
+#     avi_file       =config.cfg.LOG_DIR+ '/mark-gt-box3d.avi'
+#
+#     mark_gt_box3d(lidar_dir,gt_boxes3d_dir,mark_dir,30)
+#     # dir_to_avi(avi_file, mark_dir)
 

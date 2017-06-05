@@ -40,6 +40,7 @@ def top_box_to_box3d(boxes):
     return boxes3d
 
 def box3d_in_top_view(boxes3d):
+    # what if only some are outside of the range, but majorities are inside.
     for i in range(8):
         if TOP_X_MIN<=boxes3d[i,0]<=TOP_X_MAX and TOP_Y_MIN<=boxes3d[i,1]<=TOP_Y_MAX:
             continue

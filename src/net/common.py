@@ -20,12 +20,12 @@ elif cfg.DATA_SETS_TYPE == 'kitti':
     TOP_Y_MAX = +20
     TOP_X_MIN = 0
     TOP_X_MAX = 40
-    TOP_Z_MIN = -0.4
-    TOP_Z_MAX = 2.0
+    TOP_Z_MIN = -2.0
+    TOP_Z_MAX = 0.5
 
     TOP_X_DIVISION = 0.1
     TOP_Y_DIVISION = 0.1
-    TOP_Z_DIVISION = 0.5
+    TOP_Z_DIVISION = 0.3
 else:
     raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
 

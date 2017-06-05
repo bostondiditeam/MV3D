@@ -22,32 +22,28 @@ if __name__ == '__main__':
 
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
+    if cfg.DATA_SETS_TYPE == 'didi':
+        training_dataset = {
+            '1': ['6_f', '9_f', '10', '13', '20', '21_f', '15', '19'],
+            '2': ['3_f', '6_f', '8_f'],
+            '3': ['2_f', '4', '6', '8', '7', '11_f']}
 
+        validation_dataset = {
+            '1': ['15']}
 
-    training_dataset = {
-        '1': ['6_f','9_f','10', '13', '20'],
-        '2': ['3_f', '6_f', '8_f'],
-        '3': ['2_f','4','6','8']}
+    elif cfg.DATA_SETS_TYPE == 'kitti':
+        training_dataset = {
+            '2011_09_26': ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0056',  '0019',
+                       '0036', '0005',
+                       '0057', '0084', '0020', '0039', '0086', '0011', '0023', '0046', '0060', '0091']}
 
+        validation_dataset = {
+            '2011_09_26': ['0013', '0027', '0048',
+                           '0061', '0015', '0028', '0051', '0064']
+        }
 
-    # # use all
-    # training_dataset = {
-    #     '1': ['6_f', '9_f', '10', '13', '20', '21_f', '15', '19'],
-    #     '2': ['3_f', '6_f', '8_f'],
-    #     '3': ['2_f', '4', '6', '8', '7', '11_f']}
-
-    #
-    # training_dataset = {
-    #     '1': ['15']}
     training = ub.batch_loading(dataset_dir, training_dataset)
 
-    validation_dataset = {
-        '1': ['21_f', '15', '19'],
-        '3': ['7', '11_f']
-    }
-
-    # validation_dataset = {
-    #     '1': ['15']}
     validation = ub.batch_loading(dataset_dir, validation_dataset)
 
     train = mv3d.Trainer(train_set=training, validation_set=validation, pre_trained_weights=weights)

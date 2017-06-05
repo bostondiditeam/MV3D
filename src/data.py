@@ -41,7 +41,8 @@ def obj_to_gt_boxes3d(objs):
 def draw_top_image(lidar_top):
     top_image = np.sum(lidar_top,axis=2)
     top_image = top_image-np.min(top_image)
-    top_image = (top_image/np.max(top_image)*255)
+    divisor = np.max(top_image)-np.min(top_image)
+    top_image = (top_image/divisor*255)
     top_image = np.dstack((top_image, top_image, top_image)).astype(np.uint8)
     return top_image
 
@@ -93,13 +94,13 @@ def lidar_to_top(lidar):
 
     if 1:  #new method
         for x in range(Xn):
-            ix  = np.where (quantized[:,0]==x)
+            ix  = np.where(quantized[:,0]==x)
             quantized_x = quantized[ix]
             if len(quantized_x) == 0 : continue
             yy = -x
 
             for y in range(Yn):
-                iy  = np.where (quantized_x[:,1]==y)
+                iy  = np.where(quantized_x[:,1]==y)
                 quantized_xy = quantized_x[iy]
                 count = len(quantized_xy)
                 if  count==0 : continue
@@ -359,7 +360,7 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
     else:
         frames_idx_chunks=[frames_index]
 
-    for frames_index in frames_idx_chunks:
+    for i, frames_index in enumerate(frames_idx_chunks):
         # The range argument is optional - default is None, which loads the whole dataset
         dataset = pykitti.raw(raw_dir, date, drive, frames_index) #, range(0, 50, 5))
 
@@ -392,7 +393,6 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         if 1:  ##generate top view --------------------
             generate_top_view(save_preprocess_dir, dataset,objects, date, drive, frames_index,
                               overwrite=True,dump_image=True)
-
 
         if 1 and objects!=None:  ## preprocess boxes3d  --------------------
             preprocess_bbox(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
@@ -491,8 +491,16 @@ if __name__ == '__main__':
                    '0057', '0084', '0009', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091',
                    '0013', '0027', '0048',
                    '0061', '0015', '0028', '0051', '0064']
-        drivers=['0005']
-        frames_index=[0,5,8,12,16,20,50]
+        drivers = ['0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091',
+                   '0013', '0027', '0048', '0061', '0015', '0028', '0051', '0064']
+        drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0019',
+                   '0036', '0005',
+                   '0057', '0084', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091',
+                   '0013', '0027', '0048',
+                   '0061', '0015', '0028', '0051', '0064']
+        # drivers = ['0009']
+        # drivers=['0005']
+        frames_index = None # [0,5,8,12,16,20,50]
     elif cfg.DATA_SETS_TYPE == 'test':
         dates = ['1','2']
         drivers = None

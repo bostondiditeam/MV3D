@@ -76,7 +76,9 @@ if __C.DATA_SETS_TYPE   ==  'test':
 elif __C.DATA_SETS_TYPE ==  'didi':
     __C.IMAGE_HEIGHT=1096 #pixel
     __C.IMAGE_WIDTH=1368
-
+elif __C.DATA_SETS_TYPE == 'kitti':
+    __C.IMAGE_WIDTH=1242
+    __C.IMAGE_HEIGHT=375
 # if timer is needed.
 __C.TRAINING_TIMER = True
 __C.TRACKING_TIMER = True
