@@ -202,6 +202,9 @@ def rpn_target( anchors, inside_inds, gt_labels,  gt_boxes):
 def draw_rpn_gt(image, gt_boxes, gt_labels=None):
 
     ## gt
+    # gt_boxes = gt_boxes[0]
+    gt_labels = gt_labels[0]
+
     img_gt = image.copy()
     num =len(gt_boxes)
     for n in range(num):
