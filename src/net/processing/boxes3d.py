@@ -302,7 +302,7 @@ def boxes3d_decompose(boxes3d):
         T_x = np.sum(boxes3d[:, 0:8, 0], 1) / 8.0
         T_y = np.sum(boxes3d[:, 0:8, 1], 1) / 8.0
         T_z = np.sum(boxes3d[:, 0:8, 2], 1) / 8.0
-    elif cfg.DATA_SETS_TYPE == 'KITTI':
+    elif cfg.DATA_SETS_TYPE == 'kitti':
         T_x = np.sum(boxes3d[:, 0:4, 0], 1) / 4.0
         T_y = np.sum(boxes3d[:, 0:4, 1], 1) / 4.0
         T_z = np.sum(boxes3d[:, 0:4, 2], 1) / 4.0
