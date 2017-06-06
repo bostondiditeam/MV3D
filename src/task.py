@@ -6,8 +6,7 @@ def copy_weigths(dir):
     print('copy_weigths ...')
     weigth_path=os.path.join(config.cfg.CHECKPOINT_DIR,'*')
     os.makedirs(dir, exist_ok=True)
-    os.system('cp {} {}'.format(weigth_path, dir))
-    os.system('cp {} {}'.format(os.path.join(config.cfg.CHECKPOINT_DIR,'checkpoint'), dir))
+    os.system('cp {} {} -r'.format(weigth_path, dir))
     print('copy weigths done')
 
 def task1():
