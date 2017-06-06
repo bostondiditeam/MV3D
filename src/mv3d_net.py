@@ -20,6 +20,10 @@ from keras.layers import (
     MaxPooling2D
     )
 
+top_view_rpn_name = 'top_view_rpn'
+imfeature_net_name = 'image_feature'
+fusion_net_name = 'fusion'
+
 
 def top_feature_net(input, anchors, inds_inside, num_bases):
     """temporary net for debugging only. may not follow the paper exactly .... 
@@ -580,7 +584,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     front_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='front_rois')
     rgb_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='rgb_rois')
 
-    with tf.variable_scope('top_view_rpn'):
+    with tf.variable_scope(top_view_rpn_name):
         # top feature
         if cfg.USE_RESNET_AS_TOP_BASENET==True:
             top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
@@ -599,7 +603,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
                                                   top_labels, top_targets)
 
 
-    with tf.variable_scope('image_feature') as scope:
+    with tf.variable_scope(imfeature_net_name) as scope:
         if cfg.RGB_BASENET =='resnet':
             rgb_features, rgb_stride= rgb_feature_net_r(rgb_images)
         elif cfg.RGB_BASENET =='xception':
@@ -615,7 +619,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     #     roi_rgb, roi_idxs = tf_roipooling(rgb_images, rgb_rois, 100, 200, 1)
     #     tf.summary.image('roi_rgb',roi_rgb)
 
-    with tf.variable_scope('fusion') as scope:
+    with tf.variable_scope(fusion_net_name) as scope:
         if cfg.IMAGE_FUSION_DIABLE==True:
             fuse_output = fusion_net(
                     ([top_features, top_rois, 6, 6, 1. / top_feature_stride],

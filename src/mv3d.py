@@ -66,6 +66,38 @@ def  project_to_front_roi(rois3d):
     return rois
 
 
+class Net(object):
+
+    def __init__(self, prefix, scope_name):
+        self.name =scope_name
+        self.prefix = prefix
+        self.checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, scope_name)
+        self.checkpoint_name = scope_name
+        os.makedirs(self.checkpoint_dir,exist_ok=True)
+        self.variables = self.get_variables([prefix+'/'+scope_name])
+        self.saver=  tf.train.Saver(self.variables)
+
+
+    def save_weights(self, sess=None):
+        path = os.path.join(self.checkpoint_dir, self.checkpoint_name)
+        self.saver.save(sess, path)
+
+
+    def load_weights(self, sess=None):
+        path = os.path.join(self.checkpoint_dir, self.checkpoint_name)
+        assert tf.train.checkpoint_exists(path) == True
+        self.saver.restore(sess, self.checkpoint_dir)
+
+
+    def get_variables(self, scope_names):
+        variables=[]
+        for scope in scope_names:
+            variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
+            assert len(variables) != 0
+            variables += variables
+        return variables
+
+
 class MV3D(object):
 
     def __init__(self, top_shape, front_shape, rgb_shape):
@@ -86,24 +118,20 @@ class MV3D(object):
 
         # output dir, etc
         utilfile.makedirs(cfg.CHECKPOINT_DIR)
-        utilfile.makedirs(os.path.join(cfg.CHECKPOINT_DIR,'reg'))
         self.log_msg = utilfile.Logger(cfg.LOG_DIR + '/log.txt', mode='a')
         self.track_log = utilfile.Logger(cfg.LOG_DIR + '/tracking_log.txt', mode='a')
 
-        self.rpn_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_rpn')
-
-        self.fusion_net_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, 'mv3d_fusion_net')
-
-        self.all_net_checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR)
-        os.makedirs(self.rpn_checkpoint_dir, exist_ok=True)
-        os.makedirs(self.fusion_net_checkpoint_dir, exist_ok=True)
-        os.makedirs(self.all_net_checkpoint_dir, exist_ok=True)
 
         # creat sesssion
         self.sess = tf.Session()
         self.use_pretrain_weights=[]
 
         self.build_net(top_shape, front_shape, rgb_shape)
+
+        #init subnet
+        self.subnet_rpn=Net(prefix='MV3D', scope_name=mv3d_net.top_view_rpn_name)
+        self.subnet_imfeatrue = Net(prefix='MV3D', scope_name=mv3d_net.imfeature_net_name)
+        self.subnet_fusion = Net(prefix='MV3D', scope_name=mv3d_net.fusion_net_name)
 
 
         # set anchor boxes
@@ -233,29 +261,6 @@ class MV3D(object):
         train_gt_boxes3d = train_gt_boxes3d[keep]
         return True, train_gt_labels, train_gt_boxes3d
 
-    def get_variables_by_scopes_name(self, scopes):
-        variables=[]
-        for scope in scopes:
-            variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=scope)
-            assert len(variables) != 0
-            variables += variables
-        return variables
-
-
-    def get_rpn_variables(self):
-        rpn_scopes = ['MV3D/top_view_rpn']
-        return self.get_variables_by_scopes_name(rpn_scopes)
-
-
-    def get_fusion_net_variables(self):
-        #fuse-net
-        scopes = ['MV3D/fusion']
-        return self.get_variables_by_scopes_name(scopes)
-
-
-    def get_rgb_feature_net_variables(self):
-        #'rgb-feature-net'
-        return self.get_variables_by_scopes_name(['MV3D/image_feature'])
 
 
     def build_net(self, top_shape, front_shape, rgb_shape):
@@ -265,20 +270,6 @@ class MV3D(object):
 
 
     def variables_initializer(self):
-        # uninit_vars=[]
-        # if 'all' not in self.use_pretrain_weights:
-        #     if 'rpn' not in self.use_pretrain_weights:
-        #         uninit_vars +=self.get_rpn_variables()
-        #
-        #     if 'fusion_net' not in self.use_pretrain_weights:
-        #         uninit_vars +=self.get_fusion_net_variables()
-        #
-        #     if config.cfg.USE_IMAGENET_PRE_TRAINED_MODEL == False: # todo : remove it
-        #         uninit_vars += self.get_rgb_feature_net_variables()
-        #
-        # if uninit_vars != []:
-        #     self.sess.run(tf.variables_initializer(uninit_vars),
-        #              {blocks.IS_TRAIN_PHASE: True, K.learning_phase(): 1})
 
         # todo : remove it
         self.sess.run(tf.global_variables_initializer(),
@@ -286,53 +277,46 @@ class MV3D(object):
 
 
     def load_weights(self, weights=[]):
-        path=None
         for name in weights:
-            if name == 'all':
-                path = os.path.join(self.all_net_checkpoint_dir, 'mv3d_all_net.ckpt')
-                assert tf.train.checkpoint_exists(path) == True
-                print('load all_net pretrained model')
-                self.all_net_saver.restore(self.sess, path)
-            elif name == 'rpn':
-                path = os.path.join(self.rpn_checkpoint_dir, 'rpn.ckpt')
-                assert tf.train.checkpoint_exists(path)==True
+            if name == mv3d_net.top_view_rpn_name:
                 print('load rpn pretrained model')
-                self.rpn_saver.restore(self.sess, path)
+                self.subnet_rpn.load_weights(self.sess)
 
-            elif name == 'fusion_net':
-                path=os.path.join(self.fusion_net_checkpoint_dir, 'fusion_net.ckpt')
-                assert tf.train.checkpoint_exists(path) ==True
-
+            elif name == mv3d_net.fusion_net_name:
                 print('load fusion_net pretrained model')
-                self.fusion_net_saver.restore(self.sess, path)
+                self.subnet_fusion.load_weights(self.sess)
+
+            elif name == mv3d_net.imfeature_net_name:
+                print('load fusion_net pretrained model')
+                self.subnet_imfeatrue.load_weights(self.sess)
+
             else:
                 ValueError('unknow weigths name')
 
 
     def save_weights(self, weights=[]):
-        path = None
-        sess=self.sess
         for name in weights:
-            if name == 'all':
-                self.all_net_saver.save(sess, os.path.join(self.all_net_checkpoint_dir, 'mv3d_all_net.ckpt'))
-                print('all net model save!')
+            if name == mv3d_net.top_view_rpn_name:
+                print('save rpn model weigths')
+                self.subnet_rpn.save_weights(self.sess)
 
-            elif name == 'rpn':
-                self.rpn_saver.save(sess, os.path.join(self.rpn_checkpoint_dir, 'rpn.ckpt'))
-                print('rpn model save!')
+            elif name == mv3d_net.fusion_net_name:
+                print('save fusion_net model weigths')
+                self.subnet_fusion.save_weights(self.sess)
 
-            elif name == 'fusion_net':
-                self.fusion_net_saver.save(sess, os.path.join(self.fusion_net_checkpoint_dir, 'fusion_net.ckpt'))
-                print('fusion_net model save!')
+            elif name == mv3d_net.imfeature_net_name:
+                print('save imfeatrue model weigths')
+                self.subnet_imfeatrue.save_weights(self.sess)
+
             else:
                 ValueError('unknow weigths name')
+
 
     def top_image_padding(self, top_image):
         return np.concatenate((top_image, np.zeros_like(top_image)*255,np.zeros_like(top_image)*255), 1)
 
+
     def log_rpn(self,step=None, scope_name=''):
-
-
 
         top_image = self.top_image
         subdir = self.log_subdir
@@ -401,9 +385,8 @@ class MV3D(object):
 class Predictor(MV3D):
     def __init__(self, top_shape, front_shape, rgb_shape):
         MV3D.__init__(self, top_shape, front_shape, rgb_shape)
-        self.all_net_saver = tf.train.Saver()
         self.variables_initializer()
-        self.load_weights(['all'])
+        self.load_weights([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name])
         self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
         self.default_summary_writer = tf.summary.FileWriter(
             os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_tracking'))
@@ -426,11 +409,12 @@ class Predictor(MV3D):
 
 class Trainer(MV3D):
 
-    def __init__(self, train_set, validation_set, pre_trained_weights):
+    def __init__(self, train_set, validation_set, pre_trained_weights, train_targets):
         top_shape, front_shape, rgb_shape = train_set.get_shape()
         MV3D.__init__(self,top_shape, front_shape, rgb_shape)
         self.train_set = train_set
         self.validation_set = validation_set
+        self.train_target= train_targets
 
         # about tensorboard.
         self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
@@ -463,22 +447,43 @@ class Trainer(MV3D):
                 self.fuse_reg_loss = self.net['fuse_reg_loss']
                 tf.summary.scalar('fuse_reg_loss', self.fuse_reg_loss)
 
-                self.trainning_target = 'all'  # 'rpn' 'fusion_net' 'all'
-                if self.trainning_target == 'all':
-                    total_loss = 1. * (1. * self.top_cls_loss + 0.05 * self.top_reg_loss) + \
+
+                train_var_list =[]
+
+                assert train_targets != []
+                for target in train_targets:
+                    # variables
+                    if target == mv3d_net.top_view_rpn_name:
+                        train_var_list += self.subnet_rpn.variables
+
+                    elif target == mv3d_net.imfeature_net_name:
+                        train_var_list += self.subnet_imfeatrue.variables
+
+                    elif target == mv3d_net.fusion_net_name:
+                        train_var_list += self.subnet_fusion.variables
+                    else:
+                        ValueError('unknow train_target name')
+
+                # set loss
+                if set([mv3d_net.top_view_rpn_name]) == set(train_targets):
+                    targets_loss = 1. * self.top_cls_loss + 0.05 * self.top_reg_loss
+
+                elif set([mv3d_net.imfeature_net_name]) == set(train_targets):
+                    targets_loss = 1. * self.fuse_cls_loss + 0.05 * self.fuse_reg_loss
+
+                elif set([mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name]) == set(train_targets):
+                    targets_loss = 1. * self.fuse_cls_loss + 0.05 * self.fuse_reg_loss
+
+                elif set([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name,mv3d_net.fusion_net_name])\
+                        == set(train_targets):
+                    targets_loss = 1. * (1. * self.top_cls_loss + 0.05 * self.top_reg_loss) + \
                                  1. * self.fuse_cls_loss + 0.1 * self.fuse_reg_loss
-                    tf.summary.scalar('total_loss', total_loss)
-                    self.solver_step = solver.minimize(total_loss)
+                else:
+                    ValueError('unknow train_target set')
 
-                elif self.trainning_target == 'rpn':
-                    total_loss = 1. * self.top_cls_loss + 0.05 * self.top_reg_loss
-                    tf.summary.scalar('top_total_loss', total_loss)
-                    self.solver_step = solver.minimize(total_loss, var_list=self.get_rpn_variables())
+                tf.summary.scalar('targets_loss', targets_loss)
+                self.solver_step = solver.minimize(targets_loss)
 
-                elif self.trainning_target == 'fusion_net':
-                    total_loss = 1. * self.fuse_cls_loss + 0.05 * self.fuse_reg_loss
-                    tf.summary.scalar('fuse_total_loss', total_loss)
-                    self.solver_step = solver.minimize(total_loss, var_list=self.get_fusion_net_variables())
 
             # summary.FileWriter
             self.train_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard',
@@ -490,12 +495,10 @@ class Trainer(MV3D):
             summ = tf.summary.merge_all()
             self.summ = summ
 
-            self.rpn_saver = tf.train.Saver(self.get_rpn_variables())
-            self.fusion_net_saver = tf.train.Saver(self.get_fusion_net_variables())
-            self.all_net_saver = tf.train.Saver()
             self.variables_initializer()
             self.load_weights(pre_trained_weights)
             self.n_global_step = 0
+
 
     def anchors_details(self):
         pos_indes=self.batch_top_pos_inds
@@ -651,7 +654,7 @@ class Trainer(MV3D):
                 if iter%ckpt_save_step==0:
                     # saver.save(sess, pretrained_model_path)
                     print('save_weights')
-                    self.save_weights([self.trainning_target])
+                    self.save_weights(self.train_target)
 
 
                     if cfg.TRAINING_TIMER:

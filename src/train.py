@@ -1,4 +1,5 @@
 import mv3d
+import mv3d_net
 import glob
 from config import *
 import utils.batch_loading as ub
@@ -8,8 +9,15 @@ import argparse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training')
+
+    all= '%s,%s,%s' % (mv3d_net.top_view_rpn_name ,mv3d_net.imfeature_net_name,mv3d_net.fusion_net_name)
+
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
-        help='use pre trained weigthts example: -w "rpn,fusion" ')
+        help='use pre trained weigthts example: -w "%s" ' % (all))
+
+    parser.add_argument('-t', '--targets', type=str, nargs='?', default=all,
+        help='train targets example: -w "%s" ' % (all))
+
     parser.add_argument('-i', '--max_iter', type=int, nargs='?', default=1000,
                         help='max count of train iter')
     args = parser.parse_args()
@@ -20,9 +28,13 @@ if __name__ == '__main__':
     if args.weights != '':
         weights = args.weights.split(',')
 
+    targets=[]
+    if args.targets != '':
+        targets = args.targets.split(',')
+
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
-    if cfg.DATA_SETS_TYPE == 'didi':
+    if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
         training_dataset = {
             '1': ['6_f', '9_f', '10', '13', '20', '21_f', '15', '19'],
             '2': ['3_f', '6_f', '8_f'],
@@ -46,7 +58,8 @@ if __name__ == '__main__':
 
     validation = ub.batch_loading(dataset_dir, validation_dataset)
 
-    train = mv3d.Trainer(train_set=training, validation_set=validation, pre_trained_weights=weights)
+    train = mv3d.Trainer(train_set=training, validation_set=validation,
+                         pre_trained_weights=weights, train_targets=targets)
 
     train(max_iter=max_iter)
 
