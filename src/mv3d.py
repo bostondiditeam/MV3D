@@ -287,7 +287,7 @@ class MV3D(object):
                 self.subnet_fusion.load_weights(self.sess)
 
             elif name == mv3d_net.imfeature_net_name:
-                print('load fusion_net pretrained model')
+                print('load imfeature net pretrained model')
                 self.subnet_imfeatrue.load_weights(self.sess)
 
             else:
