@@ -5,6 +5,7 @@ from net.processing.boxes3d import boxes3d_decompose
 from tracklets.Tracklet_saver import Tracklet_saver
 import argparse
 import os
+import config
 from config import cfg
 import time
 import utils.batch_loading as ub
@@ -98,21 +99,42 @@ if __name__ == '__main__':
 
     # Set true if you want score after export predicted tracklet xml
     # set false if you just want to export tracklet xml
-    if_score = True
-    if 1:
-        dataset = {'Round1Test': ['19_f2']}
-        dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
-        # generate tracklet file
-        print("tracklet_pred_dir: " + tracklet_pred_dir)
-        pred_file = pred_and_save(tracklet_pred_dir, dataset_loader)
-    else:
-        car='3'
-        data='7'
+    if config.cfg.DATA_SETS_TYPE == 'didi':
+        if_score = True
+        if 1:
+            dataset = {'Round1Test': ['19_f2']}
+            dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
+
+            # generate tracklet file
+            print("tracklet_pred_dir: " + tracklet_pred_dir)
+            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader)
+        else:
+            car='3'
+            data='7'
+            dataset = {
+                car: [data]
+            }
+            dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR,dataset,is_testset=True)
+
+            # generate tracklet file
+            print("tracklet_pred_dir: " + tracklet_pred_dir)
+            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, frame_offset=0)
+
+            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+            #  fits you needs.
+            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
+            tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
+            print("scores are save under {} directory.".format(tracklet_pred_dir))
+
+    elif config.cfg.DATA_SETS_TYPE == 'kitti':
+        if_score = False
+        car = '2011_09_26'
+        data = '0013'
         dataset = {
             car: [data]
         }
-        dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR,dataset,is_testset=True)
+        dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
         # generate tracklet file
         print("tracklet_pred_dir: " + tracklet_pred_dir)
@@ -120,9 +142,12 @@ if __name__ == '__main__':
 
         # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
         #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
+        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
+                                        'tracklet_labels.xml')
         tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
         print("scores are save under {} directory.".format(tracklet_pred_dir))
+
+
 
     copy_weigths(os.path.join(log_dir, 'pretrained_model'))
     print("Completed")
