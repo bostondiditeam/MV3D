@@ -140,12 +140,13 @@ if __name__ == '__main__':
         print("tracklet_pred_dir: " + tracklet_pred_dir)
         pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, frame_offset=0)
 
-        # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-        #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
-                                        'tracklet_labels.xml')
-        tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
-        print("scores are save under {} directory.".format(tracklet_pred_dir))
+        if if_score:
+            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+            #  fits you needs.
+            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
+                                            'tracklet_labels.xml')
+            tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
+            print("scores are save under {} directory.".format(tracklet_pred_dir))
 
 
 
