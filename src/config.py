@@ -26,6 +26,7 @@ cfg = __C
 __C.TEST_KEY=11
 
 # dataset type
+__C.DATA_SETS_TYPE='didi'       #['didi','kitti','test']
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
