@@ -86,7 +86,7 @@ class Net(object):
     def load_weights(self, sess=None):
         path = os.path.join(self.checkpoint_dir, self.checkpoint_name)
         assert tf.train.checkpoint_exists(path) == True
-        self.saver.restore(sess, self.checkpoint_dir)
+        self.saver.restore(sess, path)
 
 
     def get_variables(self, scope_names):
