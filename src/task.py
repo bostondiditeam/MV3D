@@ -22,7 +22,7 @@ def task1():
     try_count=0
     while delta_time<120 and try_count<=try_max:
         start_time=time.time()
-        os.system('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i 1000')
+        os.system('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i 2000')
         delta_time=time.time()-start_time
         print('\n\ntraining finished ,detal time : {} retry: {}'.format(delta_time,try_count) )
         time.sleep(2)
@@ -31,7 +31,7 @@ def task1():
         try_count += 1
 #
 
-def task2():
+def train_rpn():
     """
     Only train top_view_rpn net (not use pretrained weights )
     :return:
@@ -43,7 +43,7 @@ def task2():
     try_count=0
     while delta_time<120 and try_count<=try_max:
         start_time=time.time()
-        os.system('python train.py -t "top_view_rpn" -i 1500')
+        os.system('python train.py -t "top_view_rpn" -i 2000')
         time.sleep(2)
         delta_time=time.time()-start_time
         print('\n\ntraining finished ,detal time : {} retry: {}'.format(delta_time,try_count) )
@@ -53,10 +53,20 @@ def task2():
         try_count += 1
 
 def main():
-    task2()
-    for i in range(20):
-        task1()
-        time.sleep(5)
+
+    task_num =1
+
+    if task_num == 0:
+        # tain all
+        train_rpn()
+        for i in range(20):
+            task1()
+            time.sleep(5)
+    elif task_num == 1:
+        # train imfeature and fusion net
+        for i in range(20):
+            task1()
+            time.sleep(5)
 
 if __name__ == '__main__':
     main()
