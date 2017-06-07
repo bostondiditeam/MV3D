@@ -482,7 +482,7 @@ class Trainer(MV3D):
                     ValueError('unknow train_target set')
 
                 tf.summary.scalar('targets_loss', targets_loss)
-                self.solver_step = solver.minimize(targets_loss)
+                self.solver_step = solver.minimize(loss = targets_loss,var_list=train_var_list)
 
 
             # summary.FileWriter
