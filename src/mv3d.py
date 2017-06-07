@@ -522,13 +522,6 @@ class Trainer(MV3D):
     def log_fusion_net_target(self,rgb, scope_name=''):
         subdir = self.log_subdir
         top_image = self.top_image
-        img_label = draw_rcnn_labels(top_image, self.batch_top_rois, self.batch_fuse_labels)
-        img_target = draw_rcnn_targets(top_image, self.batch_top_rois, self.batch_fuse_labels,
-                                       self.batch_fuse_targets)
-        # nud.imsave('img_rcnn_label', img_label, subdir)
-        # nud.imsave('img_rcnn_target', img_target, subdir)
-        self.summary_image(img_label, scope_name + '/img_rcnn_label', step=self.n_global_step)
-        self.summary_image(img_target, scope_name + '/img_rcnn_target', step=self.n_global_step)
 
         img_rgb_rois = box.draw_boxes(rgb, self.batch_rgb_rois[np.where(self.batch_fuse_labels == 0), 1:5][0],
                                       color=(0, 0, 255), thickness=1)
