@@ -1,10 +1,11 @@
 # Function
 [Work-In-Progress] This is a skeleton ROS framework to enable real-time processing of ROS bags in Udacity's Didi Chuxing Challenge.
 
-# Concept
+# Overview
 ![alt text](ros_pipeline_2.png "ROS Pipeline")
+![alt text](ROS_Nodes_round2.png "ROS Nodes")
 
-## Instructions
+# Instructions
 
 * Copy the entire `src` folder to your catkin workspace. For example,
 ```
