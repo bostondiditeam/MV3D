@@ -20,7 +20,7 @@ def publish_dataframe():
     pub = rospy.Publisher('chatter', String, queue_size=10)
     hello_str = "hello world %s" % rospy.get_time()
     rospy.loginfo(hello_str)
-    #pub.publish(hello_str)
+    pub.publish(hello_str) # python testlisten.py to listen to test messages
     dataframe.clearData()
 
 def handle_msg(msg, who):
