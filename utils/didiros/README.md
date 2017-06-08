@@ -13,8 +13,7 @@ cp -r src ~/catkin_ws/
 cd ~/catkin_ws/
 ```
 
-* Note: Make sure `~/catkin_ws/src/projection/scripts/didiros.py` is executable. 
-Use the command `chmod +x` for this step.
+* Note: Make sure `~/catkin_ws/src/projection/scripts/listener.py` is executable (use  `chmod +x`).
 
 * Build the catkin package
 ```
@@ -38,7 +37,7 @@ source ~/catkin_ws/devel/setup.bash
 
 * Teminal 4 (process data and call MV3D)
 
-```rosrun roslisten didiros.py```
+```rosrun roslisten listener.py```
 
 ---
 # References
