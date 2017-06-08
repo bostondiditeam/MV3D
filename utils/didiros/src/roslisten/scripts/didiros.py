@@ -52,6 +52,7 @@ def startlisten():
     # name for our 'listener' node so that multiple listeners can
     # run simultaneously.
     rospy.init_node('listener', anonymous=True)
+    #rospy.init_node('talker', anonymous=True)
 
     # Odometry topics
     rospy.Subscriber('/objects/capture_vehicle/rear/gps/rtkfix', Odometry, handle_msg, 'cap_r')
