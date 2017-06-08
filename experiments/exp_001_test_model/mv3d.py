@@ -29,7 +29,6 @@ import time
 import io
 import matplotlib.pyplot as plt
 from tensorflow.python import debug as tf_debug
-import pickle
 
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
@@ -70,27 +69,23 @@ def  project_to_front_roi(rois3d):
 
 class Net(object):
 
-    def __init__(self, prefix, scope_name, checkpoint_dir=None):
+    def __init__(self, prefix, scope_name):
         self.name =scope_name
         self.prefix = prefix
-        self.checkpoint_dir =checkpoint_dir
-        self.subnet_checkpoint_dir = os.path.join(checkpoint_dir, scope_name)
-        self.subnet_checkpoint_name = scope_name
-        os.makedirs(self.subnet_checkpoint_dir, exist_ok=True)
+        self.checkpoint_dir = os.path.join(cfg.CHECKPOINT_DIR, scope_name)
+        self.checkpoint_name = scope_name
+        os.makedirs(self.checkpoint_dir,exist_ok=True)
         self.variables = self.get_variables([prefix+'/'+scope_name])
         self.saver=  tf.train.Saver(self.variables)
 
 
     def save_weights(self, sess=None):
-        path = os.path.join(self.subnet_checkpoint_dir, self.subnet_checkpoint_name)
+        path = os.path.join(self.checkpoint_dir, self.checkpoint_name)
         self.saver.save(sess, path)
 
 
     def load_weights(self, sess=None):
-        path = os.path.join(self.subnet_checkpoint_dir, self.subnet_checkpoint_name)
-        if tf.train.checkpoint_exists(path) ==False:
-            print('can not found %s, use default weights instead it' % (path))
-            path = path.replace(os.path.basename(self.checkpoint_dir),'default')
+        path = os.path.join(self.checkpoint_dir, self.checkpoint_name)
         assert tf.train.checkpoint_exists(path) == True
         self.saver.restore(sess, path)
 
@@ -106,7 +101,7 @@ class Net(object):
 
 class MV3D(object):
 
-    def __init__(self, top_shape, front_shape, rgb_shape, debug_mode=False, tag=None):
+    def __init__(self, top_shape, front_shape, rgb_shape, debug_mode=False):
 
         # anchors
         self.top_stride=None
@@ -135,14 +130,9 @@ class MV3D(object):
         self.build_net(top_shape, front_shape, rgb_shape)
 
         #init subnet
-        self.tag=tag
-        self.ckpt_dir = os.path.join(cfg.CHECKPOINT_DIR, tag)
-        self.subnet_rpn=Net(prefix='MV3D', scope_name=mv3d_net.top_view_rpn_name ,
-                            checkpoint_dir=self.ckpt_dir)
-        self.subnet_imfeatrue = Net(prefix='MV3D', scope_name=mv3d_net.imfeature_net_name,
-                                    checkpoint_dir=self.ckpt_dir)
-        self.subnet_fusion = Net(prefix='MV3D', scope_name=mv3d_net.fusion_net_name,
-                                 checkpoint_dir=self.ckpt_dir)
+        self.subnet_rpn=Net(prefix='MV3D', scope_name=mv3d_net.top_view_rpn_name)
+        self.subnet_imfeatrue = Net(prefix='MV3D', scope_name=mv3d_net.imfeature_net_name)
+        self.subnet_fusion = Net(prefix='MV3D', scope_name=mv3d_net.fusion_net_name)
 
 
         # set anchor boxes
@@ -171,15 +161,6 @@ class MV3D(object):
         self.default_summary_writer = None
 
         self.debug_mode =debug_mode
-
-        # about tensorboard.
-        self.tb_dir = tag if tag != None else strftime("%Y_%m_%d_%H_%M", localtime())
-
-
-    def dump_weigths(self, dir):
-        command = 'cp %s %s -r' % (self.ckpt_dir, dir)
-        os.system(command)
-
 
     def gc(self):
         self.log_subdir = None
@@ -404,10 +385,11 @@ class MV3D(object):
 
 
 class Predictor(MV3D):
-    def __init__(self, top_shape, front_shape, rgb_shape, tag=None):
-        MV3D.__init__(self, top_shape, front_shape, rgb_shape, tag=tag)
+    def __init__(self, top_shape, front_shape, rgb_shape):
+        MV3D.__init__(self, top_shape, front_shape, rgb_shape)
         self.variables_initializer()
         self.load_weights([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name])
+        self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
         self.default_summary_writer = tf.summary.FileWriter(
             os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_tracking'))
         self.n_log_scope = 0
@@ -429,13 +411,15 @@ class Predictor(MV3D):
 
 class Trainer(MV3D):
 
-    def __init__(self, train_set, validation_set, pre_trained_weights, train_targets, tag=None):
+    def __init__(self, train_set, validation_set, pre_trained_weights, train_targets):
         top_shape, front_shape, rgb_shape = train_set.get_shape()
-        MV3D.__init__(self, top_shape, front_shape, rgb_shape, tag=tag)
+        MV3D.__init__(self,top_shape, front_shape, rgb_shape)
         self.train_set = train_set
         self.validation_set = validation_set
         self.train_target= train_targets
 
+        # about tensorboard.
+        self.tb_dir = strftime("%Y_%m_%d_%H_%M", localtime())
         self.train_summary_writer = None
         self.val_summary_writer = None
         self.tensorboard_dir = None
@@ -571,27 +555,11 @@ class Trainer(MV3D):
         with open(os.path.join(dir, 'info.txt'), 'w') as info_file:
             info_file.write(info)
 
-    def save_progress(self):
-        print('save_progress !')
-        path = os.path.join(cfg.LOG_DIR, 'train_progress',self.tag,'progress.data')
-        os.makedirs(os.path.dirname(path) ,exist_ok=True)
-        pickle.dump(self.n_global_step, open(path, "wb"))
 
-
-    def load_progress(self):
-        path = os.path.join(cfg.LOG_DIR, 'train_progress', self.tag, 'progress.data')
-        if os.path.isfile(path):
-            print('load_progress !')
-            self.n_global_step = pickle.load(open(path, 'rb'))
-        else:
-            print('can not found progress file')
-
-
-    def __call__(self, max_iter=1000, train_set =None, validation_set =None, continue_train =False):
+    def __call__(self, max_iter=1000, train_set =None, validation_set =None):
 
         sess = self.sess
         net = self.net
-        if continue_train: self.load_progress()
 
         with sess.as_default():
             #for init model
@@ -694,7 +662,8 @@ class Trainer(MV3D):
             if cfg.TRAINING_TIMER:
                 self.log_msg.write('It takes %0.2f secs to train the dataset. \n' % \
                                    (time_it.total_time()))
-            self.save_progress()
+        self.train_summary_writer.close()
+        self.val_summary_writer.close()
 
 
 

@@ -20,9 +20,20 @@ if __name__ == '__main__':
 
     parser.add_argument('-i', '--max_iter', type=int, nargs='?', default=1000,
                         help='max count of train iter')
+
+    parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
+                        help='set log tag')
+
+    parser.add_argument('-c', '--continue_train', type=bool, nargs='?', default=False,
+                        help='set continue train flag')
     args = parser.parse_args()
 
     print('\n\n{}\n\n'.format(args))
+    tag = args.tag
+    if tag == 'unknow_tag':
+        tag = input('Enter log tag : ')
+        print('\nSet log tag :"%s" ok !!\n' %tag)
+
     max_iter = args.max_iter
     weights=[]
     if args.weights != '':
@@ -59,8 +70,8 @@ if __name__ == '__main__':
     validation = ub.batch_loading(dataset_dir, validation_dataset)
 
     train = mv3d.Trainer(train_set=training, validation_set=validation,
-                         pre_trained_weights=weights, train_targets=targets)
+                         pre_trained_weights=weights, train_targets=targets, tag=tag)
 
-    train(max_iter=max_iter)
+    train(max_iter=max_iter,continue_train=args.continue_train)
 
 
