@@ -9,11 +9,11 @@
 
 * Copy the entire `src` folder to your catkin workspace. For example,
 ```
-cp -r  src ~/catkin_ws/
+cp -r src ~/catkin_ws/
 cd ~/catkin_ws/
 ```
 
-* Note: Make sure `~/catkin_ws/src/projection/scripts/didiros.py`) is executable. 
+* Note: Make sure `~/catkin_ws/src/projection/scripts/didiros.py` is executable. 
 Use the command `chmod +x` for this step.
 
 * Build the catkin package
