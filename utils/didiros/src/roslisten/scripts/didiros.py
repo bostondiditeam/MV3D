@@ -8,13 +8,19 @@ from sensor_msgs.msg import PointCloud2, PointField, Image
 from velodyne_msgs.msg import VelodyneScan
 #from cv_bridge import CvBridge, CvBridgeError
 import Converter
-import Predictor
 from dataframe import OneFrameData
 
+# def process_frame():
+#     print('....................call MV3D....................')
+#     Predictor.pred_and_pub(dataframe)
+#     dataframe.clearData()
 
-def process_frame():
-    print('....................call MV3D....................')
-    Predictor.pred_and_pub(dataframe)
+def publish_dataframe():
+    print('............... Publish dataframe ...............')
+    pub = rospy.Publisher('chatter', String, queue_size=10)
+    hello_str = "hello world %s" % rospy.get_time()
+    rospy.loginfo(hello_str)
+    #pub.publish(hello_str)
     dataframe.clearData()
 
 def handle_msg(msg, who):
@@ -43,7 +49,8 @@ def handle_msg(msg, who):
 
     # dataframe.checkComplete();
     if (dataframe.checkComplete()==True):
-        process_frame()
+        #process_frame()
+        publish_dataframe()
 
 def startlisten():
     # In ROS, nodes are uniquely named. If two nodes with the same
