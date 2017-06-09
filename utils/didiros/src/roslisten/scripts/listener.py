@@ -15,7 +15,7 @@ from dataframe import OneFrameData
 #     Predictor.pred_and_pub(dataframe)
 #     dataframe.clearData()
 
-class Listener():
+class Listener:
 
     def __init__(self):
         self.dataframe = OneFrameData()
@@ -23,9 +23,10 @@ class Listener():
     def publish_dataframe(self):
         print('............... Publish dataframe ...............')
         pub = rospy.Publisher('chatter', String, queue_size=10)
-        hello_str = "hello world %s" % rospy.get_time()
-        rospy.loginfo(hello_str)
-        pub.publish(hello_str) # python testlisten.py to listen to test messages
+        # msg = "hello world %s" % rospy.get_time()
+        msg = self.dataframe
+        rospy.loginfo(msg)
+        pub.publish(msg) # python testlisten.py to listen to test messages
         self.dataframe.clearData()
 
     def handle_msg(self, msg, who):

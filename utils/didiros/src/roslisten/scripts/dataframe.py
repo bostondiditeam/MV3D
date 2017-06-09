@@ -1,4 +1,4 @@
-class OneFrameData():
+class OneFrameData:
 
     def __init__(self):
         self.cap_r = None
