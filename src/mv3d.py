@@ -106,7 +106,7 @@ class Net(object):
 
 class MV3D(object):
 
-    def __init__(self, top_shape, front_shape, rgb_shape, debug_mode=False, tag=None):
+    def __init__(self, top_shape, front_shape, rgb_shape, debug_mode=False, log_tag=None, weigths_dir=None):
 
         # anchors
         self.top_stride=None
@@ -135,8 +135,8 @@ class MV3D(object):
         self.build_net(top_shape, front_shape, rgb_shape)
 
         #init subnet
-        self.tag=tag
-        self.ckpt_dir = os.path.join(cfg.CHECKPOINT_DIR, tag)
+        self.tag=log_tag
+        self.ckpt_dir = os.path.join(cfg.CHECKPOINT_DIR, log_tag) if weigths_dir == None else weigths_dir
         self.subnet_rpn=Net(prefix='MV3D', scope_name=mv3d_net.top_view_rpn_name ,
                             checkpoint_dir=self.ckpt_dir)
         self.subnet_imfeatrue = Net(prefix='MV3D', scope_name=mv3d_net.imfeature_net_name,
@@ -173,7 +173,7 @@ class MV3D(object):
         self.debug_mode =debug_mode
 
         # about tensorboard.
-        self.tb_dir = tag if tag != None else strftime("%Y_%m_%d_%H_%M", localtime())
+        self.tb_dir = log_tag if log_tag != None else strftime("%Y_%m_%d_%H_%M", localtime())
 
 
     def dump_weigths(self, dir):
@@ -404,8 +404,9 @@ class MV3D(object):
 
 
 class Predictor(MV3D):
-    def __init__(self, top_shape, front_shape, rgb_shape, tag=None):
-        MV3D.__init__(self, top_shape, front_shape, rgb_shape, tag=tag)
+    def __init__(self, top_shape, front_shape, rgb_shape, log_tag=None, weights_tag=None):
+        weigths_dir= os.path.join(cfg.CHECKPOINT_DIR, log_tag) if weights_tag!=None  else None
+        MV3D.__init__(self, top_shape, front_shape, rgb_shape, log_tag=log_tag, weigths_dir=weigths_dir)
         self.variables_initializer()
         self.load_weights([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name])
         self.default_summary_writer = tf.summary.FileWriter(
@@ -429,9 +430,9 @@ class Predictor(MV3D):
 
 class Trainer(MV3D):
 
-    def __init__(self, train_set, validation_set, pre_trained_weights, train_targets, tag=None):
+    def __init__(self, train_set, validation_set, pre_trained_weights, train_targets, log_tag=None):
         top_shape, front_shape, rgb_shape = train_set.get_shape()
-        MV3D.__init__(self, top_shape, front_shape, rgb_shape, tag=tag)
+        MV3D.__init__(self, top_shape, front_shape, rgb_shape, log_tag=log_tag)
         self.train_set = train_set
         self.validation_set = validation_set
         self.train_target= train_targets

@@ -70,7 +70,7 @@ if __name__ == '__main__':
     validation = ub.batch_loading(dataset_dir, validation_dataset)
 
     train = mv3d.Trainer(train_set=training, validation_set=validation,
-                         pre_trained_weights=weights, train_targets=targets, tag=tag)
+                         pre_trained_weights=weights, train_targets=targets, log_tag=tag)
 
     train(max_iter=max_iter,continue_train=args.continue_train)
 

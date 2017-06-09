@@ -35,10 +35,10 @@ def train_rpn(tag):
 def train_img_and_fusion(tag):
     run_task('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i 700 '
              '-n %s' % (tag))
-    for i in range(20):
+    for i in range(10):
         run_task('python train.py -w "top_view_rpn,image_feature,fusion" -t "image_feature,fusion" -i 600 '
                  ' -n %s -c True' %(tag))
-        run_task('python tracking.py -n %s' % (tag))
+        run_task('python tracking.py -n %s_%d -w "%s"' % (tag,i,tag))
 
 
 

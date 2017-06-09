@@ -19,14 +19,15 @@ from time import localtime, strftime
 log_subdir=os.path.join('tracking',strftime("%Y_%m_%d_%H_%M_%S", localtime()))
 log_dir = os.path.join(cfg.LOG_DIR, log_subdir)
 
-def pred_and_save(tracklet_pred_dir, dataset, generate_video=False, frame_offset=16, tag=None):
+def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
+                  frame_offset=16, log_tag=None, weights_tag=None):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
     os.makedirs (os.path.join(log_dir,'image'),exist_ok=True)
 
 
     top_shape, front_shape, rgb_shape=dataset.get_shape()
-    predict=mv3d.Predictor(top_shape, front_shape, rgb_shape, tag=tag)
+    predict=mv3d.Predictor(top_shape, front_shape, rgb_shape, log_tag=log_tag)
 
     if generate_video:
         vid_in = skvideo.io.FFmpegWriter(os.path.join(log_dir,'output.mp4'))
@@ -95,6 +96,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='tracking')
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
                         help='set log tag')
+    parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
+                        help='set weigths tag name')
     args = parser.parse_args()
 
     print('\n\n{}\n\n'.format(args))
@@ -102,12 +105,15 @@ if __name__ == '__main__':
     if tag == 'unknow_tag':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
+    weights_tag = args.weights if args.weights!= '' else None
 
     tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
     os.makedirs(tracklet_pred_dir, exist_ok=True)
 
     # Set true if you want score after export predicted tracklet xml
     # set false if you just want to export tracklet xml
+    frame_offset=None
+    dataset_loader=None
 
     if config.cfg.DATA_SETS_TYPE == 'didi':
         if_score = True
@@ -117,7 +123,7 @@ if __name__ == '__main__':
 
             # generate tracklet file
             print("tracklet_pred_dir: " + tracklet_pred_dir)
-            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, tag=tag)
+            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, log_tag=tag, weights_tag=weights_tag)
         else:
             car='3'
             data='7'
@@ -128,7 +134,8 @@ if __name__ == '__main__':
 
             # generate tracklet file
             print("tracklet_pred_dir: " + tracklet_pred_dir)
-            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, frame_offset=0, tag=tag)
+            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
+                                      frame_offset=0, log_tag=tag, weights_tag=weights_tag)
 
             # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
             #  fits you needs.
@@ -147,7 +154,8 @@ if __name__ == '__main__':
 
         # generate tracklet file
         print("tracklet_pred_dir: " + tracklet_pred_dir)
-        pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, frame_offset=0, tag=tag)
+        pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
+                                  frame_offset=0, log_tag=tag, weights_tag=weights_tag)
 
         if if_score:
             # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
@@ -156,5 +164,17 @@ if __name__ == '__main__':
                                             'tracklet_labels.xml')
             tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
             print("scores are save under {} directory.".format(tracklet_pred_dir))
+
+    print("tracklet_pred_dir: " + tracklet_pred_dir)
+    pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
+                              frame_offset=0, log_tag=tag, weights_tag=weights_tag)
+
+    if if_score:
+        # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+        #  fits you needs.
+        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
+                                        'tracklet_labels.xml')
+        tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
+        print("scores are save under {} directory.".format(tracklet_pred_dir))
 
     print("Completed")
