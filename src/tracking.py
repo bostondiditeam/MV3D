@@ -19,6 +19,7 @@ from time import localtime, strftime
 log_subdir=os.path.join('tracking',strftime("%Y_%m_%d_%H_%M_%S", localtime()))
 log_dir = os.path.join(cfg.LOG_DIR, log_subdir)
 
+fast_test = False
 def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
                   frame_offset=16, log_tag=None, weights_tag=None):
     # Tracklet_saver will check whether the file already exists.
@@ -38,7 +39,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
         time_it = timer()
 
     frame_num = 0
-    for i in range(dataset.size):
+    for i in range(dataset.size if fast_test==False else frame_offset + 1):
 
         rgb, top, front, _, _,_= dataset.load(1)
 
@@ -98,6 +99,8 @@ if __name__ == '__main__':
                         help='set log tag')
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
                         help='set weigths tag name')
+    parser.add_argument('-t', '--fast_test', type=bool, nargs='?', default=False,
+                        help='set fast_test model')
     args = parser.parse_args()
 
     print('\n\n{}\n\n'.format(args))
@@ -106,6 +109,8 @@ if __name__ == '__main__':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
     weights_tag = args.weights if args.weights!= '' else None
+
+    fast_test = args.fast_test
 
     tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
     os.makedirs(tracklet_pred_dir, exist_ok=True)

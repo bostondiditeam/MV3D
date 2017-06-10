@@ -633,7 +633,7 @@ class Trainer(MV3D):
                 # set fit flag
                 if iter % validation_step == 0:  summary_it,is_validation,print_loss = True,True,True # summary validation loss
                 if (iter+1) % validation_step == 0:  summary_it,print_loss = True,True # summary train loss
-                if iter % 5 == 0: print_loss = True #print train loss
+                if iter % 20 == 0: print_loss = True #print train loss
 
                 if 1 and  iter%300 == 3: summary_it,summary_runmeta = True,True
 

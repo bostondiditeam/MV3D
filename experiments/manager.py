@@ -1,5 +1,6 @@
 import os
 import glob
+import subprocess
 
 class Env(object):
     def __init__(self,root_dir:str, dep_links:dict, dep_copy:dict =None):
@@ -36,12 +37,31 @@ class Experimet(Env):
         Env.__init__(self, dir, dep_links=dep_links)
         self.tag = os.path.basename(dir)
         self.dir = dir
+        self.check_state = 'unknown'
+        self.run_state = 'unknown'
 
 
     def run(self):
         command = 'cd %s && python task.py -n %s' % (self.dir,self.tag)
         print('\nrun: %s\n' % (command))
-        os.system(command)
+        code = subprocess.call(command, shell=True)
+        if code != 0:
+            self.run_state = 'fail'
+            return 1
+        else:
+            self.run_state = 'success'
+            return 0
+
+    def check(self):
+        command = 'cd %s && python task.py -n %s -t True' % (self.dir,self.tag)
+        print('\nrun: %s\n' % (command))
+        code = subprocess.call(command, shell=True)
+        if code != 0:
+            self.check_state = 'fail'
+            return 1
+        else:
+            self.check_state = 'success'
+            return 0
 
 
 class Manager(Env):
@@ -77,13 +97,41 @@ class Manager(Env):
         for i, exp in enumerate(exps):
             print('    %d: %s' % (i, exp.tag))
 
+    def check(self, exps: [Experimet]):
+        sum = 0
+        # check
+        for i, exp in enumerate(exps):
+            print('\n\n-----------------------experiment check: %d/%d -------------------' %
+                  (i + 1, len(exps)))
+            sum += exp.check()
+
+        print('\n------------------------------------------------------------------------------')
+        for i, exp in enumerate(exps):
+            print('fast test : %d. %s  %s' %(i,exp.tag, exp.check_state))
+
+        return sum
+
+    def run(self, exps: [Experimet]):
+        for i,exp in enumerate(exps):
+            print('\n\n-----------------------experiment run: %d/%d -------------------' %
+                  (i+1,len(exps)))
+            exp.run()
+
+        print('\n------------------------------------------------------------------------------')
+        for i, exp in enumerate(exps):
+            print('exp run : %d. %s  %s' %(i,exp.tag, exp.run_state))
+
+
+
+
 if __name__ == '__main__':
     man = Manager()
     print('\n\n start scan all experiments')
     exps = man.scan()
 
     man.summary(exps)
-    for i,exp in enumerate(exps):
-        print('\n\n--------------------------experiment: %d/%d ---------------------' %
-              (i+1,len(exps)))
-        exp.run()
+
+    fail_sum = man.check(exps)
+
+    if fail_sum == 0:
+        man.run(exps)
