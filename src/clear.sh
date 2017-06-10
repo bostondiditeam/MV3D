@@ -3,6 +3,7 @@ rm ./net/lib/psroi_pooling_layer/psroi_pooling.so
 rm ./net/processing/gpu_nms.cpython-35m-x86_64-linux-gnu.so
 rm ./net/processing/cpu_nms.cpython-35m-x86_64-linux-gnu.so
 rm ./net/lib/pycocotools/_mask.cpython-35m-x86_64-linux-gnu.so
+rm ./net/processing/cython_bbox.cpython-35m-x86_64-linux-gnu.so
 
 #.c
 rm ./net/lib/nms/cpu_nms.c
