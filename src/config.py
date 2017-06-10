@@ -44,12 +44,10 @@ __C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_T
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 
-__C.IMAGE_FUSION_DIABLE = True
-
 __C.USE_RESNET_AS_TOP_BASENET = True
 
 __C.IMAGE_FUSION_DIABLE = False
-__C.RGB_BASENET = 'xception'  # 'resnet' 、'xception' 'VGG'
+__C.RGB_BASENET = 'VGG'  # 'resnet' 、'xception' 'VGG'
 if __C.RGB_BASENET == 'xception':
     __C.USE_IMAGENET_PRE_TRAINED_MODEL = True
 else:

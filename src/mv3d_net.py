@@ -187,13 +187,7 @@ def rgb_feature_net_r(input):
 
     with tf.variable_scope('resnet-block-1') as scope:
         print('build_resnet')
-        resnet = ResnetBuilder.build_resnet_50([img_channel, img_height, img_width], 1)
-
-        resnet_input = resnet.get_layer('input_1').input
-        resnet_output = resnet.get_layer('add_7').output
-        resnet_f = Model(inputs=resnet_input, outputs=resnet_output)  # add_7
-        # print(resnet_f.summary())
-        block = resnet_f(input)
+        block = ResnetBuilder.resnet_tiny(input)
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME', name='2')
         stride = 8
 
@@ -326,7 +320,7 @@ def front_feature_net(input):
 #
 def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
-    test_num = 1
+    test_num = 0
     print('\n\n !!!! test_num ={}\n\n'.format(test_num))
 
     if test_num==0:
@@ -354,16 +348,11 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
                     input = concat([input,roi_features], axis=1, name='%d/cat'%n)
 
         with tf.variable_scope('fuse-block-1') as scope:
-            block = linear_bn_relu(input, num_hiddens=4096, name='1')
-            block = linear_bn_relu(block, num_hiddens=4096, name='2')
+            block = linear_bn_relu(input, num_hiddens=512, name='1')
+            block = linear_bn_relu(block, num_hiddens=512, name='2')
+            block = linear_bn_relu(block, num_hiddens=512, name='3')
+            block = linear_bn_relu(block, num_hiddens=512, name='4')
 
-        #include background class
-        with tf.variable_scope('fuse') as scope:
-            dim = np.product([*out_shape])
-            scores  = linear(block, num_hiddens=num_class,     name='score')
-            probs   = tf.nn.softmax (scores, name='prob')
-            deltas  = linear(block, num_hiddens=dim*num_class, name='box')
-            deltas  = tf.reshape(deltas,(-1,num_class,*out_shape))
 
     elif test_num==1:
         with tf.variable_scope('fuse-net') as scope:
@@ -536,6 +525,54 @@ def fuse_loss(scores, deltas, rcnn_labels, rcnn_targets):
     return rcnn_cls_loss, rcnn_reg_loss
 
 
+def fuse_loss_test(scores, deltas, rcnn_labels, rcnn_targets):
+
+    def modified_smooth_l1( deltas, targets, sigma=3.0):
+        '''
+            ResultLoss = outside_weights * SmoothL1(inside_weights * (box_pred - box_targets))
+            SmoothL1(x) = 0.5 * (sigma * x)^2,    if |x| < 1 / sigma^2
+                          |x| - 0.5 / sigma^2,    otherwise
+        '''
+        sigma2 = sigma * sigma
+        diffs  =  tf.subtract(deltas, targets)
+        smooth_l1_signs = tf.cast(tf.less(tf.abs(diffs), 1.0 / sigma2), tf.float32)
+
+        smooth_l1_option1 = tf.multiply(diffs, diffs) * 0.5 * sigma2
+        smooth_l1_option2 = tf.abs(diffs) - 0.5 / sigma2
+        smooth_l1_add = tf.multiply(smooth_l1_option1, smooth_l1_signs) + tf.multiply(smooth_l1_option2, 1-smooth_l1_signs)
+        smooth_l1 = smooth_l1_add
+
+        return smooth_l1
+
+
+    _, num_class = scores.get_shape().as_list()
+    dim = np.prod(deltas.get_shape().as_list()[1:])//num_class
+
+    with tf.variable_scope('get_scores'):
+        rcnn_scores   = tf.reshape(scores,[-1, num_class], name='rcnn_scores')
+        rcnn_cls_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
+            logits=rcnn_scores, labels=rcnn_labels))
+
+    with tf.variable_scope('get_detals'):
+        num = tf.identity( tf.shape(deltas)[0], 'num')
+        idx = tf.identity(tf.range(num)*num_class + rcnn_labels,name='idx')
+        deltas1      = tf.reshape(deltas,[-1, dim],name='deltas1')
+        rcnn_deltas_with_fp  = tf.gather(deltas1,  idx, name='rcnn_deltas_with_fp')  # remove ignore label
+        rcnn_targets_with_fp =  tf.reshape(rcnn_targets,[-1, dim], name='rcnn_targets_with_fp')
+
+        #remove false positive
+        fp_idxs = tf.where(tf.not_equal(rcnn_labels, 0), name='fp_idxs')
+        rcnn_deltas_no_fp  = tf.gather(rcnn_deltas_with_fp,  fp_idxs, name='rcnn_deltas_no_fp')
+        rcnn_targets_no_fp =  tf.gather(rcnn_targets_with_fp,  fp_idxs, name='rcnn_targets_no_fp')
+
+    with tf.variable_scope('modified_smooth_l1'):
+        rcnn_smooth_l1 = modified_smooth_l1(rcnn_deltas_no_fp, rcnn_targets_no_fp, sigma=3.0)
+
+    rcnn_reg_loss  = tf.reduce_mean(tf.reduce_sum(rcnn_smooth_l1, axis=1))
+
+    return rcnn_cls_loss, rcnn_reg_loss
+
+
 def rpn_loss(scores, deltas, inds, pos_inds, rpn_labels, rpn_targets):
 
     def modified_smooth_l1( box_preds, box_targets, sigma=3.0):
@@ -626,7 +663,10 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
                      [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
                      [rgb_features, rgb_rois*0, 6, 6, 1. / rgb_stride],),
                     num_class, out_shape)
-        else:
+            print('\n\n!!!! disable image fusion\n\n')
+
+        elif 0:
+            # for test
             fuse_output = fusion_net(
                     ([top_features, top_rois*0, 6, 6, 1. / top_feature_stride],
                      [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
@@ -634,18 +674,34 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
                     num_class, out_shape)
             print('\n\n!!!! disable top view fusion\n\n')
 
+        else:
+            fuse_output = fusion_net(
+                    ([top_features, top_rois, 6, 6, 1. / top_feature_stride],
+                     [front_features, front_rois, 0, 0, 1. / stride],  # disable by 0,0
+                     [rgb_features, rgb_rois, 6, 6, 1. / rgb_stride],),
+                    num_class, out_shape)
+
+
         # include background class
         with tf.variable_scope('predict') as scope:
             dim = np.product([*out_shape])
             fuse_scores = linear(fuse_output, num_hiddens=num_class, name='score')
             fuse_probs = tf.nn.softmax(fuse_scores, name='prob')
             fuse_deltas = linear(fuse_output, num_hiddens=dim * num_class, name='box')
-            fuse_deltas = tf.reshape(fuse_deltas, (-1, num_class, *out_shape))
+            if 1:
+                fuse_deltas = tf.reshape(fuse_deltas, (-1, num_class, *out_shape))
+            else:
+                fuse_deltas = tf.reshape(fuse_deltas, (-1, num_class, *out_shape))*0
+                print('\n\n!!!! test disable rgb reg')
 
         with tf.variable_scope('loss') as scope:
             fuse_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='fuse_label')
             fuse_targets = tf.placeholder(shape=[None, *out_shape], dtype=tf.float32, name='fuse_target')
-            fuse_cls_loss, fuse_reg_loss = fuse_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
+            if 1:
+                fuse_cls_loss, fuse_reg_loss = fuse_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
+            else:
+                print('\n\n!!!! use test fuse_loss()\n\n')
+                fuse_cls_loss, fuse_reg_loss = fuse_loss_test(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
 
 
     return {
@@ -686,3 +742,19 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
         'top_feature_stride':top_feature_stride
 
     }
+
+
+if __name__ == '__main__':
+    import  numpy as np
+    x =tf.placeholder(tf.float32,(None),name='x')
+    y = tf.placeholder(tf.float32,(None),name='y')
+    idxs = tf.where(tf.not_equal(x,0))
+    # weights = tf.cast(tf.not_equal(x,0),tf.float32)
+    y_w = tf.gather(y,idxs)
+    sess = tf.Session()
+    with sess.as_default():
+        ret= sess.run(y_w, feed_dict={
+            x:np.array([1.0,1.0,0.,2.]),
+            y: np.array([1., 2., 2., 3.]),
+        })
+        print(ret)

@@ -27,7 +27,7 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
 
 
     top_shape, front_shape, rgb_shape=dataset.get_shape()
-    predict=mv3d.Predictor(top_shape, front_shape, rgb_shape, log_tag=log_tag)
+    predict=mv3d.Predictor(top_shape, front_shape, rgb_shape, log_tag=log_tag, weights_tag=weights_tag)
 
     if generate_video:
         vid_in = skvideo.io.FFmpegWriter(os.path.join(log_dir,'output.mp4'))
@@ -112,36 +112,24 @@ if __name__ == '__main__':
 
     # Set true if you want score after export predicted tracklet xml
     # set false if you just want to export tracklet xml
-    frame_offset=None
+    frame_offset=0
     dataset_loader=None
 
     if config.cfg.DATA_SETS_TYPE == 'didi':
         if_score = True
         if 1:
             dataset = {'Round1Test': ['19_f2']}
-            dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
-            # generate tracklet file
-            print("tracklet_pred_dir: " + tracklet_pred_dir)
-            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader, log_tag=tag, weights_tag=weights_tag)
         else:
             car='3'
             data='7'
             dataset = {
                 car: [data]
             }
-            dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR,dataset,is_testset=True)
-
-            # generate tracklet file
-            print("tracklet_pred_dir: " + tracklet_pred_dir)
-            pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
-                                      frame_offset=0, log_tag=tag, weights_tag=weights_tag)
 
             # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
             #  fits you needs.
             gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
-            tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
-            print("scores are save under {} directory.".format(tracklet_pred_dir))
 
     elif config.cfg.DATA_SETS_TYPE == 'kitti':
         if_score = False
@@ -150,30 +138,20 @@ if __name__ == '__main__':
         dataset = {
             car: [data]
         }
-        dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
-        # generate tracklet file
-        print("tracklet_pred_dir: " + tracklet_pred_dir)
-        pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
-                                  frame_offset=0, log_tag=tag, weights_tag=weights_tag)
+        # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+        #  fits you needs.
+        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
+                                        'tracklet_labels.xml')
 
-        if if_score:
-            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-            #  fits you needs.
-            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
-                                            'tracklet_labels.xml')
-            tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
-            print("scores are save under {} directory.".format(tracklet_pred_dir))
+
+    dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
     print("tracklet_pred_dir: " + tracklet_pred_dir)
     pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
                               frame_offset=0, log_tag=tag, weights_tag=weights_tag)
 
     if if_score:
-        # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-        #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
-                                        'tracklet_labels.xml')
         tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
         print("scores are save under {} directory.".format(tracklet_pred_dir))
 

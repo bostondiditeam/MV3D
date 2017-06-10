@@ -60,7 +60,7 @@ def draw_box3d_on_image_with_gt(rgb, boxes3d, gt_boxes3d):
 
 
 
-def rcnn_nms( probs,  deltas,  rois3d,  score_threshold = 0.75,nms_threshold=0.05):
+def rcnn_nms( probs,  deltas,  rois3d,  score_threshold = 0.75,nms_threshold=0.001):
 
 
     cls=1  # do for class-one only

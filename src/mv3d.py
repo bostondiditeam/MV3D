@@ -405,7 +405,7 @@ class MV3D(object):
 
 class Predictor(MV3D):
     def __init__(self, top_shape, front_shape, rgb_shape, log_tag=None, weights_tag=None):
-        weigths_dir= os.path.join(cfg.CHECKPOINT_DIR, log_tag) if weights_tag!=None  else None
+        weigths_dir= os.path.join(cfg.CHECKPOINT_DIR, weights_tag) if weights_tag!=None  else None
         MV3D.__init__(self, top_shape, front_shape, rgb_shape, log_tag=log_tag, weigths_dir=weigths_dir)
         self.variables_initializer()
         self.load_weights([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name])
@@ -430,7 +430,8 @@ class Predictor(MV3D):
 
 class Trainer(MV3D):
 
-    def __init__(self, train_set, validation_set, pre_trained_weights, train_targets, log_tag=None):
+    def __init__(self, train_set, validation_set, pre_trained_weights, train_targets, log_tag=None,
+                 continue_train=False):
         top_shape, front_shape, rgb_shape = train_set.get_shape()
         MV3D.__init__(self, top_shape, front_shape, rgb_shape, log_tag=log_tag)
         self.train_set = train_set
@@ -442,6 +443,7 @@ class Trainer(MV3D):
         self.tensorboard_dir = None
         self.summ = None
         self.iter_debug = 200
+        self.n_global_step = 0
 
         # saver
         with self.sess.as_default():
@@ -505,18 +507,27 @@ class Trainer(MV3D):
 
 
             # summary.FileWriter
-            self.train_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard',
-                                                                           self.tb_dir + '_train'),
-                                                              graph=tf.get_default_graph())
-            self.val_summary_writer = tf.summary.FileWriter(os.path.join(cfg.LOG_DIR, 'tensorboard',
-                                                                         self.tb_dir + '_val'))
+            train_writer_dir = os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_train')
+            val_writer_dir = os.path.join(cfg.LOG_DIR, 'tensorboard',self.tb_dir + '_val')
+            if continue_train == False:
+               if os.path.isdir(train_writer_dir):
+                   command ='rm -rf %s' % train_writer_dir
+                   print('clear old file: %s' % command)
+                   os.system(command)
+               if os.path.isdir(val_writer_dir):
+                   command = 'rm -rf %s' % val_writer_dir
+                   print('clear old file: %s' % command)
+                   os.system(command)
+
+            self.train_summary_writer = tf.summary.FileWriter(train_writer_dir,graph=tf.get_default_graph())
+            self.val_summary_writer = tf.summary.FileWriter(val_writer_dir)
 
             summ = tf.summary.merge_all()
             self.summ = summ
 
             self.variables_initializer()
             self.load_weights(pre_trained_weights)
-            self.n_global_step = 0
+            if continue_train: self.load_progress()
 
 
     def anchors_details(self):
@@ -588,11 +599,10 @@ class Trainer(MV3D):
             print('can not found progress file')
 
 
-    def __call__(self, max_iter=1000, train_set =None, validation_set =None, continue_train =False):
+    def __call__(self, max_iter=1000, train_set =None, validation_set =None):
 
         sess = self.sess
         net = self.net
-        if continue_train: self.load_progress()
 
         with sess.as_default():
             #for init model
@@ -611,7 +621,7 @@ class Trainer(MV3D):
             self.log_msg.write('-------------------------------------------------------------------------------------\n')
 
 
-            for iter in range(1,max_iter):
+            for iter in range(max_iter):
 
 
                 is_validation = False
@@ -621,8 +631,8 @@ class Trainer(MV3D):
                 log_this_iter = False
 
                 # set fit flag
-                if iter % validation_step == 1:  summary_it,is_validation,print_loss = True,True,True # summary validation loss
-                if (iter+1) % validation_step == 1:  summary_it,print_loss = True,True # summary train loss
+                if iter % validation_step == 0:  summary_it,is_validation,print_loss = True,True,True # summary validation loss
+                if (iter+1) % validation_step == 0:  summary_it,print_loss = True,True # summary train loss
                 if iter % 5 == 0: print_loss = True #print train loss
 
                 if 1 and  iter%300 == 3: summary_it,summary_runmeta = True,True

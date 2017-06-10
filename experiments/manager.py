@@ -2,9 +2,10 @@ import os
 import glob
 
 class Env(object):
-    def __init__(self,root_dir:str, dep_links:dict):
+    def __init__(self,root_dir:str, dep_links:dict, dep_copy:dict =None):
         self.root_dir=root_dir
         self.dep_links=dep_links
+        self.dep_copy = dep_copy
 
         #reset dependence links
         print('reset dep links')
@@ -39,7 +40,7 @@ class Experimet(Env):
 
     def run(self):
         command = 'cd %s && python task.py -n %s' % (self.dir,self.tag)
-        print('run: %s' % (command))
+        print('\nrun: %s\n' % (command))
         os.system(command)
 
 
@@ -83,4 +84,6 @@ if __name__ == '__main__':
 
     man.summary(exps)
     for i,exp in enumerate(exps):
+        print('\n\n--------------------------experiment: %d/%d ---------------------' %
+              (i+1,len(exps)))
         exp.run()
