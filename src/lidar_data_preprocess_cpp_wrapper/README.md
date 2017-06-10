@@ -20,11 +20,11 @@ For detailed usage example, please see "python_call_cpp_preprocess_test.py"
 
 --> Run make
 
---> liblidar_preprocess.so and lidar_preprocess_ext.so will be generated(For UBUNTU)
+--> liblidar_preprocess.so and lidar_preprocess_ext.so will be generated         (For UBUNTU)
 
 ## To test preprocess module, run the python script file as follows:
 
---> python2 python_call_cpp_preprocess_test.py   (For UBUNTU)
+--> python2 python_call_cpp_preprocess_test.py                (For UBUNTU)
 
 ## To specify lidar data source file path :
 
