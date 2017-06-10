@@ -11,7 +11,7 @@ def show_image (img,title ="no title"):
 
 for frame_count in range(0,3):    # CHANGE LIDAR FRAME TO BE PREPROCESSED HERE 
 	#---------CHANGE LIDAR SOURCE DIRECTORY HERE -------------------
-	lidar_data_src_dir = "../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
+	lidar_data_src_dir = "./raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
 	lidar_data_src_path = lidar_data_src_dir + str(frame_count).zfill(10) + ".bin"
 	#------------------------------------------------------------------------
 
