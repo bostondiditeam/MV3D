@@ -1,8 +1,0 @@
-prefix=/home/tzeping/udacity/didi/proj/didiros/devel
-
-Name: roslisten
-Description: Description of roslisten
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/tzeping/udacity/didi/proj/didiros/devel/lib 
-Requires: 
