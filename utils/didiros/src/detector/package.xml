@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package>
+  <name>detector</name>
+  <version>0.0.0</version>
+  <description>detection package</description>
+  <maintainer email="prerit.jaiswal@gmail.com">Prerit Jaiswal</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>image_geometry</build_depend>
+  <build_depend>rosbag</build_depend>
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>tf</build_depend>
+  <run_depend>image_geometry</run_depend>
+  <run_depend>rosbag</run_depend>
+  <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>tf</run_depend>
+</package>
