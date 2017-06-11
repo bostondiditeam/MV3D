@@ -28,18 +28,19 @@ extern "C"
 	} PointT;
 
 
-    void createTopViewMaps(const void * indatav, const char * file_path, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION)
+	void createTopViewMaps(const void * indatav, const char * file_path, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION)
     {
-		int X_SIZE = (int)((x_MAX-x_MIN)/x_DIVISION);	// X_SIZE is 400
-		int Y_SIZE = (int)((y_MAX-y_MIN)/y_DIVISION);   // Y_SIZE is 400
-		int Z_SIZE = (int)((z_MAX-z_MIN)/z_DIVISION);   // Z_SIZE is 6
+
+		int X_SIZE = (int)floor((x_MAX-x_MIN)/x_DIVISION);	// X_SIZE is 400
+		int Y_SIZE = (int)floor((y_MAX-y_MIN)/y_DIVISION);   // Y_SIZE is 400
+		int Z_SIZE = (int)floor((z_MAX-z_MIN)/z_DIVISION);   // Z_SIZE is 6	
+		//std::cout<< X_SIZE <<","<<Y_SIZE<<","<<Z_SIZE<<std::endl;
 
 	    double * data_cube = (double *) indatav;
-		//char * file_path = (char *) file_pathv;
 
 		// load point cloud
 		FILE *fp;
-	  	
+	
 	    int32_t num = 1000000;
 	    float *data = (float*)malloc(num*sizeof(float));
 
@@ -123,10 +124,14 @@ extern "C"
 		    point.z = *pz;
 			point.intensity = (*pr) * 255;	//TODO : check if original Kitti data normalized between 0 and 1 ?
 
-			X = (int)((point.x-x_MIN)/x_DIVISION);
-			Y = (int)((point.y-y_MIN)/y_DIVISION);
-			Z = (int)((point.z-z_MIN)/z_DIVISION);
-		
+			//X = (int)((point.x-x_MIN)/x_DIVISION);
+			//Y = (int)((point.y-y_MIN)/y_DIVISION);
+			//Z = (int)((point.z-z_MIN)/z_DIVISION);
+
+			X = (int)floor((point.x-x_MIN)/x_DIVISION);	// X_SIZE is 400
+		    Y = (int)floor((point.y-y_MIN)/y_DIVISION);   // Y_SIZE is 400
+		    Z = (int)floor((point.z-z_MIN)/z_DIVISION);   // Z_SIZE is 6
+	
 			//For every point in each cloud, only select points inside a predefined 3D grid box
 			if (X >= 0 && Y>= 0 && Z >=0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)
 			{
@@ -159,13 +164,14 @@ extern "C"
 					grid_point.z = 0;
 					grid_point.intensity = point.intensity;
 					intensity_cloud.push_back(grid_point);
-				
+					
 					grid_point.intensity = density_map[X][Y];
 					density_cloud.push_back(grid_point);
 				}
 			}
 		    px+=4; py+=4; pz+=4; pr+=4;
 		}
+
 
 		// erase the dummy vector added at the start
 		for(int i = 0; i < Z_SIZE; i++){
@@ -200,15 +206,16 @@ extern "C"
 		  	int cloud_size = cloud_demo->size();
 			int plane_idx = k;	// because this is the kth plane (starting from zero)
 
-			for(int i = 0; i < cloud_size; i++){
-				int x_coord = (int)cloud_demo->at(i).y;
-				int y_coord = (int)cloud_demo->at(i).x;
+			for(int i = 0; i < cloud_size; i++){				
+				int x_coord = (int)cloud_demo->at(i).x;
+				int y_coord = (int)cloud_demo->at(i).y;
 
 				// array_idx equals 400*8*y + 8*x + plane_idx where plane_idx goes from 0 to 5 (for the 6 height maps)
 				// The formula for array_idx below was empirically calculated to fit the exact order in which the elements
 				// of a 3D array are stored in memory. Elements are read starting with the top left corner of the bottom plane
 				// the 3D array, then moving up in the z direction, then across (x) and then below (y)
-				int array_idx = X_SIZE * (Z_SIZE + 2) * y_coord + (Z_SIZE + 2) * x_coord + plane_idx;
+				int array_idx = Y_SIZE * (Z_SIZE + 2) * x_coord + (Z_SIZE + 2) * y_coord + plane_idx;
+
 				float value = cloud_demo->at(i).intensity;
 
 				data_cube[array_idx] = value;
@@ -221,11 +228,11 @@ extern "C"
 		int plane_idx = Z_SIZE;	// because this is the 6th plane (starting from zero)
 
 		for(int i = 0; i < cloud_size; i++){
-			int x_coord = (int)cloud_demo->at(i).y;
-			int y_coord = (int)cloud_demo->at(i).x;
+			int x_coord = (int)cloud_demo->at(i).x;
+			int y_coord = (int)cloud_demo->at(i).y;
 
 			// array_idx equals 400*8*x + 8*y + 6 where 6 is the 6th (starting at 0) 400x400 plane
-			int array_idx = X_SIZE * (Z_SIZE + 2) * y_coord + (Z_SIZE + 2) * x_coord + plane_idx;
+			int array_idx = Y_SIZE * (Z_SIZE + 2) * x_coord + (Z_SIZE + 2) * y_coord + plane_idx;
 			float value = cloud_demo->at(i).intensity;
 
 			data_cube[array_idx] = value;
@@ -237,11 +244,11 @@ extern "C"
 		plane_idx = Z_SIZE + 1;	// because this is the 7th plane (starting from zero)
 
 		for(int i = 0; i < cloud_size; i++){
-			int x_coord = (int)cloud_demo->at(i).y;
-			int y_coord = (int)cloud_demo->at(i).x;
+			int x_coord = (int)cloud_demo->at(i).x;
+			int y_coord = (int)cloud_demo->at(i).y;
 
 			// array_idx equals 400*8*x + 8*y + 7 where 7 is the 7th (starting at 0) 400x400 plane
-			int array_idx = X_SIZE * (Z_SIZE + 2) * y_coord + (Z_SIZE + 2) * x_coord + plane_idx;
+			int array_idx = Y_SIZE * (Z_SIZE + 2) * x_coord + (Z_SIZE + 2) * y_coord + plane_idx;
 			float value = cloud_demo->at(i).intensity;
 
 			data_cube[array_idx] = value;
