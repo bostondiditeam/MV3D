@@ -19,7 +19,9 @@ class raw:
 
     def __init__(self, base_path, date, drive, frame_range=None):
         """Set the path."""
-        if (cfg.DATA_SETS_TYPE == 'didi'):
+        if (cfg.DATA_SETS_TYPE == 'didi2'):
+            self.drive = drive
+        elif (cfg.DATA_SETS_TYPE == 'didi'):
             self.drive = drive
         elif cfg.DATA_SETS_TYPE == 'kitti':
             self.drive = date + '_drive_' + drive + '_sync'
