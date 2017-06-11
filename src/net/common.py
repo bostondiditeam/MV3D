@@ -2,9 +2,7 @@ from config import cfg
 
 #### kitti dataset orijection from lidar to top, front and rgb ####
 
-
-
-if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
+if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'test':
     TOP_Y_MIN = -10
     TOP_Y_MAX = +10
     TOP_X_MIN = -45

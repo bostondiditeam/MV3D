@@ -210,6 +210,9 @@ def parseXML(trackletFile):
                 elif poseInfo.tag == 'truncation':
                     if cfg.DATA_SETS_TYPE == 'kitti':
                       newTrack.truncs[frameIdx] = truncFromText[poseInfo.text]
+                    elif cfg.DATA_SETS_TYPE == 'didi2':
+                      # todo :'truncation filter disable')
+                      pass
                     elif cfg.DATA_SETS_TYPE == 'didi':
                       # todo :'truncation filter disable')
                       pass
