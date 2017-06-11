@@ -234,9 +234,9 @@ extern "C"
 				int y_coord = (int)cloud_demo->at(i).x;
 
 				// array_idx equals 400*8*y + 8*x + plane_idx where plane_idx goes from 0 to 5 (for the 6 height maps)
-				// The formula for array_idx below was empirically calculated to fit the exact order in which the cnpy library
-				// populates a 3D array when it is passed a 1D array. The cnpy library starts at the top left corner of
-				// the 3D array and populates the array in the up (z) direction, then across (x) and then below (y)
+				// The formula for array_idx below was empirically calculated to fit the exact order in which the elements
+				// of a 3D array are stored in memory. Elements are read starting with the top left corner of the bottom plane
+				// the 3D array, then moving up in the z direction, then across (x) and then below (y)
 				int array_idx = X_SIZE * (Z_SIZE + 2) * y_coord + (Z_SIZE + 2) * x_coord + plane_idx;
 				float value = cloud_demo->at(i).intensity;
 
