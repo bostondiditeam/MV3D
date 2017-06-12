@@ -5,6 +5,7 @@ import os
 import glob
 from sklearn.utils import shuffle
 from utils.check_data import check_preprocessed_data, get_file_names
+import net.processing.boxes3d  as box
 
 # disable print
 # import sys
@@ -208,13 +209,52 @@ class batch_loading:
     def get_frame_info(self, handle_id):
         return handle_id
 
+    def keep_gt_inside_range(self, train_gt_labels, train_gt_boxes3d):
+        # todo : support batch size >1
+        if train_gt_labels.shape[0] == 0:
+            return False, None, None
+        assert train_gt_labels.shape[0] == train_gt_boxes3d.shape[0]
+
+        # get limited train_gt_boxes3d and train_gt_labels.
+        keep = np.zeros((len(train_gt_labels)), dtype=bool)
+
+        for i in range(len(train_gt_labels)):
+            if box.box3d_in_top_view(train_gt_boxes3d[i]):
+                keep[i] = 1
+
+        # if all targets are out of range in selected top view, return True.
+        if np.sum(keep) == 0:
+            return False, None, None
+
+        train_gt_labels = train_gt_labels[keep]
+        train_gt_boxes3d = train_gt_boxes3d[keep]
+        return True, train_gt_labels, train_gt_boxes3d
+
     def load(self, size, batch=True, shuffled=False):
-        if batch:
-            train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, frame_id = self.load_batch(size,
-                                                                                                          shuffled)
-        else:
-            train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, frame_id =  \
-                self.load_test_frames(size, shuffled)
+        load_frames = True
+        while load_frames:
+            if batch:
+                train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, frame_id = self.load_batch(size,
+                                                                                                              shuffled)
+            else:
+                train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, frame_id =  \
+                    self.load_test_frames(size, shuffled)
+            load_frames = False
+            # for keeping all gt labels and gt boxes inside range, and discard gt out of selected range.
+            is_gt_inside_range, batch_gt_labels_in_range, batch_gt_boxes3d_in_range = \
+                self.keep_gt_inside_range(train_gt_labels[0], train_gt_boxes3d[0])
+
+            if not is_gt_inside_range:
+                load_frames = True
+                continue
+
+            # modify gt_labels and gt_boxes3d values to be inside range.
+            # todo current support only batch_size == 1
+            train_gt_labels = np.zeros((1, batch_gt_labels_in_range.shape[0]), dtype=np.int32)
+            train_gt_boxes3d = np.zeros((1, batch_gt_labels_in_range.shape[0], 8, 3), dtype=np.float32)
+            train_gt_labels[0] = batch_gt_labels_in_range
+            train_gt_boxes3d[0] = batch_gt_boxes3d_in_range
+
 
         return np.array(train_rgbs), np.array(train_tops), np.array(train_fronts), np.array(train_gt_labels), \
                np.array(train_gt_boxes3d), frame_id

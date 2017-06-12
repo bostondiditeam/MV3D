@@ -269,28 +269,6 @@ class MV3D(object):
                 return True
         return False
 
-    def keep_gt_inside_range(self, train_gt_labels, train_gt_boxes3d):
-        # todo : support batch size >1
-        if train_gt_labels.shape[0] == 0:
-            return False, None, None
-        assert train_gt_labels.shape[0] == train_gt_boxes3d.shape[0]
-
-        # get limited train_gt_boxes3d and train_gt_labels.
-        keep = np.zeros((len(train_gt_labels)), dtype=bool)
-
-        for i in range(len(train_gt_labels)):
-            if box.box3d_in_top_view(train_gt_boxes3d[i]):
-                keep[i] = 1
-
-        # if all targets are out of range in selected top view, return True.
-        if np.sum(keep) == 0:
-            return False, None, None
-
-        train_gt_labels = train_gt_labels[keep]
-        train_gt_boxes3d = train_gt_boxes3d[keep]
-        return True, train_gt_labels, train_gt_boxes3d
-
-
 
     def build_net(self, top_shape, front_shape, rgb_shape):
         with tf.variable_scope('MV3D'):
@@ -673,22 +651,6 @@ class Trainer(MV3D):
                 self.batch_rgb_images, self.batch_top_view, self.batch_front_view, \
                 self.batch_gt_labels, self.batch_gt_boxes3d, self.frame_id = \
                     data_set.load(batch_size, shuffled=True)
-                #
-                # if self.batch_data_is_invalid(self.batch_gt_boxes3d[0]):
-                #     continue
-
-                # for keeping all gt labels and gt boxes inside range, and discard gt out of selected range.
-                is_gt_inside_range, batch_gt_labels_in_range, batch_gt_boxes3d_in_range = \
-                    self.keep_gt_inside_range(self.batch_gt_labels[0], self.batch_gt_boxes3d[0])
-
-                if not is_gt_inside_range: continue
-
-                # todo current support only batch_size == 1
-                self.batch_gt_labels = np.zeros((1, batch_gt_labels_in_range.shape[0]), dtype=np.int32)
-                self.batch_gt_boxes3d = np.zeros((1, batch_gt_labels_in_range.shape[0], 8, 3), dtype=np.float32)
-                self.batch_gt_labels[0] = batch_gt_labels_in_range
-                self.batch_gt_boxes3d[0] = batch_gt_boxes3d_in_range
-
 
                 # fit_iterate log init
                 if log_this_iter:
