@@ -50,13 +50,15 @@ for frameNum in range(0,1):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!!
 	b_lidar_data_src_path = lidar_data_src_path.encode('utf-8')
 	# call the C function to create top view maps
 	# The np array indata will be edited by createTopViewMaps to populate it with the 8 top view maps 
-	SharedLib.createTopViewMaps(ctypes.c_void_p(indata.ctypes.data), ctypes.c_char_p(b_lidar_data_src_path), ctypes.c_float(x_MIN), ctypes.c_float(x_MAX), ctypes.c_float(y_MIN), ctypes.c_float(y_MAX), ctypes.c_float(z_MIN), ctypes.c_float(z_MAX), ctypes.c_float(x_DIVISION), ctypes.c_float(y_DIVISION), ctypes.c_float(z_DIVISION), ctypes.c_int(X_SIZE), ctypes.c_int(Y_SIZE), ctypes.c_int(Z_SIZE)  )	
+	SharedLib.createTopViewMaps(ctypes.c_void_p(indata.ctypes.data), ctypes.c_char_p(b_lidar_data_src_path), ctypes.c_float(x_MIN), 
+								ctypes.c_float(x_MAX), ctypes.c_float(y_MIN), ctypes.c_float(y_MAX), ctypes.c_float(z_MIN), 
+								ctypes.c_float(z_MAX), ctypes.c_float(x_DIVISION), ctypes.c_float(y_DIVISION), ctypes.c_float(z_DIVISION), 
+								ctypes.c_int(X_SIZE), ctypes.c_int(Y_SIZE), ctypes.c_int(Z_SIZE)  )	
 
 	# Code to visualize image one by one for one lidar frame (optional)
 #	plt.figure()
 #	for i in range(Z_SIZE+2):
 #		plt.imshow(indata[:,:,i])
-#		plt.gray()
 #	plt.show()
 
 	# Code to visualize all images for one lidar frame(optional)
@@ -72,14 +74,11 @@ for frameNum in range(0,1):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!!
 #	for i in range(Z_SIZE):
 #		plt.subplot(row, col, i+1)
 #		plt.imshow(indata[:,:,i])
-#		plt.gray()
 #	plt.subplot(row, col, Z_SIZE+1)
 #	plt.imshow(indata[:,:,Z_SIZE])
-#	plt.gray()
 #	plt.title("density map")
 #	plt.subplot(row, col, Z_SIZE+2)
 #	plt.imshow(indata[:,:,Z_SIZE+1])
-#	plt.gray()
 #	plt.title("intensity map")
 #	plt.show()
 
