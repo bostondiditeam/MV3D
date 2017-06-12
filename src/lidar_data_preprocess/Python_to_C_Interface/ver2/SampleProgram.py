@@ -55,11 +55,11 @@ for frameNum in range(0,1):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!!
 	# col 1~8 image : height maps  
 	# col 9 image : intensity map
 	# col 10 image : density map
-	plt.figure()
-	for i in range(10):
-		plt.subplot(1, 10, i+1)
-		plt.imshow(top[:,:,i])
-	plt.show()
+	#plt.figure()
+	#for i in range(10):
+	#	plt.subplot(1, 10, i+1)
+	#	plt.imshow(top[:,:,i])
+	#plt.show()
 
 	# Example code to visualize all images for one lidar frame (optional)
 	#row = int(pow((Zn+2),0.5))
