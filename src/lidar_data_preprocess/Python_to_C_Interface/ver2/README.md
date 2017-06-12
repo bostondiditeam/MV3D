@@ -17,5 +17,5 @@ python SampleProgram.py
 ## Comments:
 - After running make, a shared object named LidarPreprocess.so will be created.
 - The shared object is called by the code in SampleProgram.py.
-- Change lidar sensing range and resolution (x_MIN, x_MAX, ...) to LidarPreprocess.so in SampleProgram.py.
+- Change lidar sensing range and resolution (TOP_X_MIN, TOP_X_MAX, ...) to LidarPreprocess.so in SampleProgram.py.
 - Change the filepath (lidar_data_src_path) to LidarPreprocess.so in SampleProgram.py.
