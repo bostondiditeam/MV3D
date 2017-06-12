@@ -38,9 +38,7 @@ indata = np.ones((X_SIZE, Y_SIZE, Z_SIZE+2), dtype = np.double)
 SharedLib = ctypes.cdll.LoadLibrary('./LidarPreprocess.so')
 
 # CHANGE LIDAR DATA DIR HERE !!!!
-# lidar_data_src_dir = "../../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
-
-lidar_data_src_dir = '/home/afrah/Desktop/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/'
+lidar_data_src_dir = "../../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
 
 tStart = time.time()
 for frameNum in range(0,108):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!! 
