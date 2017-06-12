@@ -28,7 +28,8 @@ extern "C"
 	} PointT;
 
 
-	void createTopViewMaps(const void * indatav, const char * file_path, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION, int X_SIZE, int Y_SIZE, int Z_SIZE )
+	void createTopViewMaps(const void * indatav, const char * file_path, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, 
+							float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION, int X_SIZE, int Y_SIZE, int Z_SIZE )
     {
 	    double * data_cube = (double *) indatav;
 
