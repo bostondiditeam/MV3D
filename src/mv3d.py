@@ -30,6 +30,7 @@ import io
 import matplotlib.pyplot as plt
 from tensorflow.python import debug as tf_debug
 import pickle
+import subprocess
 
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
@@ -83,13 +84,20 @@ class Net(object):
 
     def save_weights(self, sess=None):
         path = os.path.join(self.subnet_checkpoint_dir, self.subnet_checkpoint_name)
+        print('\nSave weigths : %s' % path)
         self.saver.save(sess, path)
+
+    def clean_weights(self):
+        command = 'rm -rf %s' % (os.path.join(self.subnet_checkpoint_dir))
+        subprocess.call(command, shell=True)
+        print('\nClean weights: %s' % command)
+        os.makedirs(self.subnet_checkpoint_dir ,exist_ok=True)
 
 
     def load_weights(self, sess=None):
         path = os.path.join(self.subnet_checkpoint_dir, self.subnet_checkpoint_name)
         if tf.train.checkpoint_exists(path) ==False:
-            print('can not found %s, use default weights instead it' % (path))
+            print('\nCan not found :\n"%s",\nuse default weights instead it\n' % (path))
             path = path.replace(os.path.basename(self.checkpoint_dir),'default')
         assert tf.train.checkpoint_exists(path) == True
         self.saver.restore(sess, path)
@@ -300,16 +308,27 @@ class MV3D(object):
     def load_weights(self, weights=[]):
         for name in weights:
             if name == mv3d_net.top_view_rpn_name:
-                print('load rpn pretrained model')
                 self.subnet_rpn.load_weights(self.sess)
 
             elif name == mv3d_net.fusion_net_name:
-                print('load fusion_net pretrained model')
                 self.subnet_fusion.load_weights(self.sess)
 
             elif name == mv3d_net.imfeature_net_name:
-                print('load imfeature net pretrained model')
                 self.subnet_imfeatrue.load_weights(self.sess)
+
+            else:
+                ValueError('unknow weigths name')
+
+    def clean_weights(self, weights=[]):
+        for name in weights:
+            if name == mv3d_net.top_view_rpn_name:
+                self.subnet_rpn.clean_weights()
+
+            elif name == mv3d_net.fusion_net_name:
+                self.subnet_fusion.clean_weights()
+
+            elif name == mv3d_net.imfeature_net_name:
+                self.subnet_imfeatrue.clean_weights()
 
             else:
                 ValueError('unknow weigths name')
@@ -318,15 +337,12 @@ class MV3D(object):
     def save_weights(self, weights=[]):
         for name in weights:
             if name == mv3d_net.top_view_rpn_name:
-                print('save rpn model weigths')
                 self.subnet_rpn.save_weights(self.sess)
 
             elif name == mv3d_net.fusion_net_name:
-                print('save fusion_net model weigths')
                 self.subnet_fusion.save_weights(self.sess)
 
             elif name == mv3d_net.imfeature_net_name:
-                print('save imfeatrue model weigths')
                 self.subnet_imfeatrue.save_weights(self.sess)
 
             else:
@@ -512,11 +528,11 @@ class Trainer(MV3D):
             if continue_train == False:
                if os.path.isdir(train_writer_dir):
                    command ='rm -rf %s' % train_writer_dir
-                   print('clear old file: %s' % command)
+                   print('\nClear old summary file: %s' % command)
                    os.system(command)
                if os.path.isdir(val_writer_dir):
                    command = 'rm -rf %s' % val_writer_dir
-                   print('clear old file: %s' % command)
+                   print('\nClear old summary file: %s' % command)
                    os.system(command)
 
             self.train_summary_writer = tf.summary.FileWriter(train_writer_dir,graph=tf.get_default_graph())
@@ -526,6 +542,11 @@ class Trainer(MV3D):
             self.summ = summ
 
             self.variables_initializer()
+
+            #remove old weigths
+            if continue_train == False:
+                self.clean_weights(train_targets)
+
             self.load_weights(pre_trained_weights)
             if continue_train: self.load_progress()
 
@@ -584,7 +605,7 @@ class Trainer(MV3D):
             info_file.write(info)
 
     def save_progress(self):
-        print('save_progress !')
+        print('Save progress !')
         path = os.path.join(cfg.LOG_DIR, 'train_progress',self.tag,'progress.data')
         os.makedirs(os.path.dirname(path) ,exist_ok=True)
         pickle.dump(self.n_global_step, open(path, "wb"))
@@ -593,10 +614,10 @@ class Trainer(MV3D):
     def load_progress(self):
         path = os.path.join(cfg.LOG_DIR, 'train_progress', self.tag, 'progress.data')
         if os.path.isfile(path):
-            print('load_progress !')
+            print('\nLoad progress !')
             self.n_global_step = pickle.load(open(path, 'rb'))
         else:
-            print('can not found progress file')
+            print('\nCan not found progress file')
 
 
     def __call__(self, max_iter=1000, train_set =None, validation_set =None):
@@ -639,7 +660,7 @@ class Trainer(MV3D):
 
                 if iter % self.iter_debug == 0 or (iter + 1) % self.iter_debug == 0:
                     log_this_iter = True
-                    print('summary log image')
+                    print('Summary log image')
                     if iter % self.iter_debug == 0: is_validation =False
                     else: is_validation =True
 
@@ -690,8 +711,6 @@ class Trainer(MV3D):
                                        (step_name, self.n_global_step, t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss))
 
                 if iter%ckpt_save_step==0:
-                    # saver.save(sess, pretrained_model_path)
-                    print('save_weights')
                     self.save_weights(self.train_target)
 
 

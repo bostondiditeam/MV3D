@@ -5,7 +5,7 @@ import subprocess
 
 
 def run_task(command, time_threshold=None):
-    print('\nstart run:%s\n' % (command))
+    print('\nStart run:\n"%s"\n' % (command))
     delta_time = 0
     # task 1
     try_max = 3
@@ -21,7 +21,6 @@ def run_task(command, time_threshold=None):
     else:
         exit_code = subprocess.call(command, shell=True)
         if exit_code != 0: exit(exit_code)
-        time.sleep(2)
 
 class Task(object):
 
@@ -50,7 +49,7 @@ class Task(object):
         for i in range(iter(5)):
             run_task('python train.py -w "top_view_rpn,image_feature,fusion" -t "image_feature,fusion" -i %d '
                      ' -n %s -c True' %(iter(4000), tag))
-            run_task('python tracking.py -n %s_%d -w "%s" -t "%s"' % (tag,i,tag,self.fast_test))
+            run_task('python tracking.py -n %s_%d -w "%s" -t %s' % (tag,i,tag,self.fast_test))
 
 
 
