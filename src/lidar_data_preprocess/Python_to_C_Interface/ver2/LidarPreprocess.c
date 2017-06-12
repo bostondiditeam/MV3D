@@ -28,14 +28,8 @@ extern "C"
 	} PointT;
 
 
-	void createTopViewMaps(const void * indatav, const char * file_path, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION)
+	void createTopViewMaps(const void * indatav, const char * file_path, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION, int X_SIZE, int Y_SIZE, int Z_SIZE )
     {
-
-		int X_SIZE = (int)floor((x_MAX-x_MIN)/x_DIVISION);	// X_SIZE is 400
-		int Y_SIZE = (int)floor((y_MAX-y_MIN)/y_DIVISION);   // Y_SIZE is 400
-		int Z_SIZE = (int)floor((z_MAX-z_MIN)/z_DIVISION);   // Z_SIZE is 6	
-		//std::cout<< X_SIZE <<","<<Y_SIZE<<","<<Z_SIZE<<std::endl;
-
 	    double * data_cube = (double *) indatav;
 
 		// load point cloud

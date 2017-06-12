@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import math
 #import time
 
-# CHANGE LIDAR SENSING RANGE AND RESOLUTION HERE !!!!
 x_MIN = -45#0.0
 x_MAX = 45#40.0
 y_MIN =-10#-20.0
@@ -15,6 +14,15 @@ x_DIVISION = 0.2#0.1
 y_DIVISION = 0.2#0.1
 z_DIVISION = 0.5#0.3          #was 0.2 originally
 
+x_MIN = -20#0.0
+x_MAX = 20#40.0
+y_MIN =-20#-20.0
+y_MAX =20# 20.0
+z_MIN =-2# -0.4
+z_MAX =0.4# 2
+x_DIVISION = 0.1#0.1
+y_DIVISION = 0.1#0.1
+z_DIVISION = 0.4#0.3          #was 0.2 originally
 
 X_SIZE = int(math.floor((x_MAX-x_MIN)/x_DIVISION))  #400
 Y_SIZE = int(math.floor((y_MAX-y_MIN)/y_DIVISION)) #400
@@ -42,7 +50,7 @@ for frameNum in range(0,1):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!!
 	b_lidar_data_src_path = lidar_data_src_path.encode('utf-8')
 	# call the C function to create top view maps
 	# The np array indata will be edited by createTopViewMaps to populate it with the 8 top view maps 
-	SharedLib.createTopViewMaps(ctypes.c_void_p(indata.ctypes.data), ctypes.c_char_p(b_lidar_data_src_path), ctypes.c_float(x_MIN), ctypes.c_float(x_MAX), ctypes.c_float(y_MIN), ctypes.c_float(y_MAX), ctypes.c_float(z_MIN), ctypes.c_float(z_MAX), ctypes.c_float(x_DIVISION), ctypes.c_float(y_DIVISION), ctypes.c_float(z_DIVISION)  )	
+	SharedLib.createTopViewMaps(ctypes.c_void_p(indata.ctypes.data), ctypes.c_char_p(b_lidar_data_src_path), ctypes.c_float(x_MIN), ctypes.c_float(x_MAX), ctypes.c_float(y_MIN), ctypes.c_float(y_MAX), ctypes.c_float(z_MIN), ctypes.c_float(z_MAX), ctypes.c_float(x_DIVISION), ctypes.c_float(y_DIVISION), ctypes.c_float(z_DIVISION), ctypes.c_int(X_SIZE), ctypes.c_int(Y_SIZE), ctypes.c_int(Z_SIZE)  )	
 
 	# Code to visualize image one by one for one lidar frame (optional)
 #	plt.figure()
