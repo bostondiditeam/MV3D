@@ -337,7 +337,9 @@ def is_evaluation_dataset(date, drive):
 
 def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
-    if (cfg.DATA_SETS_TYPE == 'didi'):
+    if (cfg.DATA_SETS_TYPE == 'didi2'):
+        img_path = os.path.join(raw_dir, date, drive, "image_02", "data")
+    elif (cfg.DATA_SETS_TYPE == 'didi'):
         img_path = os.path.join(raw_dir, date, drive, "image_02", "data")
     elif cfg.DATA_SETS_TYPE == 'kitti':
         img_path = os.path.join(raw_dir, date, date + "_drive_" + drive + "_sync", "image_02", "data")
@@ -459,51 +461,64 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         #     cv2.imwrite(save_preprocess_dir + '/top_image/top_rois'+date+'_'+drive+'.png', mean_image)
 
 
-def preproces(dates=None, drivers=None, frames_index=None):
-
-    if dates == None:
+def preproces(mapping, frames_index):
+    # if mapping is none, using all dataset under raw_data_sets_dir.
+    if mapping is None:
         paths = glob.glob(os.path.join(cfg.RAW_DATA_SETS_DIR ,'*'))
-        dates = [os.path.basename(path) for path in paths]
-    for date in dates:
-        if drivers==None:
-            paths = glob.glob(os.path.join(cfg.RAW_DATA_SETS_DIR,date,'*'))
-            if paths==[]:
-                raise ValueError('can not found any file in:{}'.format(os.path.join(cfg.RAW_DATA_SETS_DIR,date,'*')))
-            drivers_searched = [os.path.basename(path) for path in paths]
-            drivers_des=drivers_searched
+        map_key = [os.path.basename(path) for path in paths]
+        map_value = [os.listdir(bag_name) for bag_name in map_key]
+        mapping = {k: v for k, v in zip(map_key, map_value)}
+
+    # looping through
+    for key in mapping.keys():
+        if mapping[key] is None:
+            paths = glob.glob(os.path.join(cfg.RAW_DATA_SETS_DIR, key, '*'))
+            if len(paths) == 0:
+                raise ValueError('can not found any file in:{}'.format(os.path.join(cfg.RAW_DATA_SETS_DIR, key, '*')))
+            drivers_des=[os.path.basename(path) for path in paths]
         else:
-            drivers_des=drivers
+            drivers_des=mapping[key]
         for driver in drivers_des:
-            data_in_single_driver(cfg.RAW_DATA_SETS_DIR, date, driver, frames_index)
+            print('date {} and driver {}'.format(key, driver))
+            data_in_single_driver(cfg.RAW_DATA_SETS_DIR, key, driver, frames_index)
 
 # main #################################################################33
 if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     if (cfg.DATA_SETS_TYPE == 'didi'):
-        #dates=['1','2','3']
-        dates = ['1']
-        drivers= ['6_f']
-        frames_index=[0]  #None
+        data_dir = {'1': ['15', '10']}
+        frames_index = None  # None
+    elif (cfg.DATA_SETS_TYPE == 'didi2'):
+        pose_name = [
+                     'nissan_pulling_to_right',
+                     'suburu_not_visible',
+                     'suburu_pulling_up_to_it',
+                     'nissan_driving_past_it',
+                     'suburu_driving_towards_it',
+                     'suburu_sitting_still',
+                     'suburu_driving_away',
+                     'suburu_follows_capture',
+                     'nissan_sitting_still',
+                     'suburu_leading_at_distance',
+                     'bmw_following_long',
+                     'suburu_driving_past_it',
+                     'suburu_driving_parallel',
+                     'nissan_pulling_to_left',
+                    ]
+
+        # data_dir = {k:v for k,v in zip(pose_name, bag_name_list)}
+        data_dir = {k: None for k in pose_name}
+
+        frames_index=None  #None
     elif cfg.DATA_SETS_TYPE == 'kitti':
-        dates = ['2011_09_26']
-        drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0005', '0019',
-                   '0036',
-                   '0057', '0084', '0009', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091',
-                   '0013', '0027', '0048',
-                   '0061', '0015', '0028', '0051', '0064']
-        drivers = ['0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091',
-                   '0013', '0027', '0048', '0061', '0015', '0028', '0051', '0064']
-        drivers = ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079', '0019',
-                   '0036', '0005',
-                   '0057', '0084', '0020', '0039', '0059', '0086', '0011', '0023', '0046', '0060', '0091',
-                   '0013', '0027', '0048',
-                   '0061', '0015', '0028', '0051', '0064']
-        # drivers = ['0009']
-        # drivers=['0005']
+        data_dir = {'2011_09_26': ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0035', '0056', '0079',
+                                   '0019', '0036', '0005', '0057', '0084', '0020', '0039', '0059', '0086', '0011',
+                                   '0023', '0046', '0060', '0091','0013', '0027', '0048', '0061', '0015', '0028',
+                                   '0051', '0064']}
+
         frames_index = None # [0,5,8,12,16,20,50]
     elif cfg.DATA_SETS_TYPE == 'test':
-        dates = ['1','2']
-        drivers = None
+        data_dir = {'1':None, '2':None}
         frames_index=None
     else:
         raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
@@ -511,7 +526,7 @@ if __name__ == '__main__':
     import time
     t0=time.time()
 
-    preproces(dates, drivers, frames_index)
+    preproces(data_dir, frames_index)
 
     print('use time : {}'.format(time.time()-t0))
 

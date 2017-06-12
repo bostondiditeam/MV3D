@@ -25,8 +25,9 @@ __C = edict()
 cfg = __C
 __C.TEST_KEY=11
 
-# dataset type
-__C.DATA_SETS_TYPE='didi'       #['didi','kitti','test']
+#['didi2', 'didi','kitti','test']
+# 'didi2' means configuration for round 2, 'didi' means configuration for round 1 data, 'kitti' means for kitti dataset.
+__C.DATA_SETS_TYPE='kitti'
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
@@ -61,6 +62,11 @@ if __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE   ==  'test':
     __C.IMAGE_CROP_RIGHT    =0
     __C.IMAGE_CROP_TOP      =400
     __C.IMAGE_CROP_BOTTOM   =100
+elif __C.DATA_SETS_TYPE ==  'didi2':
+    __C.IMAGE_CROP_LEFT = 0  # pixel
+    __C.IMAGE_CROP_RIGHT = 0
+    __C.IMAGE_CROP_TOP = 400
+    __C.IMAGE_CROP_BOTTOM = 100
 else:
     __C.IMAGE_CROP_LEFT     =0  #pixel
     __C.IMAGE_CROP_RIGHT    =0
@@ -71,7 +77,7 @@ else:
 if __C.DATA_SETS_TYPE   ==  'test':
     __C.IMAGE_HEIGHT=1096 #pixel
     __C.IMAGE_WIDTH=1368
-elif __C.DATA_SETS_TYPE ==  'didi':
+elif __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE ==  'didi2':
     __C.IMAGE_HEIGHT=1096 #pixel
     __C.IMAGE_WIDTH=1368
 elif __C.DATA_SETS_TYPE == 'kitti':

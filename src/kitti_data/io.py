@@ -19,8 +19,7 @@ def read_objects(tracklet_file, frames_index):
 
         # this part is inspired by kitti object development kit matlab code: computeBox3D
         h,w,l = tracklet.size
-        if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
-            l *= cfg.TRACKLET_GTBOX_LENGTH_SCALE
+        if cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
             h, w = h*1.1, l
             trackletBox = np.array([
                 [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
@@ -55,6 +54,9 @@ def read_objects(tracklet_file, frames_index):
                 if truncation not in (TRUNC_IN_IMAGE, TRUNC_TRUNCATED):
                    continue
                 # pass
+            elif cfg.DATA_SETS_TYPE == 'didi2':
+                # todo : 'truncation filter disable'
+                pass
             elif cfg.DATA_SETS_TYPE == 'didi':
                 # todo : 'truncation filter disable'
                 pass
