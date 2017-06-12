@@ -51,17 +51,25 @@ class Task(object):
                      ' -n %s -c True' %(iter(4000), tag))
             run_task('python tracking.py -n %s_%d -w "%s" -t %s' % (tag,i,tag,self.fast_test))
 
+def str2bool(v: str):
+    if v.lower() in ('true'):
+        return True
+    elif v.lower() in ('false'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='tracking')
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
                         help='set log tag')
-    parser.add_argument('-t', '--fast_test', type=bool, nargs='?', default=False,
+    parser.add_argument('-t', '--fast_test', type=str2bool, nargs='?', default=False,
                         help='fast test mode')
     args = parser.parse_args()
 
     print('\n\n{}\n\n'.format(args))
+    fast_test = bool(args.fast_test)
     tag = args.tag
     if tag == 'unknow_tag':
         # tag = input('Enter log tag : ')

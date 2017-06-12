@@ -90,16 +90,25 @@ def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
     print("tracklet file named tracklet_labels.xml is written successfully.")
     return tracklet.path
 
+def str2bool(v):
+    if v.lower() in ('true'):
+        return True
+    elif v.lower() in ('false'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 
 from tracklets.evaluate_tracklets import tracklet_score
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser(description='tracking')
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
                         help='set log tag')
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
                         help='set weigths tag name')
-    parser.add_argument('-t', '--fast_test', type=bool, nargs='?', default=False,
+    parser.add_argument('-t', '--fast_test', type=str2bool, nargs='?', default=False,
                         help='set fast_test model')
     args = parser.parse_args()
 
