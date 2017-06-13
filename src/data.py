@@ -7,6 +7,7 @@ from net.processing.boxes3d import *
 from net.common import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
     TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
+import config
 import os
 import cv2
 import numpy
@@ -45,6 +46,14 @@ def draw_top_image(lidar_top):
     top_image = (top_image/divisor*255)
     top_image = np.dstack((top_image, top_image, top_image)).astype(np.uint8)
     return top_image
+
+
+def clidar_to_top(lidar):
+    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
+        lidar=filter_center_car(lidar)
+
+    top =None   # todo : use createTopViewMaps(lidar) to preprocess
+    return top
 
 
 ## lidar to top ##
@@ -193,8 +202,19 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
         lidars.append(dataset.velo[count])
         count += 1
 
-    tops = pool.map(lidar_to_top,lidars)
-    # tops=[lidar_to_top(lidar) for lidar in lidars]
+
+    if config.cfg.USE_CLIDAR_TO_TOP:
+        print('use clidar_to_top')
+        t0 = time.time()
+        tops = pool.map(clidar_to_top,lidars)
+        # tops=[clidar_to_top(lidar) for lidar in lidars]
+        print('time = ',time.time() -t0)
+    else:
+        t0 = time.time()
+        tops = pool.map(lidar_to_top,lidars)
+        # tops=[lidar_to_top(lidar) for lidar in lidars]
+        print('time = ', time.time() - t0)
+
     count = 0
     for top in tops:
         n=frames_index[count]
