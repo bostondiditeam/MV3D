@@ -47,7 +47,7 @@ __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 __C.USE_RESNET_AS_TOP_BASENET = True
 
 __C.IMAGE_FUSION_DIABLE = False
-__C.RGB_BASENET = 'resnet'  # 'resnet' 、'xception' 'VGG'
+__C.RGB_BASENET = 'VGG'  # 'resnet' 、'xception' 'VGG'
 if __C.RGB_BASENET == 'xception':
     __C.USE_IMAGENET_PRE_TRAINED_MODEL = True
 else:
