@@ -38,11 +38,11 @@ SharedLib = ctypes.cdll.LoadLibrary('./LidarPreprocess.so')
 lidar_data_src_dir = "../../../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
 
 #tStart = time.time()
-for frameNum in range(0,4):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!! 
+for frameNum in range(0, 1):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!! 
 	lidar_data_src_path = lidar_data_src_dir + str(frameNum).zfill(10) + ".bin"
 	
 	# OR OVERWRITE lidar_data_src_path TO SPICIFY THE PATH OF LIDAR DATA FILE !!!!
-	#lidar_data_src_path = "0000000002.bin"
+	lidar_data_src_path = "0000000002.bin"
 
 	#----------------------------------------------------------------------------
 
@@ -63,11 +63,11 @@ for frameNum in range(0,4):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!!
 	# col 1~8 image : height maps  
 	# col 9 image : intensity map
 	# col 10 image : density map
-	plt.figure()
-	for i in range(10):
-		plt.subplot(1, 10, i+1)
-		plt.imshow(top[:,:,i])
-	plt.show()
+	#plt.figure()
+	#for i in range(10):
+	#	plt.subplot(1, 10, i+1)
+	#	plt.imshow(top[:,:,i])
+	#plt.show()
 
 	# Example code to visualize all images for one lidar frame (optional)
 	#row = int(pow((Zn+2),0.5))
