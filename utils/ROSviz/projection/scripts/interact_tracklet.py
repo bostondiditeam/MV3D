@@ -205,11 +205,6 @@ class Projection:
         self.obs_marker.pose.orientation = Quaternion(*self.orient)
         self.add_bbox_lidar()
 
-        tx, ty, tz, yaw, pitch, roll = [0.00749025, -0.40459941, -0.51372948, 
-                                        -1.66780896, -1.59875352, -3.05415572]
-        translation = [tx, ty, tz, 1]
-        rotationMatrix = tf.transformations.euler_matrix(roll, pitch, yaw)
-        rotationMatrix[:, 3] = translation
         md = self.metadata
         dims = np.array([md['l'], md['w'], md['h']])
         outputName = '/image_bbox'
@@ -236,9 +231,7 @@ class Projection:
         cameraModel = PinholeCameraModel()
         cam_info = load_cam_info(self.calib_file)
         cameraModel.fromCameraInfo(cam_info)
-        for pt in corners:
-            rotated_pt = rotationMatrix.dot(list(pt)+[1])
-            projected_pts.append(cameraModel.project3dToPixel(rotated_pt))
+        projected_pts = [cameraModel.project3dToPixel(list(pt)+[1]) for pt in corners]
         projected_pts = np.array(projected_pts)
         center = np.mean(projected_pts, axis=0)
         out_img = drawBbox(img, projected_pts)

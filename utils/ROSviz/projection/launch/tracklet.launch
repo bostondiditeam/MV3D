@@ -8,6 +8,6 @@
 	<node name="velodyne" pkg="velodyne_pointcloud" type="cloud_node" args="">
         <param name="calibration" value="$(find velodyne_pointcloud)/params/32db.yaml" />
     </node>
-	<node name="projection" pkg="projection" type="visualize_tracklet.py" args="$(arg data_DIR)/bags/$(arg bag).bag $(arg data_DIR)/tracklets/$(arg bag).xml $(find projection)/scripts/ost.yaml --offset $(arg offset)"/>
+	<node name="projection" pkg="projection" type="visualize_tracklet.py" args="$(arg data_DIR)/bags/$(arg bag).bag $(arg data_DIR)/tracklets/$(arg bag).xml $(find projection)/scripts/ost_new.yaml --offset $(arg offset)"/>
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find projection)/launch/tracklet_config.rviz"  />
 </launch>
