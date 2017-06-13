@@ -2,5 +2,6 @@
 
 Lidar-camera calibration for DiDi competition
 
-* Calibration explained in `Calibration.ipynb` 
+* Instrinsic calibration explained in `IntrinsicCalibration.ipynb` 
+* Extrinsic calibration explained in `ExtrinsicCalibration.ipynb` 
 * Calibration data can be found in `calib.json` 
