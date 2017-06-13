@@ -163,11 +163,6 @@ class Projection:
             #self.markOutput.publish(marker)
             
 
-            tx, ty, tz, yaw, pitch, roll = [0.00749025, -0.40459941, -0.51372948, 
-                                            -1.66780896, -1.59875352, -3.05415572]
-            translation = [tx, ty, tz, 1]
-            rotationMatrix = tf.transformations.euler_matrix(roll, pitch, yaw)
-            rotationMatrix[:, 3] = translation
             md = self.metadata
             dims = np.array([md['l'], md['w'], md['h']])
             obs_centroid = np.array(f.trans)
@@ -193,23 +188,15 @@ class Projection:
             corners = [0.5*np.array([i,j,k])*dims for i in [-1,1] 
                         for j in [-1,1] for k in [-1,1]]
             corners = [obs_centroid + R.dot(list(c)+[1])[:3] for c in corners]
-            projected_pts = []
             cameraModel = PinholeCameraModel()
             cam_info = load_cam_info(self.calib_file)
             cameraModel.fromCameraInfo(cam_info)
-            for pt in corners:
-                rotated_pt = rotationMatrix.dot(list(pt)+[1])
-                projected_pts.append(cameraModel.project3dToPixel(rotated_pt))
+            projected_pts = [cameraModel.project3dToPixel(list(pt)+[1]) for pt in corners]
             projected_pts = np.array(projected_pts)
             center = np.mean(projected_pts, axis=0)
             out_img = drawBbox(out_img, projected_pts, color=color[::-1])
        
 
-        #id = 0
-        #for m in self.markerArray.markers:
-        #    m.id = id
-        #    id += 1
- 
         self.markOutput.publish(self.markerArray)
         self.imgOutput.publish(bridge.cv2_to_imgmsg(out_img, 'bgr8'))
 
