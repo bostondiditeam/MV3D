@@ -334,6 +334,8 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
         objs = objects[count]
         gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
         img = draw.draw_box3d_on_camera(rgb, gt_boxes3d)
+        new_size = (img.shape[1] // 3, img.shape[0] // 3)
+        img = cv2.resize(img, new_size)
         cv2.imwrite(os.path.join(dataset_dir,'%05d.png' % n), img)
         count += 1
     print('gt box image save done\n')
