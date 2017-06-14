@@ -320,117 +320,24 @@ def front_feature_net(input):
 #
 def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
-    test_num = 0
-    print('\n\n !!!! test_num ={}\n\n'.format(test_num))
-
-    if test_num==0:
-        num=len(feature_list)
-
-        input = None
-        with tf.variable_scope('fuse-input') as scope:
-            feature_names=['top_feature','front_feature','rgb_feature']
-            for n in range(num):
-                feature     = feature_list[n][0]
-                roi         = feature_list[n][1]
-                pool_height = feature_list[n][2]
-                pool_width  = feature_list[n][3]
-                pool_scale  = feature_list[n][4]
-                if (pool_height==0 or pool_width==0): continue
-
-                roi_features,  roi_idxs = tf_roipooling(feature,roi, pool_height, pool_width,
-                                                        pool_scale, name='%d/pool'%n)
-                roi_features = flatten(roi_features)
-                tf.summary.histogram(feature_names[n],roi_features)
-
-                if input is None:
-                    input = roi_features
-                else:
-                    input = concat([input,roi_features], axis=1, name='%d/cat'%n)
-
-        with tf.variable_scope('fuse-block-1') as scope:
-            block = linear_bn_relu(input, num_hiddens=512, name='1')
-            block = linear_bn_relu(block, num_hiddens=512, name='2')
-            block = linear_bn_relu(block, num_hiddens=512, name='3')
-            block = linear_bn_relu(block, num_hiddens=512, name='4')
-
-
-    elif test_num==1:
-        with tf.variable_scope('fuse-net') as scope:
-            num = len(feature_list)
-            feature_names = ['top', 'front', 'rgb']
-            roi_features_list = []
-            for n in range(num):
-                feature = feature_list[n][0]
-                roi = feature_list[n][1]
-                pool_height = feature_list[n][2]
-                pool_width = feature_list[n][3]
-                pool_scale = feature_list[n][4]
-                if (pool_height == 0 or pool_width == 0): continue
-
-                with tf.variable_scope(feature_names[n] + '-roi-pooling'):
-                    roi_features, roi_idxs = tf_roipooling(feature, roi, pool_height, pool_width,
-                                                           pool_scale, name='%s-roi_pooling' % feature_names[n])
-                with tf.variable_scope(feature_names[n]+ '-feature-conv'):
-
-                    with tf.variable_scope('block1') as scope:
-                        block = conv2d_bn_relu(roi_features, num_kernels=128, kernel_size=(3, 3),
-                                               stride=[1, 1, 1, 1], padding='SAME',name=feature_names[n]+'_conv_1')
-                        residual=block
-
-                        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3, 3), stride=[1, 1, 1, 1],
-                                               padding='SAME',name=feature_names[n]+'_conv_2')+residual
-
-                        block = avgpool(block, kernel_size=(2, 2), stride=[1, 2, 2, 1],
-                                        padding='SAME', name=feature_names[n]+'_max_pool')
-                    with tf.variable_scope('block2') as scope:
-
-                        block = conv2d_bn_relu(block, num_kernels=256, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
-                                               name=feature_names[n]+'_conv_1')
-                        residual = block
-                        block = conv2d_bn_relu(block, num_kernels=256, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
-                                               name=feature_names[n]+'_conv_2')+residual
-
-                        block = avgpool(block, kernel_size=(2, 2), stride=[1, 2, 2, 1],
-                                        padding='SAME', name=feature_names[n]+'_max_pool')
-                    with tf.variable_scope('block3') as scope:
-
-                        block = conv2d_bn_relu(block, num_kernels=512, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
-                                               name=feature_names[n]+'_conv_1')
-                        residual = block
-                        block = conv2d_bn_relu(block, num_kernels=512, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
-                                               name=feature_names[n]+'_conv_2')+residual
-
-                        block = avgpool(block, kernel_size=(2, 2), stride=[1, 2, 2, 1],
-                                        padding='SAME', name=feature_names[n]+'_max_pool')
-
-
-                    roi_features = flatten(block)
-                    tf.summary.histogram(feature_names[n], roi_features)
-                    roi_features_list.append(roi_features)
-
-            with tf.variable_scope('rois-feature-concat'):
-                block = concat(roi_features_list, axis=1, name='concat')
-
-
-    elif test_num==2:
+    with tf.variable_scope('fuse-net') as scope:
         num = len(feature_list)
+        feature_names = ['top', 'front', 'rgb']
+        roi_features_list = []
+        for n in range(num):
+            feature = feature_list[n][0]
+            roi = feature_list[n][1]
+            pool_height = feature_list[n][2]
+            pool_width = feature_list[n][3]
+            pool_scale = feature_list[n][4]
+            if (pool_height == 0 or pool_width == 0): continue
 
-        input = None
-        with tf.variable_scope('fuse-input') as scope:
-            feature_names = ['top_feature', 'front_feature', 'rgb_feature']
-            for n in range(num):
-                feature = feature_list[n][0]
-                roi = feature_list[n][1]
-                pool_height = feature_list[n][2]
-                pool_width = feature_list[n][3]
-                pool_scale = feature_list[n][4]
-                if (pool_height == 0 or pool_width == 0): continue
-
-
+            with tf.variable_scope(feature_names[n] + '-roi-pooling'):
                 roi_features, roi_idxs = tf_roipooling(feature, roi, pool_height, pool_width,
-                                                       pool_scale, name='%d/pool' % n)
+                                                       pool_scale, name='%s-roi_pooling' % feature_names[n])
+            with tf.variable_scope(feature_names[n]+ '-feature-conv'):
 
-                with tf.variable_scope('roipooling-conv1') as scope:
+                with tf.variable_scope('block1') as scope:
                     block = conv2d_bn_relu(roi_features, num_kernels=128, kernel_size=(3, 3),
                                            stride=[1, 1, 1, 1], padding='SAME',name=feature_names[n]+'_conv_1')
                     residual=block
@@ -440,22 +347,22 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
                     block = avgpool(block, kernel_size=(2, 2), stride=[1, 2, 2, 1],
                                     padding='SAME', name=feature_names[n]+'_max_pool')
-                with tf.variable_scope('roipooling-conv2') as scope:
+                with tf.variable_scope('block2') as scope:
 
-                    block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
+                    block = conv2d_bn_relu(block, num_kernels=256, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
                                            name=feature_names[n]+'_conv_1')
                     residual = block
-                    block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
+                    block = conv2d_bn_relu(block, num_kernels=256, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
                                            name=feature_names[n]+'_conv_2')+residual
 
                     block = avgpool(block, kernel_size=(2, 2), stride=[1, 2, 2, 1],
                                     padding='SAME', name=feature_names[n]+'_max_pool')
-                with tf.variable_scope('roipooling-conv3') as scope:
+                with tf.variable_scope('block3') as scope:
 
-                    block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
+                    block = conv2d_bn_relu(block, num_kernels=512, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
                                            name=feature_names[n]+'_conv_1')
                     residual = block
-                    block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
+                    block = conv2d_bn_relu(block, num_kernels=512, kernel_size=(3, 3), stride=[1, 1, 1, 1], padding='SAME',
                                            name=feature_names[n]+'_conv_2')+residual
 
                     block = avgpool(block, kernel_size=(2, 2), stride=[1, 2, 2, 1],
@@ -464,68 +371,20 @@ def fusion_net(feature_list, num_class, out_shape=(8,3)):
 
                 roi_features = flatten(block)
                 tf.summary.histogram(feature_names[n], roi_features)
+                roi_features_list.append(roi_features)
 
-                if input is None:
-                    input = roi_features
-                else:
-                    input = concat([input, roi_features], axis=1, name='%d/cat' % n)
-            block = linear_bn_relu(input,128)
+        with tf.variable_scope('rois-feature-concat'):
+            block = concat(roi_features_list, axis=1, name='concat')
 
-
-        # include background class
-        with tf.variable_scope('fuse') as scope:
-            dim = np.product([*out_shape])
-            scores = linear(block, num_hiddens=num_class, name='score')
-            probs = tf.nn.softmax(scores, name='prob')
-            deltas = linear(block, num_hiddens=dim * num_class, name='box')
-            deltas = tf.reshape(deltas, (-1, num_class, *out_shape))
-
+        with tf.variable_scope('fusion-feature-fc'):
+            print('\nUse fusion-feature-2fc')
+            block = linear_bn_relu(block, num_hiddens=512, name='1')
+            block = linear_bn_relu(block, num_hiddens=512, name='2')
 
     return  block
 
 
-
 def fuse_loss(scores, deltas, rcnn_labels, rcnn_targets):
-
-    def modified_smooth_l1( deltas, targets, sigma=3.0):
-        '''
-            ResultLoss = outside_weights * SmoothL1(inside_weights * (box_pred - box_targets))
-            SmoothL1(x) = 0.5 * (sigma * x)^2,    if |x| < 1 / sigma^2
-                          |x| - 0.5 / sigma^2,    otherwise
-        '''
-        sigma2 = sigma * sigma
-        diffs  =  tf.subtract(deltas, targets)
-        smooth_l1_signs = tf.cast(tf.less(tf.abs(diffs), 1.0 / sigma2), tf.float32)
-
-        smooth_l1_option1 = tf.multiply(diffs, diffs) * 0.5 * sigma2
-        smooth_l1_option2 = tf.abs(diffs) - 0.5 / sigma2
-        smooth_l1_add = tf.multiply(smooth_l1_option1, smooth_l1_signs) + tf.multiply(smooth_l1_option2, 1-smooth_l1_signs)
-        smooth_l1 = smooth_l1_add
-
-        return smooth_l1
-
-
-    _, num_class = scores.get_shape().as_list()
-    dim = np.prod(deltas.get_shape().as_list()[1:])//num_class
-
-    rcnn_scores   = tf.reshape(scores,[-1, num_class])
-    rcnn_cls_loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(logits=rcnn_scores, labels=rcnn_labels))
-
-    num = tf.shape(deltas)[0]
-    idx = tf.range(num)*num_class + rcnn_labels
-    deltas1      = tf.reshape(deltas,[-1, dim])
-    rcnn_deltas  = tf.gather(deltas1,  idx)  # remove ignore label
-    rcnn_targets =  tf.reshape(rcnn_targets,[-1, dim])
-
-    with tf.variable_scope('modified_smooth_l1'):
-        rcnn_smooth_l1 = modified_smooth_l1(rcnn_deltas, rcnn_targets, sigma=3.0)
-
-    rcnn_reg_loss  = tf.reduce_mean(tf.reduce_sum(rcnn_smooth_l1, axis=1))
-
-    return rcnn_cls_loss, rcnn_reg_loss
-
-
-def fuse_loss_test(scores, deltas, rcnn_labels, rcnn_targets):
 
     def modified_smooth_l1( deltas, targets, sigma=3.0):
         '''
@@ -688,20 +547,12 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
             fuse_scores = linear(fuse_output, num_hiddens=num_class, name='score')
             fuse_probs = tf.nn.softmax(fuse_scores, name='prob')
             fuse_deltas = linear(fuse_output, num_hiddens=dim * num_class, name='box')
-            if 1:
-                fuse_deltas = tf.reshape(fuse_deltas, (-1, num_class, *out_shape))
-            else:
-                fuse_deltas = tf.reshape(fuse_deltas, (-1, num_class, *out_shape))*0
-                print('\n\n!!!! test disable rgb reg')
+            fuse_deltas = tf.reshape(fuse_deltas, (-1, num_class, *out_shape))
 
         with tf.variable_scope('loss') as scope:
             fuse_labels = tf.placeholder(shape=[None], dtype=tf.int32, name='fuse_label')
             fuse_targets = tf.placeholder(shape=[None, *out_shape], dtype=tf.float32, name='fuse_target')
-            if 1:
-                fuse_cls_loss, fuse_reg_loss = fuse_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
-            else:
-                print('\n\n!!!! use test fuse_loss()\n\n')
-                fuse_cls_loss, fuse_reg_loss = fuse_loss_test(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
+            fuse_cls_loss, fuse_reg_loss = fuse_loss(fuse_scores, fuse_deltas, fuse_labels, fuse_targets)
 
 
     return {
