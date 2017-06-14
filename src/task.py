@@ -44,11 +44,11 @@ class Task(object):
         iter = lambda i:  i if self.fast_test==False else 1
 
         run_task('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i %d '
-                 '-n %s' % (iter(700), self.tag))
+                 '-n %s' % (iter(2000), self.tag))
 
         for i in range(iter(5)):
             run_task('python train.py -w "top_view_rpn,image_feature,fusion" -t "image_feature,fusion" -i %d '
-                     ' -n %s -c True' %(iter(4000), tag))
+                     ' -n %s -c True' %(iter(2500), tag))
             run_task('python tracking.py -n %s_%d -w "%s" -t %s' % (tag,i,tag,self.fast_test))
 
 def str2bool(v: str):

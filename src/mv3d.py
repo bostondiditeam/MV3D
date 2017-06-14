@@ -403,8 +403,13 @@ class Predictor(MV3D):
         MV3D.__init__(self, top_shape, front_shape, rgb_shape, log_tag=log_tag, weigths_dir=weigths_dir)
         self.variables_initializer()
         self.load_weights([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name])
-        self.default_summary_writer = tf.summary.FileWriter(
-            os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_tracking'))
+
+        tb_dir = os.path.join(cfg.LOG_DIR, 'tensorboard', self.tb_dir + '_tracking')
+        if os.path.isdir(tb_dir):
+            command = 'rm -rf %s' % tb_dir
+            print('\nClear old summary file: %s' % command)
+            os.system(command)
+        self.default_summary_writer = tf.summary.FileWriter(tb_dir)
         self.n_log_scope = 0
         self.n_max_log_per_scope= 10
 
@@ -634,7 +639,7 @@ class Trainer(MV3D):
                 if (iter+1) % validation_step == 0:  summary_it,print_loss = True,True # summary train loss
                 if iter % 20 == 0: print_loss = True #print train loss
 
-                if 1 and  iter%300 == 3: summary_it,summary_runmeta = True,True
+                if 1 and  iter%300 == 0: summary_it,summary_runmeta = True,True
 
                 if iter % self.iter_debug == 0 or (iter + 1) % self.iter_debug == 0:
                     log_this_iter = True
