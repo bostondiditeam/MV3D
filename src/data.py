@@ -7,7 +7,6 @@ from net.processing.boxes3d import *
 from net.common import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
     TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
-import config
 import os
 import cv2
 import numpy
@@ -203,7 +202,7 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
         count += 1
 
 
-    if config.cfg.USE_CLIDAR_TO_TOP:
+    if cfg.USE_CLIDAR_TO_TOP:
         print('use clidar_to_top')
         t0 = time.time()
         tops = pool.map(clidar_to_top,lidars)
@@ -514,24 +513,33 @@ if __name__ == '__main__':
         data_dir = {'1': ['15', '10']}
         frames_index = None  # None
     elif (cfg.DATA_SETS_TYPE == 'didi2'):
-        pose_name = [
-                     'nissan_pulling_to_right',
-                     'suburu_not_visible',
-                     'suburu_pulling_up_to_it',
-                     'nissan_driving_past_it',
-                     'suburu_driving_towards_it',
-                     'suburu_sitting_still',
-                     'suburu_driving_away',
-                     'suburu_follows_capture',
-                     'nissan_sitting_still',
-                     'suburu_leading_at_distance',
-                     'bmw_following_long',
-                     'suburu_driving_past_it',
-                     'suburu_driving_parallel',
-                     'nissan_pulling_to_left',
-                    ]
-        pose_name = ['nissan_pulling_to_right']
-        # data_dir = {k:v for k,v in zip(pose_name, bag_name_list)}
+        dir_prefix = '/home/stu/round12_data/raw/didi'
+
+        pose_name = ['suburu_pulling_to_left',
+                 'nissan_following_long',
+                 'suburu_following_long',
+                 'nissan_pulling_to_right',
+                 'suburu_not_visible',
+                 'cmax_following_long',
+                 'nissan_driving_past_it',
+                 'cmax_sitting_still',
+                 'suburu_pulling_up_to_it',
+                 'suburu_driving_towards_it',
+                 'suburu_sitting_still',
+                 'suburu_driving_away',
+                 'suburu_follows_capture',
+                 'bmw_sitting_still',
+                 'suburu_leading_front_left',
+                 'nissan_sitting_still',
+                 'nissan_brief',
+                 'suburu_leading_at_distance',
+                 'bmw_following_long',
+                 'suburu_driving_past_it',
+                 'nissan_pulling_up_to_it',
+                 'suburu_driving_parallel',
+                 'nissan_pulling_to_left',
+                 'nissan_pulling_away', 'ped_train']
+
         data_dir = {k: None for k in pose_name}
 
         frames_index=None  #None
