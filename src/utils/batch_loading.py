@@ -240,20 +240,22 @@ class batch_loading:
                 train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, frame_id =  \
                     self.load_test_frames(size, shuffled)
             load_frames = False
-            # for keeping all gt labels and gt boxes inside range, and discard gt out of selected range.
-            is_gt_inside_range, batch_gt_labels_in_range, batch_gt_boxes3d_in_range = \
-                self.keep_gt_inside_range(train_gt_labels[0], train_gt_boxes3d[0])
+            
+            if not self.is_testset:
+                # for keeping all gt labels and gt boxes inside range, and discard gt out of selected range.
+                is_gt_inside_range, batch_gt_labels_in_range, batch_gt_boxes3d_in_range = \
+                    self.keep_gt_inside_range(train_gt_labels[0], train_gt_boxes3d[0])
 
-            if not is_gt_inside_range:
-                load_frames = True
-                continue
+                if not is_gt_inside_range:
+                    load_frames = True
+                    continue
 
-            # modify gt_labels and gt_boxes3d values to be inside range.
-            # todo current support only batch_size == 1
-            train_gt_labels = np.zeros((1, batch_gt_labels_in_range.shape[0]), dtype=np.int32)
-            train_gt_boxes3d = np.zeros((1, batch_gt_labels_in_range.shape[0], 8, 3), dtype=np.float32)
-            train_gt_labels[0] = batch_gt_labels_in_range
-            train_gt_boxes3d[0] = batch_gt_boxes3d_in_range
+                # modify gt_labels and gt_boxes3d values to be inside range.
+                # todo current support only batch_size == 1
+                train_gt_labels = np.zeros((1, batch_gt_labels_in_range.shape[0]), dtype=np.int32)
+                train_gt_boxes3d = np.zeros((1, batch_gt_labels_in_range.shape[0], 8, 3), dtype=np.float32)
+                train_gt_labels[0] = batch_gt_labels_in_range
+                train_gt_boxes3d[0] = batch_gt_boxes3d_in_range
 
 
         return np.array(train_rgbs), np.array(train_tops), np.array(train_fronts), np.array(train_gt_labels), \

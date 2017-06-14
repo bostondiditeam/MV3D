@@ -74,7 +74,7 @@ def lidar_to_top(lidar):
     idx = np.where (lidar[:,2]<TOP_Z_MAX)
     lidar = lidar[idx]
 
-    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
+    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test' or cfg.DATA_SETS_TYPE=='didi2'):
         lidar=filter_center_car(lidar)
 
 
@@ -219,7 +219,9 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
     for top in tops:
         n=frames_index[count]
         path = os.path.join(dataset_dir, '%05d.npy' % n)
-        np.save(path, top)
+        # top = top.astype(np.float16)
+        # np.save(path, top)
+        np.savez_compressed(path, top_view=top)
         print('top view {} saved'.format(n))
         count+=1
 
@@ -288,7 +290,8 @@ def draw_top_view_image(save_preprocess_dir,objects,date,drive,frames_index,over
 
         print('draw top view image ={}'.format(n))
 
-        top = np.load(os.path.join(save_preprocess_dir,'top',date,drive,'%05d.npy' % n) )
+        top = np.load(os.path.join(save_preprocess_dir,'top',date,drive,'%05d.npy.npz' % n) )
+        top = top['top_view']
         top_image = draw_top_image(top)
 
         # draw bbox on top image
@@ -527,7 +530,7 @@ if __name__ == '__main__':
                      'suburu_driving_parallel',
                      'nissan_pulling_to_left',
                     ]
-
+        pose_name = ['nissan_pulling_to_right']
         # data_dir = {k:v for k,v in zip(pose_name, bag_name_list)}
         data_dir = {k: None for k in pose_name}
 
