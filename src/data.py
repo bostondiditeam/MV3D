@@ -12,6 +12,7 @@ import cv2
 import numpy
 import glob
 from multiprocessing import Pool
+from collections import OrderedDict
 
 
 def filter_center_car(lidar):
@@ -378,9 +379,9 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
     # spilt large numbers of frame to small chunks
     if (cfg.DATA_SETS_TYPE == 'test'):
-        max_cache_frames_num = 4
+        max_cache_frames_num = 3
     else:
-        max_cache_frames_num = 4
+        max_cache_frames_num = 3
     if len(frames_index)>max_cache_frames_num:
         frames_idx_chunks=[frames_index[i:i+max_cache_frames_num] for i in range(0,len(frames_index),max_cache_frames_num)]
     else:
@@ -423,12 +424,12 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
         if 1 and objects!=None:  ## preprocess boxes3d  --------------------
             preprocess_bbox(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
-        if 1: ##draw top image with bbox
+        if 0: ##draw top image with bbox
             draw_top_view_image(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
 
         # dump lidar data
-        if 1:
+        if 0:
             dump_lidar(save_preprocess_dir, dataset, date, drive, frames_index, overwrite=False)
 
         if 1 and objects!= None: #dump gt boxes
@@ -511,11 +512,12 @@ if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     if (cfg.DATA_SETS_TYPE == 'didi'):
         data_dir = {'1': ['15', '10']}
+        data_dir = OrderedDict(data_dir)
         frames_index = None  # None
     elif (cfg.DATA_SETS_TYPE == 'didi2'):
         dir_prefix = '/home/stu/round12_data/raw/didi'
 
-        pose_name = ['suburu_pulling_to_left',
+        bag_groups = ['suburu_pulling_to_left',
                  'nissan_following_long',
                  'suburu_following_long',
                  'nissan_pulling_to_right',
@@ -540,7 +542,26 @@ if __name__ == '__main__':
                  'nissan_pulling_to_left',
                  'nissan_pulling_away', 'ped_train']
 
-        data_dir = {k: None for k in pose_name}
+        bag_groups = ['suburu_pulling_to_left',
+                     'nissan_following_long',
+                     'nissan_driving_past_it',
+                     'cmax_sitting_still',
+                      'cmax_following_long',
+                     'suburu_driving_towards_it',
+                     'suburu_sitting_still',
+                     'suburu_driving_away',
+                     'suburu_follows_capture',
+                     'bmw_sitting_still',
+                     'suburu_leading_front_left',
+                     'nissan_sitting_still',
+                     'suburu_leading_at_distance',
+                     'suburu_driving_past_it',
+                     'nissan_pulling_to_left',
+                     'nissan_pulling_away', 'ped_train']
+
+        # use orderedDict to fix the dictionary order.
+        data_dir = OrderedDict([(bag_group, None) for bag_group in bag_groups])
+        print('ordered dictionary here: ', data_dir)
 
         frames_index=None  #None
     elif cfg.DATA_SETS_TYPE == 'kitti':
@@ -552,6 +573,7 @@ if __name__ == '__main__':
         frames_index = None # [0,5,8,12,16,20,50]
     elif cfg.DATA_SETS_TYPE == 'test':
         data_dir = {'1':None, '2':None}
+        data_dir = OrderedDict(data_dir)
         frames_index=None
     else:
         raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))

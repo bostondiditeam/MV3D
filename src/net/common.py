@@ -13,7 +13,7 @@ if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
     TOP_X_DIVISION = 0.2
     TOP_Y_DIVISION = 0.2
     TOP_Z_DIVISION = 0.3
-elif cfg.DATA_SETS_TYPE == 'didi2'
+elif cfg.DATA_SETS_TYPE == 'didi2':
     TOP_Y_MIN = -30
     TOP_Y_MAX = 30
     TOP_X_MIN = -50
