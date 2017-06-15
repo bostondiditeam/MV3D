@@ -29,13 +29,15 @@ class Task(object):
         self.tag=tag
 
     def train_rpn(self):
+        iter = lambda i: i if self.fast_test == False else 1
 
-        run_task('python train.py -t "top_view_rpn" -i 600 '
-                 '-n %s' % (self.tag))
-        for i in range(20):
-            run_task('python train.py -w "top_view_rpn" -t "top_view_rpn" -i 600 '
-                     ' -n %s -c True' %(self.tag))
-            run_task('python tracking.py -n %s' % (self.tag))
+        run_task('python train.py -w "" -t "top_view_rpn,image_feature,fusion" -i %d '
+                 '-n %s' % (iter(1), self.tag))
+
+        for i in range(iter(10)):
+            run_task('python train.py -w "top_view_rpn" -t "top_view_rpn" -i %d '
+                     ' -n %s -c True' % (iter(2000), tag))
+            run_task('python tracking.py -n %s_%d -w "%s" -t %s' % (tag, i, tag, self.fast_test))
 
 
 
@@ -72,7 +74,8 @@ if __name__ == '__main__':
     fast_test = bool(args.fast_test)
     tag = args.tag
     if tag == 'unknow_tag':
-        # tag = input('Enter log tag : ')
+        tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
 
-    Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion()
+    # Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion()
+    Task(tag=tag, fast_test=args.fast_test).train_rpn()
