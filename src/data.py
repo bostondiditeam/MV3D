@@ -13,6 +13,7 @@ import numpy
 import glob
 from multiprocessing import Pool
 from collections import OrderedDict
+import config
 
 
 def filter_center_car(lidar):
@@ -355,7 +356,7 @@ def crop_image(image):
     return image_crop
 
 def is_evaluation_dataset(date, drive):
-    if date=='Round1Test':
+    if date=='Round1Test' or date == 'test_car' or date == 'test_ped':
         return True
     else:
         return False
