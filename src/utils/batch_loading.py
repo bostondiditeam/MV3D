@@ -6,6 +6,8 @@ import glob
 from sklearn.utils import shuffle
 from utils.check_data import check_preprocessed_data, get_file_names
 import net.processing.boxes3d  as box
+from multiprocessing import Process, Queue, Value
+import time
 
 # disable print
 # import sys
@@ -262,6 +264,52 @@ class batch_loading:
                np.array(train_gt_boxes3d), frame_id
 
 
+class BatchLoading2:
+
+    def __init__(self, queue_size=20):
+        self.test_num = 0 #todo: remove me after finished `data_preprocessed()`
+        self.queue_size = queue_size
+        self.loader_need_exit = Value('d', False)
+        self.preproc_data_queue =Queue()
+        self.lodaer_processing = Process(target=self.loader)
+        self.lodaer_processing.start()
+
+
+
+    def __enter__(self):
+        return self
+
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.loader_need_exit.value=True
+        self.lodaer_processing.join()
+
+
+    def data_preprocessed(self):
+        #todo
+        train_rgbs= []
+        train_tops= []
+        train_fronts= []
+        train_gt_labels= []
+        train_gt_boxes3d= []
+        frame_id = 'test_%05d' %(self.test_num)
+        self.test_num+=1
+        return np.array(train_rgbs), np.array(train_tops), np.array(train_fronts), np.array(train_gt_labels), \
+               np.array(train_gt_boxes3d), frame_id
+
+    def loader(self):
+        print('loader here')
+        while self.loader_need_exit.value == False:
+            self.preproc_data_queue.put(self.data_preprocessed())
+            if self.preproc_data_queue.qsize() >= self.queue_size:
+                time.sleep(1)
+
+
+    def load(self):
+        return self.preproc_data_queue.get(block=True, timeout=10)
+
+
+
 if __name__ == '__main__':
     # testing image testing, single frames
     # batch frame testing.
@@ -283,4 +331,11 @@ if __name__ == '__main__':
 
     for i in range(1000):
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, handle_id = batches.load(1, False)
+
+    with BatchLoading2() as bl:
+        time.sleep(1)
+        for i in range(40):
+            data = bl.load()
+            print(data)
+        print('Done')
 
