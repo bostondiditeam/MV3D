@@ -129,7 +129,23 @@ if __name__ == '__main__':
     frame_offset=0
     dataset_loader=None
 
-    if config.cfg.DATA_SETS_TYPE == 'didi':
+    if config.cfg.DATA_SETS_TYPE == 'didi2':
+        if_score = False
+        if 1:
+            dataset = {'nissan_brief': ['nissan06']}
+
+        else:
+            car='3'
+            data='7'
+            dataset = {
+                car: [data]
+            }
+
+            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+            #  fits you needs.
+            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
+
+    elif config.cfg.DATA_SETS_TYPE == 'didi':
         if_score = True
         if 1:
             dataset = {'Round1Test': ['19_f2']}
