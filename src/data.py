@@ -15,6 +15,29 @@ from multiprocessing import Pool
 from collections import OrderedDict
 import config
 
+class Preprocess(object):
+
+
+    def rgb(self, rgb):
+        rgb = crop_image(rgb)
+        return rgb
+
+
+    def bbox3d(self, obj):
+        return box3d_compose(translation= obj.translation, rotation= obj.rotation, size= obj.size)
+
+
+    def label(self, obj):
+        label=0
+        if obj.type=='Van' or obj.type=='Truck' or obj.type=='Car' or obj.type=='Tram':# todo : only  support 'Van'
+            label = 1
+        return label
+
+
+
+proprocess = Preprocess()
+
+
 
 def filter_center_car(lidar):
     idx = np.where(np.logical_or(numpy.abs(lidar[:, 0]) > 4.7/2, numpy.abs(lidar[:, 1]) > 2.1/2))
@@ -176,9 +199,7 @@ def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite
             continue
         print('rgb images={}'.format(n))
         rgb = dataset.rgb[count][0]
-        rgb = (rgb * 255).astype(np.uint8)
-        rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        rgb = crop_image(rgb)
+        rgb = proprocess.rgb(rgb)
 
         # todo fit it to didi dataset later.
         cv2.imwrite(os.path.join(path), rgb)

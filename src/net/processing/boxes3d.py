@@ -335,6 +335,48 @@ def boxes3d_decompose(boxes3d):
     return translation,size,rotation
 
 
+def box3d_compose(translation,size,rotation):
+    """
+    only support compose one box
+
+    """
+    h, w, l = size[0],size[1],size[2]
+    if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
+        h, w = h * 1.1, l
+        trackletBox = np.array([
+            [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
+            [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
+            [-h / 2, -h / 2, -h / 2, -h / 2, h / 2, h / 2, h / 2, h / 2]])
+    elif cfg.DATA_SETS_TYPE == 'kitti':
+        trackletBox = np.array([  # in velodyne coordinates around zero point and without orientation yet\
+            [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
+            [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
+            [0.0, 0.0, 0.0, 0.0, h, h, h, h]])
+    elif cfg.DATA_SETS_TYPE == 'didi2':
+        h, w = 1.5 * h, 1.7 * w
+        trackletBox = np.array([
+            [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
+            [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
+            [-h / 2, -h / 2, -h / 2, -h / 2, h / 2, h / 2, h / 2, h / 2]])
+    else:
+        raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
+
+
+        # re-create 3D bounding box in velodyne coordinate system
+    yaw = rotation[2]  # other rotations are 0 in all xml files I checked
+    # assert np.abs(rotation[:2]).sum() == 0, 'object rotations other than yaw given!'
+    rotMat = np.array([ \
+        [np.cos(yaw), -np.sin(yaw), 0.0], \
+        [np.sin(yaw), np.cos(yaw), 0.0], \
+        [0.0, 0.0, 1.0]])
+    cornerPosInVelo = np.dot(rotMat, trackletBox) + np.tile(translation, (8, 1)).T
+
+
+    box3d = cornerPosInVelo.transpose()
+
+    return box3d
+
+
 
 import cv2
 
