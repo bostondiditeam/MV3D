@@ -352,25 +352,36 @@ def project_point(point,cameraMat,cameraExtrinsicMat,distCoeff):
   return [u,v]
 
 def box3d_to_rgb_projection_cv2(points):
-    #http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+    ##http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
 
-    cameraMatrix=np.array([[1384.621562, 0.000000, 625.888005],
-                              [0.000000, 1393.652271, 559.626310],
-                              [0.000000, 0.000000, 1.000000]])
+    #cameraMatrix=np.array([[1384.621562, 0.000000, 625.888005],
+    #                          [0.000000, 1393.652271, 559.626310],
+    #                          [0.000000, 0.000000, 1.000000]])
 
-    #https://github.com/zxf8665905/lidar-camera-calibration/blob/master/Calibration.ipynb
-    #Out[17]:
-    x=np.array([ -1.50231172e-03,  -4.00842946e-01,  -5.30289086e-01,
-        -2.41054475e+00,   2.41781181e+00,  -2.46716659e+00])
-    tx, ty, tz, rx, ry, rz = x
+    ##https://github.com/zxf8665905/lidar-camera-calibration/blob/master/Calibration.ipynb
+    ##Out[17]:
+    #x=np.array([ -1.50231172e-03,  -4.00842946e-01,  -5.30289086e-01,
+    #    -2.41054475e+00,   2.41781181e+00,  -2.46716659e+00])
+    #tx, ty, tz, rx, ry, rz = x
 
-    rotVect = np.array([rx, ry, rz])
-    transVect = np.array([tx, ty, tz])
+    #rotVect = np.array([rx, ry, rz])
+    #transVect = np.array([tx, ty, tz])
 
-    distCoeffs=np.array([[-0.152089, 0.270168, 0.003143, -0.005640, 0.000000]])
+    #distCoeffs=np.array([[-0.152089, 0.270168, 0.003143, -0.005640, 0.000000]])
 
-    imagePoints, jacobia=cv2.projectPoints(points,rotVect,transVect,cameraMatrix,distCoeffs)
-    imagePoints=np.reshape(imagePoints,(8,2))
+    #imagePoints, jacobia=cv2.projectPoints(points,rotVect,transVect,cameraMatrix,distCoeffs)
+    #imagePoints=np.reshape(imagePoints,(8,2))
+    
+    projMat = np.matrix([[  6.24391515e+02,  -1.35999541e+03,  -3.47685065e+01,  -8.19238784e+02],
+                     [  5.20528665e+02,   1.80893752e+01,  -1.38839738e+03,  -1.17506110e+03],
+                     [  9.99547104e-01,   3.36246424e-03,  -2.99045429e-02,  -1.34871685e+00]])
+    imagePoints=[] 
+    for pt in points:
+        X = projMat*np.matrix(list(pt)+[1]).T
+        X = np.array(X[:2,0]/X[2,0]).flatten()
+        imagePoints.append(X)
+    imagePoints = np.array(imagePoints)
+
     return imagePoints.astype(np.int)
 
 if __name__ == '__main__':
