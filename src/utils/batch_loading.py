@@ -22,7 +22,7 @@ def load(file_names,is_testset=False):
 
     # print('rgb path here: ', os.path.join(prefix,'rgb', date, driver, file + '.png'))
     train_rgbs=[cv2.imread(os.path.join(prefix,'rgb', file + '.png'),1) for file in frame_num_list]
-    train_tops = [np.load(os.path.join(prefix, 'top', file + '.npy')) for file in frame_num_list]
+    train_tops = [np.load(os.path.join(prefix, 'top', file + '.npy.npz'))['top_view'] for file in frame_num_list]
     train_fronts=[np.zeros((1, 1), dtype=np.float32) for file in frame_num_list]
 
     if is_testset==True:
