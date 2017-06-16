@@ -131,8 +131,45 @@ class Tracklet(RawData):
 
 
 class Lidar(RawData):
-    #todo
-    pass
+    def __init__(self):
+        RawData.__init__(self)
+        self.files_path_mapping = self.get_paths_mapping()
+
+    def load(self, frame_tag: str) -> np.dtype:
+        lidar =np.fromfile(self.files_path_mapping[frame_tag], np.float32)
+        return lidar.reshape((-1, 4))
+
+    def get_tags(self) -> [str]:
+        tags = [tag for tag in self.files_path_mapping]
+        tags.sort()
+        return tags
+
+    def get_paths_mapping(self):
+        raw_dir = cfg.RAW_DATA_SETS_DIR
+        mapping = {}
+
+        # foreach dir1
+        for dir1 in glob.glob(os.path.join(raw_dir, '*')):
+            name1 = os.path.basename(dir1)
+
+            # foreach dir2
+            for dir2 in glob.glob(os.path.join(dir1, '*')):
+
+                if (cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
+                    name2 = os.path.basename(dir2)
+                elif cfg.DATA_SETS_TYPE == 'kitti':
+                    name2 = os.path.basename(dir2).split('_drive_')[1].split('_sync')[0]
+                else:
+                    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+
+                # foreach files in dir2
+                files_path = glob.glob(os.path.join(dir2, 'velodyne_points', 'data', '*'))
+                files_path.sort()
+                for i, file_path in enumerate(files_path):
+                    key = '%s/%s/%05d' % (name1, name2, i)
+                    mapping[key] = file_path
+
+        return mapping
 
 
 
@@ -204,28 +241,41 @@ if __name__ == '__main__':
     preprocess = data.Preprocess()
 
     raw_img = Image()
+    raw_tracklet = Tracklet()
+    raw_lidar = Lidar()
+
     tags = raw_img.get_tags()
 
-    raw_tracklet = Tracklet()
-    os.makedirs(os.path.join(config.cfg.LOG_DIR,'test') ,exist_ok=True)
+
+    os.makedirs(os.path.join(config.cfg.LOG_DIR,'test','rgb') ,exist_ok=True)
+    os.makedirs(os.path.join(config.cfg.LOG_DIR, 'test','top'), exist_ok=True)
     for one_frame_tag in tags:
 
         # load
         objs = raw_tracklet.load(one_frame_tag)
         rgb = raw_img.load(one_frame_tag)
+        lidar = raw_lidar.load(one_frame_tag)
 
         # preprocess
         rgb = preprocess.rgb(rgb)
+        top = preprocess.lidar_to_top(lidar)
         boxes3d = [preprocess.bbox3d(obj) for obj in objs]
         labels = [preprocess.label(obj) for obj in objs]
 
-        # draw
+
+        # dump rgb
         img = draw.draw_box3d_on_camera(rgb, boxes3d)
         new_size = (img.shape[1] // 3, img.shape[0] // 3)
         img = cv2.resize(img, new_size)
-        path = os.path.join(config.cfg.LOG_DIR,'test', '%s.png' % one_frame_tag.replace('/','_'))
-
+        path = os.path.join(config.cfg.LOG_DIR,'test','rgb', '%s.png' % one_frame_tag.replace('/','_'))
         cv2.imwrite(path, img)
+        print('write %s finished' % path)
+
+        # draw bbox on top image
+        path = os.path.join(config.cfg.LOG_DIR, 'test', 'top', '%s.png' % one_frame_tag.replace('/', '_'))
+        top_image = data.draw_top_image(top)
+        top_image = data.draw_box3d_on_top(top_image, boxes3d, color=(0, 0, 80))
+        cv2.imwrite(path, top_image)
         print('write %s finished' % path)
 
 

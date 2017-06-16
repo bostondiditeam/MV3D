@@ -34,6 +34,14 @@ class Preprocess(object):
         return label
 
 
+    def lidar_to_top(self, lidar :np.dtype) ->np.dtype:
+        if cfg.USE_CLIDAR_TO_TOP:
+            top = clidar_to_top(lidar)
+        else:
+            top = lidar_to_top(lidar)
+
+        return top
+
 
 proprocess = Preprocess()
 
