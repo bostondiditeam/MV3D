@@ -2,9 +2,11 @@ import mv3d
 import mv3d_net
 import glob
 from config import *
-import utils.batch_loading as ub
+# import utils.batch_loading as ub
 import argparse
-
+import os
+from utils.training_validation_data_splitter import TrainingValDataSplitter
+from utils.batch_loading import BatchLoading2 as BatchLoading
 
 
 if __name__ == '__main__':
@@ -13,7 +15,7 @@ if __name__ == '__main__':
     all= '%s,%s,%s' % (mv3d_net.top_view_rpn_name ,mv3d_net.imfeature_net_name,mv3d_net.fusion_net_name)
 
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
-        help='use pre trained weigthts example: -w "%s" ' % (all))
+        help='use pre trained weights example: -w "%s" ' % (all))
 
     parser.add_argument('-t', '--targets', type=str, nargs='?', default=all,
         help='train targets example: -w "%s" ' % (all))
@@ -45,7 +47,39 @@ if __name__ == '__main__':
 
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
-    if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
+    if cfg.DATA_SETS_TYPE == 'didi2':
+
+        train_key_list = ['nissan_pulling_away',
+                          'nissan_pulling_up_to_it',
+                          'suburu_follows_capture',
+                          'nissan_pulling_to_left',
+                          'nissan_driving_past_it',
+                          'nissan_pulling_to_right',
+                          'suburu_driving_away',
+                          'nissan_following_long',
+                          'suburu_driving_parallel',
+                          'suburu_driving_towards_it',
+                          'suburu_pulling_to_left',
+                          'suburu_not_visible',
+
+                          'suburu_leading_front_left',
+                          'ped_train',
+                          'bmw_following_long',
+                          'cmax_following_long',
+                          'suburu_following_long',
+                          'suburu_driving_past_it',
+                          'nissan_brief',
+                          'suburu_leading_at_distance']
+
+        train_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in train_key_list]
+        train_value_list = [os.listdir(value)[0] for value in train_key_full_path_list]
+
+        train_n_val_dataset = [k + '/' + v for k, v in zip(train_key_list, train_value_list)]
+
+        splitter = TrainingValDataSplitter(train_n_val_dataset)
+
+
+    elif cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
         training_dataset = {
             '1': ['6_f', '9_f', '10', '13', '20', '21_f', '15', '19'],
             '2': ['3_f', '6_f', '8_f'],
@@ -65,14 +99,12 @@ if __name__ == '__main__':
                            '0061', '0015', '0028', '0051', '0064']
         }
 
-    training = ub.batch_loading(dataset_dir, training_dataset)
 
-    validation = ub.batch_loading(dataset_dir, validation_dataset)
+    training = BatchLoading(splitter.training_bags, splitter.training_tags)
+    validation = BatchLoading(splitter.val_bags, splitter.val_tags)
 
     train = mv3d.Trainer(train_set=training, validation_set=validation,
                          pre_trained_weights=weights, train_targets=targets, log_tag=tag,
                          continue_train = args.continue_train)
 
     train(max_iter=max_iter)
-
-

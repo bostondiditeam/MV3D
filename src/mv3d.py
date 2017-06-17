@@ -655,12 +655,12 @@ class Trainer(MV3D):
                 # load dataset
                 self.batch_rgb_images, self.batch_top_view, self.batch_front_view, \
                 self.batch_gt_labels, self.batch_gt_boxes3d, self.frame_id = \
-                    data_set.load(batch_size, shuffled=True)
+                    data_set.load()
 
                 # fit_iterate log init
                 if log_this_iter:
                     self.time_str = strftime("%Y_%m_%d_%H_%M", localtime())
-                    self.frame_info = data_set.get_frame_info(self.frame_id)[0]
+                    self.frame_info = data_set.get_frame_info()
                     self.log_subdir = step_name + '/' + self.time_str
                     top_image = data.draw_top_image(self.batch_top_view[0])
                     self.top_image = self.top_image_padding(top_image)
