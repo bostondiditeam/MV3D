@@ -76,7 +76,7 @@ if __name__ == '__main__':
 
         train_n_val_dataset = [k + '/' + v for k, v in zip(train_key_list, train_value_list)]
 
-        splitter = TrainingValDataSplitter(train_n_val_dataset)
+        data_splitter = TrainingValDataSplitter(train_n_val_dataset)
 
 
     elif cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
@@ -100,8 +100,8 @@ if __name__ == '__main__':
         }
 
 
-    training = BatchLoading(splitter.training_bags, splitter.training_tags)
-    validation = BatchLoading(splitter.val_bags, splitter.val_tags)
+    training = BatchLoading(data_splitter.training_bags, data_splitter.training_tags, require_shuffle=True)
+    validation = BatchLoading(data_splitter.val_bags, data_splitter.val_tags, require_shuffle=True)
 
     train = mv3d.Trainer(train_set=training, validation_set=validation,
                          pre_trained_weights=weights, train_targets=targets, log_tag=tag,

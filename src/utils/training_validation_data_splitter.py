@@ -4,6 +4,19 @@ import re
 from config import cfg
 import os
 
+def get_test_tags(bags):
+    raw_img = Image()
+    tags_all = raw_img.get_tags()
+    # get only tes
+    all_tags = []
+    for bag in bags:
+        # get all tags start from bag string.
+        r = re.compile(bag + "*")
+        tag_list = filter(r.match, tags_all)
+        bag_tag_list = list(tag_list)
+        all_tags += bag_tag_list
+    return all_tags
+
 
 class TrainingValDataSplitter:
     def __init__(self, bags, split_rate=0.7):
@@ -27,8 +40,6 @@ class TrainingValDataSplitter:
         # get training_bags, training_tags, val_bags, val_tags.
         self.split_bags_by_tag_name()
 
-
-
     def split_bags_by_tag_name(self):
         # input tags, split rate,
         # record: training_bags(a name list), training_tags(list), val_bags(a name list), val_tags(list)
@@ -44,9 +55,6 @@ class TrainingValDataSplitter:
 
         tag_size = len(all_tags)
         split_point = round(tag_size * self.split_rate)
-
-        train_bag = set()
-        val_bag = set()
 
         for i in range(split_point, tag_size):
             first_frame = all_tags[i]
@@ -76,37 +84,35 @@ class TrainingValDataSplitter:
 
 
 if __name__ == '__main__':
-
     train_key_list = ['nissan_pulling_away',
-         'nissan_pulling_up_to_it',
-         'suburu_follows_capture',
-         'nissan_pulling_to_left',
-         'nissan_driving_past_it',
-         'nissan_pulling_to_right',
-         'suburu_driving_away',
-         'nissan_following_long',
-         'suburu_driving_parallel',
-         'suburu_driving_towards_it',
-         'suburu_pulling_to_left',
-         'suburu_not_visible',
+                      'nissan_pulling_up_to_it',
+                      'suburu_follows_capture',
+                      'nissan_pulling_to_left',
+                      'nissan_driving_past_it',
+                      'nissan_pulling_to_right',
+                      'suburu_driving_away',
+                      'nissan_following_long',
+                      'suburu_driving_parallel',
+                      'suburu_driving_towards_it',
+                      'suburu_pulling_to_left',
+                      'suburu_not_visible',
 
-         'suburu_leading_front_left',
-         'ped_train',
-         'bmw_following_long',
-         'cmax_following_long',
-         'suburu_following_long',
-         'suburu_driving_past_it',
-         'nissan_brief',
-         'suburu_leading_at_distance']
-
+                      'suburu_leading_front_left',
+                      'ped_train',
+                      'bmw_following_long',
+                      'cmax_following_long',
+                      'suburu_following_long',
+                      'suburu_driving_past_it',
+                      'nissan_brief',
+                      'suburu_leading_at_distance']
 
     train_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in train_key_list]
     train_value_list = [os.listdir(value)[0] for value in train_key_full_path_list]
 
-    train_n_val_dataset = [k+'/'+v for k, v in zip(train_key_list, train_value_list)]
+    train_n_val_dataset = [k + '/' + v for k, v in zip(train_key_list, train_value_list)]
 
     splitter = TrainingValDataSplitter(train_n_val_dataset)
-    #splitter.split_bags_by_tag_name()
+    # splitter.split_bags_by_tag_name()
     print('hello')
 
     # with BatchLoading2(train_n_val_dataset) as bl:
