@@ -19,13 +19,7 @@ class RawData(object):
 
     def get_synced_nframe(self, dir_tag:str) -> int:
         name = dir_tag.split('/')
-        if (cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
-            path = os.path.join(cfg.RAW_DATA_SETS_DIR, name[0], name[1],'image_02','data', '*')
-        elif cfg.DATA_SETS_TYPE == 'kitti':
-            path = os.path.join(cfg.RAW_DATA_SETS_DIR, name[0], name[0] +'_drive_' + name[1]+'_sync',
-                                'image_02', 'data', '*')
-        else:
-            raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+        path = os.path.join(cfg.RAW_DATA_SETS_DIR, name[0], name[1], 'image_02', 'data', '*')
         return len(glob.glob(path))
 
 
@@ -57,12 +51,7 @@ class Image(RawData):
             # foreach dir2
             for dir2 in glob.glob(os.path.join(dir1, '*')):
 
-                if (cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
-                    name2 = os.path.basename(dir2)
-                elif cfg.DATA_SETS_TYPE == 'kitti':
-                    name2 = os.path.basename(dir2).split('_drive_')[1].split('_sync')[0]
-                else:
-                    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+                name2 = os.path.basename(dir2)
 
                 # foreach files in dir2
                 files_path = glob.glob(os.path.join(dir2,'image_02','data', '*'))
@@ -108,12 +97,7 @@ class Tracklet(RawData):
             # foreach dir2
             for dir2 in glob.glob(os.path.join(dir1, '*')):
 
-                if (cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
-                    name2 = os.path.basename(dir2)
-                elif cfg.DATA_SETS_TYPE == 'kitti':
-                    name2 = os.path.basename(dir2).split('_drive_')[1].split('_sync')[0]
-                else:
-                    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+                name2 = os.path.basename(dir2)
 
                 dir_tag = '%s/%s' % (name1, name2)
                 nframe = self.get_synced_nframe(dir_tag)
@@ -154,13 +138,7 @@ class Lidar(RawData):
 
             # foreach dir2
             for dir2 in glob.glob(os.path.join(dir1, '*')):
-
-                if (cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
-                    name2 = os.path.basename(dir2)
-                elif cfg.DATA_SETS_TYPE == 'kitti':
-                    name2 = os.path.basename(dir2).split('_drive_')[1].split('_sync')[0]
-                else:
-                    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))
+                name2 = os.path.basename(dir2)
 
                 # foreach files in dir2
                 files_path = glob.glob(os.path.join(dir2, 'velodyne_points', 'data', '*'))
