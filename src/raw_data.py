@@ -75,13 +75,15 @@ class Tracklet(RawData):
         self.frames_object=self.get_frames_objects()
 
 
-    def load(self, frame_tag:str)-> (np.dtype,np.dtype, str):
+    def load(self, frame_tag:str):
         objs = self.frames_object[frame_tag]
 
         return objs
 
     def get_tags(self)-> [str]:
-        return [tag for tag in self.frames_object].sort()
+        tags = [tag for tag in self.frames_object]
+        tags.sort()
+        return tags
 
     def frame_tag_to_path(self):
         pass
@@ -215,6 +217,7 @@ def read_objects(tracklet_file, frames_index):
 if __name__ == '__main__':
     import data
     import net.utility.draw as draw
+    from sklearn.utils import shuffle
 
     preprocess = data.Preprocess()
 
@@ -222,7 +225,7 @@ if __name__ == '__main__':
     raw_tracklet = Tracklet()
     raw_lidar = Lidar()
 
-    tags = raw_img.get_tags()
+    tags = shuffle(raw_tracklet.get_tags())
 
 
     os.makedirs(os.path.join(config.cfg.LOG_DIR,'test','rgb') ,exist_ok=True)
