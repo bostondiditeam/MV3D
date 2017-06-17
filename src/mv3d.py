@@ -31,6 +31,7 @@ import matplotlib.pyplot as plt
 from tensorflow.python import debug as tf_debug
 import pickle
 import subprocess
+import sys
 
 
 #http://3dimage.ee.tsinghua.edu.cn/cxz
@@ -397,6 +398,23 @@ class MV3D(object):
         summary_writer.add_summary(summary, step)
 
 
+    def summary_scalar(self, value, tag, summary_writer=None, step=None):
+        """Log a scalar variable.
+        Parameter
+        ----------
+        tag : basestring
+            Name of the scalar
+        value
+        step : int
+            training iteration
+        """
+        if summary_writer == None:
+            summary_writer=self.default_summary_writer
+        summary = tf.Summary(value=[tf.Summary.Value(tag=tag,
+                                                     simple_value=value)])
+        summary_writer.add_summary(summary, step)
+
+
 class Predictor(MV3D):
     def __init__(self, top_shape, front_shape, rgb_shape, log_tag=None, weights_tag=None):
         weigths_dir= os.path.join(cfg.CHECKPOINT_DIR, weights_tag) if weights_tag!=None  else None
@@ -575,10 +593,22 @@ class Trainer(MV3D):
 
 
     def log_prediction(self, batch_top_view, batch_front_view, batch_rgb_images,
+                       batch_gt_labels=None, batch_gt_boxes3d=None, print_iou=False,
                        log_rpn=False, step=None, scope_name=''):
 
         boxes3d, lables = self.predict(batch_top_view, batch_front_view, batch_rgb_images)
         self.predict_log(self.log_subdir,log_rpn=log_rpn, step=step, scope_name=scope_name)
+
+        if type(batch_gt_boxes3d)==np.ndarray and type(batch_gt_labels)==np.ndarray:
+            inds = np.where(batch_gt_labels[0]!=0)
+            try:
+                iou = box.boxes3d_score_iou(batch_gt_boxes3d[0][inds], boxes3d)
+                tag = os.path.join(scope_name, 'IOU')
+                self.summary_scalar(value=iou, tag=tag, step=self.n_global_step)
+            except ValueError:
+                iou= -1
+                print("Unexpected error:", sys.exc_info()[0])
+            if print_iou: self.log_msg.write('\n %s iou: %.5f\n' % (scope_name, iou))
 
 
     def log_info(self, subdir, info):
@@ -809,7 +839,8 @@ class Trainer(MV3D):
                     sess.run([self.solver_step, top_cls_loss, top_reg_loss, fuse_cls_loss, fuse_reg_loss],
                              feed_dict=fd2)
         if log: self.log_prediction(batch_top_view, batch_front_view, batch_rgb_images,
-                                    step=self.n_global_step, scope_name=scope_name)
+                                    batch_gt_labels, batch_gt_boxes3d,
+                                    step=self.n_global_step, scope_name=scope_name, print_iou=True)
 
         return t_cls_loss, t_reg_loss, f_cls_loss, f_reg_loss
 
