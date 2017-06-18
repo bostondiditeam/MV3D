@@ -99,12 +99,10 @@ if __name__ == '__main__':
                            '0061', '0015', '0028', '0051', '0064']
         }
 
+    with BatchLoading(splitter.training_bags, splitter.training_tags) as training:
+        with BatchLoading(splitter.val_bags, splitter.val_tags, queue_size=1) as validation:
 
-    training = BatchLoading(splitter.training_bags, splitter.training_tags)
-    validation = BatchLoading(splitter.val_bags, splitter.val_tags)
-
-    train = mv3d.Trainer(train_set=training, validation_set=validation,
-                         pre_trained_weights=weights, train_targets=targets, log_tag=tag,
-                         continue_train = args.continue_train)
-
-    train(max_iter=max_iter)
+            train = mv3d.Trainer(train_set=training, validation_set=validation,
+                                 pre_trained_weights=weights, train_targets=targets, log_tag=tag,
+                                 continue_train = args.continue_train)
+            train(max_iter=max_iter)

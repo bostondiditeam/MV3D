@@ -6,7 +6,8 @@ import glob
 from sklearn.utils import shuffle
 from utils.check_data import check_preprocessed_data, get_file_names
 import net.processing.boxes3d  as box
-from multiprocessing import Process, Queue, Value
+from multiprocessing import Process,Queue as Queue, Value,Array
+# import queue
 import time
 
 import config
@@ -20,6 +21,8 @@ import data
 import net.utility.draw as draw
 from raw_data import *
 from utils.training_validation_data_splitter import TrainingValDataSplitter
+import pickle
+import array
 
 # disable print
 # import sys
@@ -336,9 +339,11 @@ def draw_bbox_on_lidar_top(top, boxes3d, one_frame_tag):
     print('write %s finished' % path)
 
 
+
+
 class BatchLoading2:
 
-    def __init__(self, bags, tags, queue_size=20, require_shuffle=False, require_log=True):
+    def __init__(self, bags, tags, queue_size=20, require_shuffle=False, require_log=False):
         self.test_num = 0 #todo: remove me after finished `data_preprocessed()`
 
         self.shuffled = require_shuffle
@@ -359,18 +364,30 @@ class BatchLoading2:
 
         self.require_log = require_log
 
-        self.queue_size = queue_size
-        self.loader_need_exit = Value('d', False)
+        self.cache_size = queue_size
+        self.loader_need_exit = Value('i', 0)
         self.preproc_data_queue = Queue()
+        self.buffer_blocks = [Array('h',41246691) for i in range(queue_size)]
+        self.blocks_usage = Array('i', range(queue_size))
+
         self.lodaer_processing = Process(target=self.loader)
         self.lodaer_processing.start()
+
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.loader_need_exit.value=True
+        print('set loader_need_exit True')
+        # print('self.preproc_data_queue size = ',self.preproc_data_queue.)
+        # while self.preproc_data_queue.empty() ==False:
+        #     print('dropout data remain in queue ')
+        #     self.preproc_data_queue.get()
+        #     self.preproc_data_queue.task_done()
+        # self.preproc_data_queue.join()
         self.lodaer_processing.join()
+        print('exit lodaer_processing')
 
 
     def load_from_one_tag(self, one_frame_tag):
@@ -378,6 +395,7 @@ class BatchLoading2:
         rgb = self.raw_img.load(one_frame_tag)
         lidar = self.raw_lidar.load(one_frame_tag)
         return obstacles, rgb, lidar
+
 
     def preprocess_one_frame(self, rgb, lidar, obstacles):
         rgb = self.preprocess.rgb(rgb)
@@ -408,6 +426,7 @@ class BatchLoading2:
 
         self.test_num+=1
         frame_tag = self.tags[self.tag_index]
+
         obstacles, rgb, lidar = self.load_from_one_tag(frame_tag)
         rgb, top, boxes3d, labels = self.preprocess_one_frame(rgb, lidar, obstacles)
         if self.require_log:
@@ -423,20 +442,61 @@ class BatchLoading2:
                 self.tags = shuffle(self.tags)
 
 
+
         return np.array([rgb]), np.array([top]), np.array([fronts]), np.array([labels]), \
                np.array([boxes3d]), frame_tag
 
+    def find_empty_block(self):
+        idx = -1
+        for i in range(self.cache_size):
+            if self.blocks_usage[i] == 1:
+                continue
+            else:
+                idx = i
+                break
+        return idx
+
 
     def loader(self):
-        print('loader here')
-        while self.loader_need_exit.value == False:
-            self.preproc_data_queue.put(self.data_preprocessed())
-            while self.preproc_data_queue.qsize() >= self.queue_size:
+        i = 0
+        while self.loader_need_exit.value == 0:
+            empty_idx = self.find_empty_block()
+            if empty_idx ==-1:
                 time.sleep(1)
+                print('sleep ')
+            else:
+                prepr_data = (self.data_preprocessed())
+                print('data_preprocessed')
+                dumps = pickle.dumps(prepr_data)
+                length = len(dumps)
+                self.buffer_blocks[empty_idx][0:length] = dumps[0:length]
+
+                self.preproc_data_queue.put({
+                    'index':empty_idx,
+                    'length':length
+                })
+
+        print('loader exit')
+
 
 
     def load(self):
-        return self.preproc_data_queue.get(block=True, timeout=10)
+        # print('self.preproc_data_queue.qsize() = ', self.preproc_data_queue.qsize())
+        info = self.preproc_data_queue.get()
+        length = info['length']
+        block_index = info['index']
+        dumps = self.buffer_blocks[block_index][0:length]
+
+        #set flag
+        self.blocks_usage[block_index] = 0
+
+        # convert to bytes string
+        dumps = array.array('B',dumps).tostring()
+        data_ori = pickle.loads(dumps)
+
+        return data_ori
+
+
 
     def get_frame_info(self):
         return self.tags[self.tag_index]
@@ -497,8 +557,25 @@ if __name__ == '__main__':
     # bl = BatchLoading2(splitter.training_bags, splitter.training_tags)
 
     with BatchLoading2(splitter.training_bags, splitter.training_tags) as bl:
-        time.sleep(1)
-        for i in range(40):
+        time.sleep(5)
+        for i in range(5):
+            t0 = time.time()
             data = bl.load()
+            print('use time =', time.time()-t0)
             print(data)
+            time.sleep(3)
+
         print('Done')
+    #
+    # from multiprocessing import sharedctypes
+    # import pickle
+    # S= np.array([1,23,34.,4])
+    # a=pickle.dumps(S)
+    # pass
+    # # S= np.ar
+    # # size = S.size
+    # # shape = S.shape
+    # # S.shape = size
+    # # S_ctypes = sharedctypes.RawArray('d', S)
+    # # S = numpy.frombuffer(S_ctypes, dtype=numpy.float64, count=size)
+    # # S.shape = shape

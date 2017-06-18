@@ -30,7 +30,7 @@ class Image(RawData):
         self.files_path_mapping= self.get_paths_mapping()
 
 
-    def load(self, frame_tag:str)-> np.dtype:
+    def load(self, frame_tag:str)-> np.ndarray:
         return cv2.imread(self.files_path_mapping[frame_tag])
 
     def get_tags(self)-> [str]:
