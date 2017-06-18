@@ -31,8 +31,8 @@ class Task(object):
     def train_rpn(self):
         iter = lambda i: i if self.fast_test == False else 1
 
-        run_task('python train.py -w "" -t "top_view_rpn,image_feature,fusion" -i %d '
-                 '-n %s' % (iter(1), self.tag))
+        run_task('python train.py -w "" -t "top_view_rpn" -i %d '
+                 '-n %s' % (iter(500), self.tag))
 
         for i in range(iter(10)):
             run_task('python train.py -w "top_view_rpn" -t "top_view_rpn" -i %d '

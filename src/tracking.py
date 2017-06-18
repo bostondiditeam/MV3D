@@ -188,16 +188,16 @@ if __name__ == '__main__':
 
     test_tags = get_test_tags(test_bags)
 
-    dataset_loader = BatchLoading(test_bags, test_tags, require_shuffle=False, is_testset=True)
+    with BatchLoading(test_bags, test_tags, require_shuffle=False, is_testset=True) as dataset_loader:
 
-    # dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
+        # dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
+    
+        print("tracklet_pred_dir: " + tracklet_pred_dir)
+        pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
+                                  frame_offset=0, log_tag=tag, weights_tag=weights_tag)
 
-    print("tracklet_pred_dir: " + tracklet_pred_dir)
-    pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
-                              frame_offset=0, log_tag=tag, weights_tag=weights_tag)
+        if if_score:
+            tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
+            print("scores are save under {} directory.".format(tracklet_pred_dir))
 
-    if if_score:
-        tracklet_score(pred_file=pred_file, gt_file=gt_tracklet_file, output_dir=tracklet_pred_dir)
-        print("scores are save under {} directory.".format(tracklet_pred_dir))
-
-    print("Completed")
+        print("Completed")

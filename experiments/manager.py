@@ -115,6 +115,8 @@ class Manager(Env):
             'data.py': os.path.join(self.root_dir, '..', 'src', 'data.py'),
             'config.py': os.path.join(self.root_dir, '..', 'src', 'config.py'),
             'mv3d.py': os.path.join(self.root_dir, '..', 'src', 'mv3d.py'),
+            'mv3d_net.py': os.path.join(self.root_dir, '..', 'src', 'mv3d_net.py'),
+            'raw_data.py': os.path.join(self.root_dir, '..', 'src', 'raw_data.py'),
             'train.py': os.path.join(self.root_dir, '..', 'src', 'train.py'),
             'tracking.py': os.path.join(self.root_dir, '..', 'src', 'tracking.py'),
             'task.py': os.path.join(self.root_dir, '..', 'src', 'task.py'),
