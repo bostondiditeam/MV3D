@@ -383,6 +383,28 @@ class BatchLoading2:
         self.lodaer_processing.join()
         if self.require_log: print('exit lodaer_processing')
 
+    def keep_gt_inside_range(self, train_gt_labels, train_gt_boxes3d):
+        train_gt_labels = np.array(train_gt_labels, dtype=np.int32)
+        train_gt_boxes3d = np.array(train_gt_boxes3d, dtype=np.float32)
+        if train_gt_labels.shape[0] == 0:
+            return False, None, None
+        assert train_gt_labels.shape[0] == train_gt_boxes3d.shape[0]
+
+        # get limited train_gt_boxes3d and train_gt_labels.
+        keep = np.zeros((len(train_gt_labels)), dtype=bool)
+
+        for i in range(len(train_gt_labels)):
+            if box.box3d_in_top_view(train_gt_boxes3d[i]):
+                keep[i] = 1
+
+        # if all targets are out of range in selected top view, return True.
+        if np.sum(keep) == 0:
+            return False, None, None
+
+        train_gt_labels = train_gt_labels[keep]
+        train_gt_boxes3d = train_gt_boxes3d[keep]
+        return True, train_gt_labels, train_gt_boxes3d
+
     def load_from_one_tag(self, one_frame_tag):
         if self.is_testset:
             obstacles = None
@@ -411,23 +433,36 @@ class BatchLoading2:
         return top_shape, front_shape, rgb_shape
 
     def data_preprocessed(self):
-        fronts = []
-        frame_tag = self.tags[self.tag_index]
-        obstacles, rgb, lidar = self.load_from_one_tag(frame_tag)
-        rgb, top, boxes3d, labels = self.preprocess_one_frame(rgb, lidar, obstacles)
-        if self.require_log and not self.is_testset:
-            draw_bbox_on_rgb(rgb, boxes3d, frame_tag)
-            draw_bbox_on_lidar_top(top, boxes3d, frame_tag)
+        # only feed in frames with ground truth labels and bboxes during training, or the training nets will break.
+        skip_frames = True
+        while skip_frames:
+            fronts = []
+            self.test_num += 1
+            frame_tag = self.tags[self.tag_index]
+            obstacles, rgb, lidar = self.load_from_one_tag(frame_tag)
+            rgb, top, boxes3d, labels = self.preprocess_one_frame(rgb, lidar, obstacles)
+            if self.require_log and not self.is_testset:
+                draw_bbox_on_rgb(rgb, boxes3d, frame_tag)
+                draw_bbox_on_lidar_top(top, boxes3d, frame_tag)
 
-        self.tag_index += 1
+            self.tag_index += 1
 
-        # reset self tag_index to 0 and shuffle tag list
-        if self.tag_index >= self.size:
-            self.tag_index = 0
-            if self.shuffled:
-                self.tags = shuffle(self.tags)
+            # reset self tag_index to 0 and shuffle tag list
+            if self.tag_index >= self.size:
+                self.tag_index = 0
+                if self.shuffled:
+                    self.tags = shuffle(self.tags)
+            skip_frames = False
 
-
+            # only feed in frames with ground truth labels and bboxes during training, or the training nets will break.
+            if not self.is_testset:
+                is_gt_inside_range, batch_gt_labels_in_range, batch_gt_boxes3d_in_range = \
+                    self.keep_gt_inside_range(labels, boxes3d)
+                labels = batch_gt_labels_in_range
+                boxes3d = batch_gt_boxes3d_in_range
+                # if no gt labels inside defined range, discard this training frame.
+                if not is_gt_inside_range:
+                    skip_frames = True
 
         return np.array([rgb]), np.array([top]), np.array([fronts]), np.array([labels]), \
                np.array([boxes3d]), frame_tag

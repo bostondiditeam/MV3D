@@ -1,8 +1,10 @@
 from sklearn.utils import shuffle
-from raw_data import Image
+from raw_data import Image, Tracklet
 import re
 from config import cfg
 import os
+import glob
+
 
 def get_test_tags(bags):
     raw_img = Image()
@@ -22,6 +24,7 @@ class TrainingValDataSplitter:
     def __init__(self, bags, split_rate=0.7):
         self.bags = bags
         self.raw_img = Image()
+        self.raw_tracklet_tag_list = list(Tracklet().frames_object.keys())
 
         # get all tags
         self.tags_all = self.raw_img.get_tags()
@@ -40,11 +43,39 @@ class TrainingValDataSplitter:
         # get training_bags, training_tags, val_bags, val_tags.
         self.split_bags_by_tag_name()
 
+    def check_frames_integrity(self, bag):
+        # get number of images belong to this bag
+        name = bag.split('/')
+        bag_dir = os.path.join(cfg.RAW_DATA_SETS_DIR, name[0], name[1])
+        img_path = os.path.join(bag_dir, 'image_02', 'data', '*')
+        lidar_path = os.path.join(bag_dir, 'velodyne_points', 'data', '*')
+
+        img_num = len(glob.glob(img_path))
+        lidar_num = len(glob.glob(lidar_path))
+        r = re.compile(bag + '*')
+        tracklet_tag_list = filter(r.match, self.raw_tracklet_tag_list)
+        tracklet_num = len(list(tracklet_tag_list))
+        if not img_num == lidar_num == tracklet_num:
+            return False
+        return True
+
     def split_bags_by_tag_name(self):
         # input tags, split rate,
         # record: training_bags(a name list), training_tags(list), val_bags(a name list), val_tags(list)
         self.bags = shuffle(self.bags, random_state=0)
-        # shuffle bags:
+
+        # make sure all bags have same number of lidar, images and tracklet poses.
+        problematic_bags = []
+        for bag in self.bags:
+            if_same = self.check_frames_integrity(bag)
+            if not if_same:
+                problematic_bags.append(bag)
+
+        if len(problematic_bags) != 0:
+            raise ValueError('Number of images, lidar and tracklet of these bags are not the same ',
+                             problematic_bags)
+
+        # shuffle bags
         all_tags = []
         for bag in self.bags:
             # get all tags start from bag string.
@@ -113,7 +144,7 @@ if __name__ == '__main__':
 
     splitter = TrainingValDataSplitter(train_n_val_dataset)
     # splitter.split_bags_by_tag_name()
-    print('hello')
+    print('completed')
 
     # with BatchLoading2(train_n_val_dataset) as bl:
     #     time.sleep(1)
