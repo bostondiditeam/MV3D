@@ -481,7 +481,7 @@ def boxes3d_score_iou(gt_boxes3d: np.ndarray, pre_boxes3d: np.ndarray):
     union = gt_vol+ pre_vol -inter
 
     iou = inter/union
-    return iou, inter, union
+    return iou
 
 
 

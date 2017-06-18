@@ -335,12 +335,12 @@ def draw_bbox_on_lidar_top(top, boxes3d, one_frame_tag):
     print('write %s finished' % path)
 
 
-use_thread =True
+use_thread = True
 
 class BatchLoading2:
 
-    def __init__(self, bags, tags, queue_size=20, require_shuffle=False, require_log=False, is_testset=False):
-        self.test_num = 0 #todo: remove me after finished `data_preprocessed()`
+    def __init__(self, bags, tags, queue_size=20, require_shuffle=False,
+                 require_log=False, is_testset=False):
         self.is_testset = is_testset
         self.shuffled = require_shuffle
         self.preprocess = data.Preprocess()
@@ -412,7 +412,6 @@ class BatchLoading2:
 
     def data_preprocessed(self):
         fronts = []
-        self.test_num += 1
         frame_tag = self.tags[self.tag_index]
         obstacles, rgb, lidar = self.load_from_one_tag(frame_tag)
         rgb, top, boxes3d, labels = self.preprocess_one_frame(rgb, lidar, obstacles)
@@ -450,19 +449,19 @@ class BatchLoading2:
 
                 if len(self.prepr_data) >=self.cache_size:
                     time.sleep(1)
-                    print('sleep ')
+                    # print('sleep ')
                 else:
                     self.prepr_data = [(self.data_preprocessed())]+self.prepr_data
-                    print('data_preprocessed')
+                    # print('data_preprocessed')
         else:
             while self.loader_need_exit.value == 0:
                 empty_idx = self.find_empty_block()
                 if empty_idx == -1:
                     time.sleep(1)
-                    print('sleep ')
+                    # print('sleep ')
                 else:
                     prepr_data = (self.data_preprocessed())
-                    print('data_preprocessed')
+                    # print('data_preprocessed')
                     dumps = pickle.dumps(prepr_data)
                     length = len(dumps)
                     self.buffer_blocks[empty_idx][0:length] = dumps[0:length]
@@ -479,12 +478,15 @@ class BatchLoading2:
 
     def load(self):
         if use_thread:
+            while len(self.prepr_data)==0:
+                time.sleep(1)
             data_ori = self.prepr_data.pop()
+
 
         else:
 
             # print('self.preproc_data_queue.qsize() = ', self.preproc_data_queue.qsize())
-            info = self.preproc_data_queue.get()
+            info = self.preproc_data_queue.get(block=True)
             length = info['length']
             block_index = info['index']
             dumps = self.buffer_blocks[block_index][0:length]
@@ -567,16 +569,3 @@ if __name__ == '__main__':
             time.sleep(3)
 
         print('Done')
-    #
-    # from multiprocessing import sharedctypes
-    # import pickle
-    # S= np.array([1,23,34.,4])
-    # a=pickle.dumps(S)
-    # pass
-    # # S= np.ar
-    # # size = S.size
-    # # shape = S.shape
-    # # S.shape = size
-    # # S_ctypes = sharedctypes.RawArray('d', S)
-    # # S = numpy.frombuffer(S_ctypes, dtype=numpy.float64, count=size)
-    # # S.shape = shape
