@@ -1,4 +1,3 @@
-from net.common import *
 from net.utility.draw import *
 
 from net.processing.boxes import *

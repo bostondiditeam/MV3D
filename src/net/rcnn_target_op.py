@@ -1,4 +1,3 @@
-from net.common import *
 from net.configuration import *
 from net.processing.boxes import *
 from net.processing.boxes3d import *

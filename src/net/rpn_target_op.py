@@ -1,4 +1,3 @@
-from net.common import *
 from net.configuration import *
 import net.processing.boxes as boxes
 from net.lib.utils.bbox import bbox_overlaps as box_overlaps

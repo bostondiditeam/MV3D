@@ -1,9 +1,11 @@
-from net.common import *
 import math
 import numpy as np
 import cv2
 import net.processing.projection as proj
 from shapely.geometry import Polygon
+from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+    TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
+from config import cfg
 
 ##extension for 3d
 def top_to_lidar_coords(xx,yy):
