@@ -25,6 +25,7 @@ import pickle
 import array
 import data
 from sklearn.utils import shuffle
+import threading
 
 
 # disable print
@@ -334,7 +335,7 @@ def draw_bbox_on_lidar_top(top, boxes3d, one_frame_tag):
     print('write %s finished' % path)
 
 
-
+use_thread =True
 
 class BatchLoading2:
 
@@ -361,11 +362,15 @@ class BatchLoading2:
 
         self.cache_size = queue_size
         self.loader_need_exit = Value('i', 0)
-        self.preproc_data_queue = Queue()
-        self.buffer_blocks = [Array('h',41246691) for i in range(queue_size)]
-        self.blocks_usage = Array('i', range(queue_size))
 
-        self.lodaer_processing = Process(target=self.loader)
+        if use_thread:
+            self.prepr_data=[]
+            self.lodaer_processing = threading.Thread(target=self.loader)
+        else:
+            self.preproc_data_queue = Queue()
+            self.buffer_blocks = [Array('h', 41246691) for i in range(queue_size)]
+            self.blocks_usage = Array('i', range(queue_size))
+            self.lodaer_processing = Process(target=self.loader)
         self.lodaer_processing.start()
 
 
@@ -375,12 +380,6 @@ class BatchLoading2:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.loader_need_exit.value=True
         print('set loader_need_exit True')
-        # print('self.preproc_data_queue size = ',self.preproc_data_queue.)
-        # while self.preproc_data_queue.empty() ==False:
-        #     print('dropout data remain in queue ')
-        #     self.preproc_data_queue.get()
-        #     self.preproc_data_queue.task_done()
-        # self.preproc_data_queue.join()
         self.lodaer_processing.join()
         print('exit lodaer_processing')
 
@@ -446,41 +445,56 @@ class BatchLoading2:
 
 
     def loader(self):
-        i = 0
-        while self.loader_need_exit.value == 0:
-            empty_idx = self.find_empty_block()
-            if empty_idx ==-1:
-                time.sleep(1)
-                print('sleep ')
-            else:
-                prepr_data = (self.data_preprocessed())
-                print('data_preprocessed')
-                dumps = pickle.dumps(prepr_data)
-                length = len(dumps)
-                self.buffer_blocks[empty_idx][0:length] = dumps[0:length]
+        if use_thread:
+            while self.loader_need_exit.value == 0:
 
-                self.preproc_data_queue.put({
-                    'index':empty_idx,
-                    'length':length
-                })
+                if len(self.prepr_data) >=self.cache_size:
+                    time.sleep(1)
+                    print('sleep ')
+                else:
+                    self.prepr_data = [(self.data_preprocessed())]+self.prepr_data
+                    print('data_preprocessed')
+        else:
+            while self.loader_need_exit.value == 0:
+                empty_idx = self.find_empty_block()
+                if empty_idx == -1:
+                    time.sleep(1)
+                    print('sleep ')
+                else:
+                    prepr_data = (self.data_preprocessed())
+                    print('data_preprocessed')
+                    dumps = pickle.dumps(prepr_data)
+                    length = len(dumps)
+                    self.buffer_blocks[empty_idx][0:length] = dumps[0:length]
+
+                    self.preproc_data_queue.put({
+                        'index': empty_idx,
+                        'length': length
+                    })
+
 
         print('loader exit')
 
 
 
     def load(self):
-        # print('self.preproc_data_queue.qsize() = ', self.preproc_data_queue.qsize())
-        info = self.preproc_data_queue.get()
-        length = info['length']
-        block_index = info['index']
-        dumps = self.buffer_blocks[block_index][0:length]
+        if use_thread:
+            data_ori = self.prepr_data.pop()
 
-        #set flag
-        self.blocks_usage[block_index] = 0
+        else:
 
-        # convert to bytes string
-        dumps = array.array('B',dumps).tostring()
-        data_ori = pickle.loads(dumps)
+            # print('self.preproc_data_queue.qsize() = ', self.preproc_data_queue.qsize())
+            info = self.preproc_data_queue.get()
+            length = info['length']
+            block_index = info['index']
+            dumps = self.buffer_blocks[block_index][0:length]
+
+            #set flag
+            self.blocks_usage[block_index] = 0
+
+            # convert to bytes string
+            dumps = array.array('B',dumps).tostring()
+            data_ori = pickle.loads(dumps)
 
         return data_ori
 
