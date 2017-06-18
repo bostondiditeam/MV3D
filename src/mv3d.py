@@ -607,7 +607,7 @@ class Trainer(MV3D):
                 self.summary_scalar(value=iou, tag=tag, step=self.n_global_step)
             except ValueError:
                 iou= -1
-                print("Unexpected error:", sys.exc_info()[0])
+                print("waring :", sys.exc_info()[0])
             if print_iou: self.log_msg.write('\n %s iou: %.5f\n' % (scope_name, iou))
 
 

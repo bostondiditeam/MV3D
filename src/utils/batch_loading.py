@@ -379,9 +379,9 @@ class BatchLoading2:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.loader_need_exit.value=True
-        print('set loader_need_exit True')
+        if self.require_log: print('set loader_need_exit True')
         self.lodaer_processing.join()
-        print('exit lodaer_processing')
+        if self.require_log: print('exit lodaer_processing')
 
     def load_from_one_tag(self, one_frame_tag):
         if self.is_testset:
@@ -472,7 +472,7 @@ class BatchLoading2:
                     })
 
 
-        print('loader exit')
+        if self.require_log:print('loader exit')
 
 
 
