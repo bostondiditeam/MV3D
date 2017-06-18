@@ -14,6 +14,10 @@ import glob
 from multiprocessing import Pool
 from collections import OrderedDict
 import config
+import ctypes
+if config.cfg.USE_CLIDAR_TO_TOP:
+    SharedLib = ctypes.cdll.LoadLibrary('/home/stu/MV3D/src/lidar_data_preprocess/'
+                                        'Python_to_C_Interface/ver3/LidarTopPreprocess.so')
 
 class Preprocess(object):
 
@@ -34,7 +38,7 @@ class Preprocess(object):
         return label
 
 
-    def lidar_to_top(self, lidar :np.dtype) ->np.dtype:
+    def lidar_to_top(self, lidar :np.dtype) ->np.ndarray:
         if cfg.USE_CLIDAR_TO_TOP:
             top = clidar_to_top(lidar)
         else:
@@ -84,7 +88,28 @@ def clidar_to_top(lidar):
     if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
         lidar=filter_center_car(lidar)
 
-    top =None   # todo : use createTopViewMaps(lidar) to preprocess
+    # Calculate map size and pack parameters for top view and front view map (DON'T CHANGE THIS !)
+    Xn = math.floor((TOP_X_MAX - TOP_X_MIN) / TOP_X_DIVISION)
+    Yn = math.floor((TOP_Y_MAX - TOP_Y_MIN) / TOP_Y_DIVISION)
+    Zn = math.floor((TOP_Z_MAX - TOP_Z_MIN) / TOP_Z_DIVISION)
+
+    top_flip = np.ones((Xn, Yn, Zn + 2), dtype=np.double)  # DON'T CHANGE THIS !
+
+    num = lidar.shape[0]  # DON'T CHANGE THIS !
+
+    # call the C function to create top view maps
+    # The np array indata will be edited by createTopViewMaps to populate it with the 8 top view maps
+    SharedLib.createTopMaps(ctypes.c_void_p(lidar.ctypes.data),
+                            ctypes.c_int(num),
+                            ctypes.c_void_p(top_flip.ctypes.data),
+                            ctypes.c_float(TOP_X_MIN), ctypes.c_float(TOP_X_MAX),
+                            ctypes.c_float(TOP_Y_MIN), ctypes.c_float(TOP_Y_MAX),
+                            ctypes.c_float(TOP_Z_MIN), ctypes.c_float(TOP_Z_MAX),
+                            ctypes.c_float(TOP_X_DIVISION), ctypes.c_float(TOP_Y_DIVISION),
+                            ctypes.c_float(TOP_Z_DIVISION),
+                            ctypes.c_int(Xn), ctypes.c_int(Yn), ctypes.c_int(Zn)
+                            )
+    top = np.flipud(np.fliplr(top_flip))
     return top
 
 
