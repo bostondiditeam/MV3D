@@ -35,3 +35,6 @@ python ExampleUsage_TopAndFront.py
 - The shared objects are called by the code in ExampleUsage_TopAndFront.py.
 - Change lidar top view and front view sensing range and resolution to LidarTopAndFrontPreprocess.so in ExampleUsage_TopAndFront.py line 5~19.
 - Change numpy array to be loaded into 'raw' to LidarTopAndFrontPreprocess.so in ExampleUsage_TopAndFront.py line 54.
+- Note only points inside (TOP_X_MIN, TOP_X_MAX, TOP_Y_MIN, ...) will be processed to generate front view maps. 
+
+
