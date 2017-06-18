@@ -437,7 +437,6 @@ class BatchLoading2:
         skip_frames = True
         while skip_frames:
             fronts = []
-            self.test_num += 1
             frame_tag = self.tags[self.tag_index]
             obstacles, rgb, lidar = self.load_from_one_tag(frame_tag)
             rgb, top, boxes3d, labels = self.preprocess_one_frame(rgb, lidar, obstacles)

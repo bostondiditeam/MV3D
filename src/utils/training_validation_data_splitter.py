@@ -99,7 +99,7 @@ class TrainingValDataSplitter:
 
         self.real_split_rate = 1. * split_point / tag_size
         print('real split rate is here: ', self.real_split_rate)
-        print('first frame is here: ', all_tags[i], ' and sec is: ', all_tags[i + 1])
+        # print('first frame is here: ', all_tags[i], ' and sec is: ', all_tags[i + 1])
 
         split_bag = ('/').join(all_tags[i + 1].split('/')[:2])
 
