@@ -1,8 +1,0 @@
-prefix=/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/install
-
-Name: lidar
-Description: Description of lidar
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/install/lib 
-Requires: 

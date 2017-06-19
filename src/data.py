@@ -4,7 +4,7 @@ from kitti_data import pykitti
 from kitti_data.io import *
 import net.utility.draw as draw
 from net.processing.boxes3d import *
-from net.common import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
     TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
 import os
@@ -12,6 +12,43 @@ import cv2
 import numpy
 import glob
 from multiprocessing import Pool
+from collections import OrderedDict
+import config
+import ctypes
+if config.cfg.USE_CLIDAR_TO_TOP:
+    SharedLib = ctypes.cdll.LoadLibrary('/home/stu/MV3D/src/lidar_data_preprocess/'
+                                        'Python_to_C_Interface/ver3/LidarTopPreprocess.so')
+
+class Preprocess(object):
+
+
+    def rgb(self, rgb):
+        rgb = crop_image(rgb)
+        return rgb
+
+
+    def bbox3d(self, obj):
+        return box3d_compose(translation= obj.translation, rotation= obj.rotation, size= obj.size)
+
+
+    def label(self, obj):
+        label=0
+        if obj.type=='Van' or obj.type=='Truck' or obj.type=='Car' or obj.type=='Tram':# todo : only  support 'Van'
+            label = 1
+        return label
+
+
+    def lidar_to_top(self, lidar :np.dtype) ->np.ndarray:
+        if cfg.USE_CLIDAR_TO_TOP:
+            top = clidar_to_top(lidar)
+        else:
+            top = lidar_to_top(lidar)
+
+        return top
+
+
+proprocess = Preprocess()
+
 
 
 def filter_center_car(lidar):
@@ -41,9 +78,39 @@ def obj_to_gt_boxes3d(objs):
 def draw_top_image(lidar_top):
     top_image = np.sum(lidar_top,axis=2)
     top_image = top_image-np.min(top_image)
-    top_image = (top_image/np.max(top_image)*255)
+    divisor = np.max(top_image)-np.min(top_image)
+    top_image = (top_image/divisor*255)
     top_image = np.dstack((top_image, top_image, top_image)).astype(np.uint8)
     return top_image
+
+
+def clidar_to_top(lidar):
+    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
+        lidar=filter_center_car(lidar)
+
+    # Calculate map size and pack parameters for top view and front view map (DON'T CHANGE THIS !)
+    Xn = math.floor((TOP_X_MAX - TOP_X_MIN) / TOP_X_DIVISION)
+    Yn = math.floor((TOP_Y_MAX - TOP_Y_MIN) / TOP_Y_DIVISION)
+    Zn = math.floor((TOP_Z_MAX - TOP_Z_MIN) / TOP_Z_DIVISION)
+
+    top_flip = np.ones((Xn, Yn, Zn + 2), dtype=np.double)  # DON'T CHANGE THIS !
+
+    num = lidar.shape[0]  # DON'T CHANGE THIS !
+
+    # call the C function to create top view maps
+    # The np array indata will be edited by createTopViewMaps to populate it with the 8 top view maps
+    SharedLib.createTopMaps(ctypes.c_void_p(lidar.ctypes.data),
+                            ctypes.c_int(num),
+                            ctypes.c_void_p(top_flip.ctypes.data),
+                            ctypes.c_float(TOP_X_MIN), ctypes.c_float(TOP_X_MAX),
+                            ctypes.c_float(TOP_Y_MIN), ctypes.c_float(TOP_Y_MAX),
+                            ctypes.c_float(TOP_Z_MIN), ctypes.c_float(TOP_Z_MAX),
+                            ctypes.c_float(TOP_X_DIVISION), ctypes.c_float(TOP_Y_DIVISION),
+                            ctypes.c_float(TOP_Z_DIVISION),
+                            ctypes.c_int(Xn), ctypes.c_int(Yn), ctypes.c_int(Zn)
+                            )
+    top = np.flipud(np.fliplr(top_flip))
+    return top
 
 
 ## lidar to top ##
@@ -64,7 +131,7 @@ def lidar_to_top(lidar):
     idx = np.where (lidar[:,2]<TOP_Z_MAX)
     lidar = lidar[idx]
 
-    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
+    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test' or cfg.DATA_SETS_TYPE=='didi2'):
         lidar=filter_center_car(lidar)
 
 
@@ -93,13 +160,13 @@ def lidar_to_top(lidar):
 
     if 1:  #new method
         for x in range(Xn):
-            ix  = np.where (quantized[:,0]==x)
+            ix  = np.where(quantized[:,0]==x)
             quantized_x = quantized[ix]
             if len(quantized_x) == 0 : continue
             yy = -x
 
             for y in range(Yn):
-                iy  = np.where (quantized_x[:,1]==y)
+                iy  = np.where(quantized_x[:,1]==y)
                 quantized_xy = quantized_x[iy]
                 count = len(quantized_xy)
                 if  count==0 : continue
@@ -165,9 +232,7 @@ def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite
             continue
         print('rgb images={}'.format(n))
         rgb = dataset.rgb[count][0]
-        rgb = (rgb * 255).astype(np.uint8)
-        rgb = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
-        rgb = crop_image(rgb)
+        rgb = proprocess.rgb(rgb)
 
         # todo fit it to didi dataset later.
         cv2.imwrite(os.path.join(path), rgb)
@@ -192,13 +257,26 @@ def generate_top_view(save_preprocess_dir,dataset,objects,date,drive,frames_inde
         lidars.append(dataset.velo[count])
         count += 1
 
-    tops = pool.map(lidar_to_top,lidars)
-    # tops=[lidar_to_top(lidar) for lidar in lidars]
+
+    if cfg.USE_CLIDAR_TO_TOP:
+        print('use clidar_to_top')
+        t0 = time.time()
+        tops = pool.map(clidar_to_top,lidars)
+        # tops=[clidar_to_top(lidar) for lidar in lidars]
+        print('time = ',time.time() -t0)
+    else:
+        t0 = time.time()
+        tops = pool.map(lidar_to_top,lidars)
+        # tops=[lidar_to_top(lidar) for lidar in lidars]
+        print('time = ', time.time() - t0)
+
     count = 0
     for top in tops:
         n=frames_index[count]
         path = os.path.join(dataset_dir, '%05d.npy' % n)
-        np.save(path, top)
+        # top = top.astype(np.float16)
+        # np.save(path, top)
+        np.savez_compressed(path, top_view=top)
         print('top view {} saved'.format(n))
         count+=1
 
@@ -267,7 +345,8 @@ def draw_top_view_image(save_preprocess_dir,objects,date,drive,frames_index,over
 
         print('draw top view image ={}'.format(n))
 
-        top = np.load(os.path.join(save_preprocess_dir,'top',date,drive,'%05d.npy' % n) )
+        top = np.load(os.path.join(save_preprocess_dir,'top',date,drive,'%05d.npy.npz' % n) )
+        top = top['top_view']
         top_image = draw_top_image(top)
 
         # draw bbox on top image
@@ -313,6 +392,8 @@ def dump_bbox_on_camera_image(save_preprocess_dir,dataset,objects,date,drive,fra
         objs = objects[count]
         gt_boxes3d, gt_labels = obj_to_gt_boxes3d(objs)
         img = draw.draw_box3d_on_camera(rgb, gt_boxes3d)
+        new_size = (img.shape[1] // 3, img.shape[0] // 3)
+        img = cv2.resize(img, new_size)
         cv2.imwrite(os.path.join(dataset_dir,'%05d.png' % n), img)
         count += 1
     print('gt box image save done\n')
@@ -329,7 +410,7 @@ def crop_image(image):
     return image_crop
 
 def is_evaluation_dataset(date, drive):
-    if date=='Round1Test':
+    if date=='Round1Test' or date == 'test_car' or date == 'test_ped':
         return True
     else:
         return False
@@ -353,15 +434,15 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
 
     # spilt large numbers of frame to small chunks
     if (cfg.DATA_SETS_TYPE == 'test'):
-        max_cache_frames_num = 4
+        max_cache_frames_num = 3
     else:
-        max_cache_frames_num = 4
+        max_cache_frames_num = 3
     if len(frames_index)>max_cache_frames_num:
         frames_idx_chunks=[frames_index[i:i+max_cache_frames_num] for i in range(0,len(frames_index),max_cache_frames_num)]
     else:
         frames_idx_chunks=[frames_index]
 
-    for frames_index in frames_idx_chunks:
+    for i, frames_index in enumerate(frames_idx_chunks):
         # The range argument is optional - default is None, which loads the whole dataset
         dataset = pykitti.raw(raw_dir, date, drive, frames_index) #, range(0, 50, 5))
 
@@ -395,16 +476,15 @@ def data_in_single_driver(raw_dir, date, drive, frames_index=None):
             generate_top_view(save_preprocess_dir, dataset,objects, date, drive, frames_index,
                               overwrite=True,dump_image=True)
 
-
         if 1 and objects!=None:  ## preprocess boxes3d  --------------------
             preprocess_bbox(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
-        if 1: ##draw top image with bbox
+        if 0: ##draw top image with bbox
             draw_top_view_image(save_preprocess_dir, objects, date, drive, frames_index, overwrite=True)
 
 
         # dump lidar data
-        if 1:
+        if 0:
             dump_lidar(save_preprocess_dir, dataset, date, drive, frames_index, overwrite=False)
 
         if 1 and objects!= None: #dump gt boxes
@@ -487,27 +567,56 @@ if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     if (cfg.DATA_SETS_TYPE == 'didi'):
         data_dir = {'1': ['15', '10']}
+        data_dir = OrderedDict(data_dir)
         frames_index = None  # None
     elif (cfg.DATA_SETS_TYPE == 'didi2'):
-        pose_name = [
-                     'nissan_pulling_to_right',
-                     'suburu_not_visible',
-                     'suburu_pulling_up_to_it',
+        dir_prefix = '/home/stu/round12_data/raw/didi'
+
+        bag_groups = ['suburu_pulling_to_left',
+                 'nissan_following_long',
+                 'suburu_following_long',
+                 'nissan_pulling_to_right',
+                 'suburu_not_visible',
+                 'cmax_following_long',
+                 'nissan_driving_past_it',
+                 'cmax_sitting_still',
+                 'suburu_pulling_up_to_it',
+                 'suburu_driving_towards_it',
+                 'suburu_sitting_still',
+                 'suburu_driving_away',
+                 'suburu_follows_capture',
+                 'bmw_sitting_still',
+                 'suburu_leading_front_left',
+                 'nissan_sitting_still',
+                 'nissan_brief',
+                 'suburu_leading_at_distance',
+                 'bmw_following_long',
+                 'suburu_driving_past_it',
+                 'nissan_pulling_up_to_it',
+                 'suburu_driving_parallel',
+                 'nissan_pulling_to_left',
+                 'nissan_pulling_away', 'ped_train']
+
+        bag_groups = ['suburu_pulling_to_left',
+                     'nissan_following_long',
                      'nissan_driving_past_it',
+                     'cmax_sitting_still',
+                      'cmax_following_long',
                      'suburu_driving_towards_it',
                      'suburu_sitting_still',
                      'suburu_driving_away',
                      'suburu_follows_capture',
+                     'bmw_sitting_still',
+                     'suburu_leading_front_left',
                      'nissan_sitting_still',
                      'suburu_leading_at_distance',
-                     'bmw_following_long',
                      'suburu_driving_past_it',
-                     'suburu_driving_parallel',
                      'nissan_pulling_to_left',
-                    ]
+                     'nissan_pulling_away', 'ped_train']
 
-        # data_dir = {k:v for k,v in zip(pose_name, bag_name_list)}
-        data_dir = {k: None for k in pose_name}
+        # use orderedDict to fix the dictionary order.
+        data_dir = OrderedDict([(bag_group, None) for bag_group in bag_groups])
+        print('ordered dictionary here: ', data_dir)
 
         frames_index=None  #None
     elif cfg.DATA_SETS_TYPE == 'kitti':
@@ -519,6 +628,7 @@ if __name__ == '__main__':
         frames_index = None # [0,5,8,12,16,20,50]
     elif cfg.DATA_SETS_TYPE == 'test':
         data_dir = {'1':None, '2':None}
+        data_dir = OrderedDict(data_dir)
         frames_index=None
     else:
         raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(cfg.DATA_SETS_TYPE))

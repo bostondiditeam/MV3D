@@ -1,8 +1,11 @@
-from net.common import *
 import math
 import numpy as np
 import cv2
 import net.processing.projection as proj
+from shapely.geometry import Polygon
+from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+    TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
+from config import cfg
 
 ##extension for 3d
 def top_to_lidar_coords(xx,yy):
@@ -40,6 +43,7 @@ def top_box_to_box3d(boxes):
     return boxes3d
 
 def box3d_in_top_view(boxes3d):
+    # what if only some are outside of the range, but majorities are inside.
     for i in range(8):
         if TOP_X_MIN<=boxes3d[i,0]<=TOP_X_MAX and TOP_Y_MIN<=boxes3d[i,1]<=TOP_Y_MAX:
             continue
@@ -297,11 +301,11 @@ def regularise_box3d(boxes3d):
 def boxes3d_decompose(boxes3d):
 
     # translation
-    if cfg.DATA_SETS_TYPE == 'didi':
+    if cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
         T_x = np.sum(boxes3d[:, 0:8, 0], 1) / 8.0
         T_y = np.sum(boxes3d[:, 0:8, 1], 1) / 8.0
         T_z = np.sum(boxes3d[:, 0:8, 2], 1) / 8.0
-    elif cfg.DATA_SETS_TYPE == 'KITTI':
+    elif cfg.DATA_SETS_TYPE == 'kitti':
         T_x = np.sum(boxes3d[:, 0:4, 0], 1) / 4.0
         T_y = np.sum(boxes3d[:, 0:4, 1], 1) / 4.0
         T_z = np.sum(boxes3d[:, 0:4, 2], 1) / 4.0
@@ -332,6 +336,48 @@ def boxes3d_decompose(boxes3d):
     size = np.c_[H,W,L]
     rotation= np.c_[R_x,R_y,R_z]
     return translation,size,rotation
+
+
+def box3d_compose(translation,size,rotation):
+    """
+    only support compose one box
+
+    """
+    h, w, l = size[0],size[1],size[2]
+    if cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
+        h, w = h * 1.1, l
+        trackletBox = np.array([
+            [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
+            [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
+            [-h / 2, -h / 2, -h / 2, -h / 2, h / 2, h / 2, h / 2, h / 2]])
+    elif cfg.DATA_SETS_TYPE == 'kitti':
+        trackletBox = np.array([  # in velodyne coordinates around zero point and without orientation yet\
+            [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
+            [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
+            [0.0, 0.0, 0.0, 0.0, h, h, h, h]])
+    elif cfg.DATA_SETS_TYPE == 'didi2':
+        h, w = 1.5 * h, 1.7 * w
+        trackletBox = np.array([
+            [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
+            [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
+            [-h / 2, -h / 2, -h / 2, -h / 2, h / 2, h / 2, h / 2, h / 2]])
+    else:
+        raise ValueError('unexpected type in cfg.DATA_SETS_TYPE :{}!'.format(cfg.DATA_SETS_TYPE))
+
+
+        # re-create 3D bounding box in velodyne coordinate system
+    yaw = rotation[2]  # other rotations are 0 in all xml files I checked
+    # assert np.abs(rotation[:2]).sum() == 0, 'object rotations other than yaw given!'
+    rotMat = np.array([ \
+        [np.cos(yaw), -np.sin(yaw), 0.0], \
+        [np.sin(yaw), np.cos(yaw), 0.0], \
+        [0.0, 0.0, 1.0]])
+    cornerPosInVelo = np.dot(rotMat, trackletBox) + np.tile(translation, (8, 1)).T
+
+
+    box3d = cornerPosInVelo.transpose()
+
+    return box3d
 
 
 
@@ -383,8 +429,119 @@ def box3d_to_rgb_projection_cv2(points):
 
     return imagePoints.astype(np.int)
 
+
+def box3d_intersection(box_a, box_b):
+    """
+    A simplified calculation of 3d bounding box intersection.
+    It is assumed that the bounding box is only rotated
+    around Z axis (yaw) from an axis-aligned box.
+    :param box_a, box_b: obstacle bounding boxes for comparison
+    :return: intersection volume (float)
+    """
+    # height (Z) overlap
+    min_h_a = np.min(box_a[2])
+    max_h_a = np.max(box_a[2])
+    min_h_b = np.min(box_b[2])
+    max_h_b = np.max(box_b[2])
+    max_of_min = np.max([min_h_a, min_h_b])
+    min_of_max = np.min([max_h_a, max_h_b])
+    z_intersection = np.max([0, min_of_max - max_of_min])
+    if z_intersection == 0:
+        return 0.
+
+    # oriented XY overlap
+    xy_poly_a = Polygon(zip(*box_a[0:2, 0:4]))
+    xy_poly_b = Polygon(zip(*box_b[0:2, 0:4]))
+    xy_intersection = xy_poly_a.intersection(xy_poly_b).area
+    if xy_intersection == 0:
+        return 0.
+
+    return z_intersection * xy_intersection
+
+
+def boxes3d_score_iou(gt_boxes3d: np.ndarray, pre_boxes3d: np.ndarray):
+    n_pre_box = pre_boxes3d.shape[0]
+    if n_pre_box ==0: return 0.
+    n_gt_box = gt_boxes3d.shape[0]
+
+    _, gt_size, _= boxes3d_decompose(gt_boxes3d)
+    gt_vol = np.sum(np.prod(gt_size,1))
+
+    _, pre_size, _ = boxes3d_decompose(pre_boxes3d)
+    pre_vol = np.sum(np.prod(pre_size,1))
+
+    inters = np.zeros((n_gt_box, n_pre_box))
+
+    for j in range(n_gt_box):
+        for i in range(n_pre_box):
+            try:
+                inters[j, i] = box3d_intersection(gt_boxes3d[j].T, pre_boxes3d[i].T)
+            except:
+                raise ValueError('Invalid box')
+
+    inter = np.sum(np.max(inters, 1))
+    union = gt_vol+ pre_vol -inter
+
+    iou = inter/union
+    return iou
+
+
+
+
 if __name__ == '__main__':
-    # test boxes3d_for_evaluation
-    gt_boxes3d=np.load('gt_boxes3d_135.npy')
-    translation, size, rotation =boxes3d_decompose(gt_boxes3d[0])
-    print(translation,size,rotation)
+    if 0:
+        # test boxes3d_for_evaluation
+        gt_boxes3d=np.load('gt_boxes3d_135.npy')
+        translation, size, rotation =boxes3d_decompose(gt_boxes3d[0])
+        print(translation,size,rotation)
+
+    if 1:
+        gt_box3d_trans = np.array([
+            [1.6,17.5,-1.0],
+            [11.6, 17.5, -1.0],
+            [21.6, 17.5, -1.0]
+        ])
+        gt_box3d_size = np.array([
+            [1.6, 2.5, 6.0],
+            [1.6, 2.5, 6.0],
+            [1.6, 2.5, 6.0]
+        ])
+        gt_box3d_rota = np.array([
+            [0., 0., 1.6],
+            [0., 0., 1.6],
+            [0., 0., 1.6]
+        ])
+
+        pre_box3d_trans = np.array([
+            [1.6, 17.5, -1.0],
+            [11.6, 17.5, -1.0],
+            [21.6, 17.5, -1.0]
+        ])
+        pre_box3d_size = np.array([
+            [1.6, 2.5, 6.0],
+            [1.6, 2.5, 6.0],
+            [1.6, 2.5, 6.0]
+        ])
+        pre_box3d_rota = np.array([
+            [0., 0., 1.6],
+            [0., 0., 1.6],
+            [0., 0., 1.6]
+        ])
+
+        n_box = gt_box3d_trans.shape[0]
+        gt_boxes3d=[]
+        for i in range(n_box):
+            gt_boxes3d.append(box3d_compose(gt_box3d_trans[i], gt_box3d_size[i], gt_box3d_rota[i]))
+        gt_boxes3d = np.array(gt_boxes3d)
+
+        n_box = pre_box3d_trans.shape[0]
+        pre_boxes3d = []
+        for i in range(n_box):
+            pre_boxes3d.append(box3d_compose(pre_box3d_trans[i], pre_box3d_size[i], pre_box3d_rota[i]))
+        pre_boxes3d = np.array(pre_boxes3d)
+
+        iou= boxes3d_score_iou(gt_boxes3d, pre_boxes3d)
+        print('iou = {}'.format(iou))
+
+        iou= boxes3d_score_iou(gt_boxes3d, pre_boxes3d[0:1, :, :])
+        print('iou = {}'.format(iou))

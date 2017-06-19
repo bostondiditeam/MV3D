@@ -4,23 +4,19 @@ import matplotlib.pyplot as plt
 import math
 #import time
 
-# SET PARAMETERS HERE !!!---------------------------------
-TOP_X_MIN =-45.33
-TOP_X_MAX =45.12
-TOP_Y_MIN =-15
-TOP_Y_MAX =10.3
-TOP_Z_MIN =-3.2
+TOP_X_MIN =-45
+TOP_X_MAX =45
+TOP_Y_MIN =-10
+TOP_Y_MAX =10
+TOP_Z_MIN =-3
 TOP_Z_MAX =1.0
 TOP_X_DIVISION = 0.2
 TOP_Y_DIVISION = 0.2
-TOP_Z_DIVISION = 0.35
-# --------------------------------------------------------
+TOP_Z_DIVISION = 0.5
 
-# DON'T CHANGE THIS ! THIS IMPLEMENTATION IS THE SAME AS IN C CODE
-Xn = math.floor((TOP_X_MAX-TOP_X_MIN)/TOP_X_DIVISION)   #450
-Yn = math.floor((TOP_Y_MAX-TOP_Y_MIN)/TOP_Y_DIVISION)	#100
-Zn = math.floor((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)	#8
-
+Xn = int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1    
+Yn = int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
+Zn = int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
 height  = Xn
 width   = Yn
 channel = Zn + 2
@@ -29,35 +25,31 @@ print('Feature Maps Size (height, width, channel) is ('+ str(height)+ ", " + str
 print ('LiDAR data pre-processing starting...')
 
 # initialize an np 3D array with 1's
-top_flip = np.ones((height, width, channel), dtype = np.double)
+top = np.ones((height, width, channel), dtype = np.double)
 
 # create a handle to LidarPreprocess.c
 SharedLib = ctypes.cdll.LoadLibrary('./LidarPreprocess.so')
 
-# CHANGE LIDAR DATA DIR HERE !!!! -----------------------------------------------
-lidar_data_src_dir = "../../../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
+# CHANGE LIDAR DATA DIR HERE !!!!
+lidar_data_src_dir = "../../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
 
 #tStart = time.time()
-for frameNum in range(0, 1):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!! 
+for frameNum in range(0,1):    # CHANGE LIDAR DATA FRAME NUMBER HERE !!!! 
 	lidar_data_src_path = lidar_data_src_dir + str(frameNum).zfill(10) + ".bin"
-	
+
 	# OR OVERWRITE lidar_data_src_path TO SPICIFY THE PATH OF LIDAR DATA FILE !!!!
 	lidar_data_src_path = "0000000002.bin"
-
-	#----------------------------------------------------------------------------
 
 	b_lidar_data_src_path = lidar_data_src_path.encode('utf-8')
 	# call the C function to create top view maps
 	# The np array indata will be edited by createTopViewMaps to populate it with the 8 top view maps 
-	SharedLib.createTopViewMaps(ctypes.c_void_p(top_flip.ctypes.data), ctypes.c_char_p(b_lidar_data_src_path), 
-								ctypes.c_float(TOP_X_MIN), ctypes.c_float(TOP_X_MAX), 
-								ctypes.c_float(TOP_Y_MIN), ctypes.c_float(TOP_Y_MAX), 
-								ctypes.c_float(TOP_Z_MIN), ctypes.c_float(TOP_Z_MAX), 
-								ctypes.c_float(TOP_X_DIVISION), ctypes.c_float(TOP_Y_DIVISION), ctypes.c_float(TOP_Z_DIVISION), 
+	SharedLib.createTopViewMaps(ctypes.c_void_p(top.ctypes.data), ctypes.c_char_p(b_lidar_data_src_path), ctypes.c_float(TOP_X_MIN), 
+								ctypes.c_float(TOP_X_MAX), ctypes.c_float(TOP_Y_MIN), ctypes.c_float(TOP_Z_MAX), ctypes.c_float(TOP_Z_MIN), 
+								ctypes.c_float(TOP_Z_MAX), ctypes.c_float(TOP_X_DIVISION), ctypes.c_float(TOP_Y_DIVISION), ctypes.c_float(TOP_Z_DIVISION), 
 								ctypes.c_int(Xn), ctypes.c_int(Yn), ctypes.c_int(Zn)  )	
 
 	# flip image to match the original preprocess module result (data.py)
-	top = np.flipud(np.fliplr(top_flip))
+	top = np.flipud(np.fliplr(top))
 
 	# Example code to visualize image for one lidar frame (optional)
 	# col 1~8 image : height maps  
