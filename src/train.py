@@ -49,27 +49,31 @@ if __name__ == '__main__':
 
     if cfg.DATA_SETS_TYPE == 'didi2':
 
-        train_key_list = ['nissan_pulling_away',
-                          'nissan_pulling_up_to_it',
-                          'suburu_follows_capture',
-                          'nissan_pulling_to_left',
-                          'nissan_driving_past_it',
-                          'nissan_pulling_to_right',
-                          'suburu_driving_away',
-                          'nissan_following_long',
-                          'suburu_driving_parallel',
-                          'suburu_driving_towards_it',
-                          'suburu_pulling_to_left',
-                          'suburu_not_visible',
-
-                          'suburu_leading_front_left',
-                          'ped_train',
-                          'bmw_following_long',
-                          'cmax_following_long',
-                          'suburu_following_long',
-                          'suburu_driving_past_it',
+        train_key_list = ['suburu_pulling_up_to_it',
                           'nissan_brief',
-                          'suburu_leading_at_distance']
+                          'cmax_sitting_still',
+                          'nissan_pulling_up_to_it',
+                          'suburu_sitting_still',
+                          'nissan_pulling_to_left',
+                          'bmw_sitting_still',
+                          'suburu_follows_capture',
+                          'nissan_pulling_away',
+                          'suburu_pulling_to_left',
+                          'bmw_following_long',
+                          'nissan_pulling_to_right',
+                          'suburu_driving_towards_it',
+                          'suburu_following_long',
+                          'suburu_not_visible',
+                          'suburu_leading_front_left',
+                          'nissan_sitting_still',
+                          'cmax_following_long',
+                          'nissan_following_long',
+                          'suburu_driving_away',
+                          'suburu_leading_at_distance',
+                          'nissan_driving_past_it',
+                          'suburu_driving_past_it',
+                          'suburu_driving_parallel',
+                          ]
 
         train_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in train_key_list]
         train_value_list = [os.listdir(value)[0] for value in train_key_full_path_list]
