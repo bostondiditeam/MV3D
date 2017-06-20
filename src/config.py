@@ -46,6 +46,7 @@ __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 
 __C.USE_RESNET_AS_TOP_BASENET = True
+__C.TOP_CONV_KERNEL_SIZE = 32   #default 3
 
 __C.IMAGE_FUSION_DIABLE = False
 __C.RGB_BASENET = 'VGG'  # 'resnet' 、'xception' 'VGG'

@@ -191,7 +191,7 @@ if __name__ == '__main__':
     with BatchLoading(test_bags, test_tags, require_shuffle=False, is_testset=True) as dataset_loader:
 
         # dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
-    
+
         print("tracklet_pred_dir: " + tracklet_pred_dir)
         pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
                                   frame_offset=0, log_tag=tag, weights_tag=weights_tag)
