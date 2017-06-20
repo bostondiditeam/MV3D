@@ -165,8 +165,8 @@ if __name__ == '__main__':
 
     ## detecting
     test_tags = get_test_tags(test_bags)
-    with BatchLoading(test_tags, require_shuffle=False, is_testset=True, n_skip_frames=n_skip_frames
-                      ) as dataset_loader:
+    with BatchLoading(test_tags, require_shuffle=False, is_testset=True,
+                      n_skip_frames=0 if fast_test else n_skip_frames) as dataset_loader:
 
         # dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 
