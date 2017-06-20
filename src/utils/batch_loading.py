@@ -339,8 +339,8 @@ use_thread = True
 
 class BatchLoading2:
 
-    def __init__(self, bags, tags, queue_size=20, require_shuffle=False,
-                 require_log=False, is_testset=False):
+    def __init__(self, tags, queue_size=20, require_shuffle=False,
+                 require_log=False, is_testset=False, n_skip_frames=0):
         self.is_testset = is_testset
         self.shuffled = require_shuffle
         self.preprocess = data.Preprocess()
@@ -348,9 +348,9 @@ class BatchLoading2:
         self.raw_tracklet = Tracklet()
         self.raw_lidar = Lidar()
 
-        self.bags = bags
-        # get all tags
-        self.tags = tags
+        # skit some frames
+        self.tags = [tag for i,tag in enumerate(tags) if i%(n_skip_frames+1)==0]
+        
 
         if self.shuffled:
             self.tags = shuffle(self.tags)

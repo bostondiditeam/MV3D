@@ -25,7 +25,7 @@ fast_test = False
 
 
 def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
-                  frame_offset=16, log_tag=None, weights_tag=None):
+                  frame_offset=0, log_tag=None, weights_tag=None):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
     os.makedirs(os.path.join(log_dir, 'image'), exist_ok=True)
@@ -134,61 +134,53 @@ if __name__ == '__main__':
 
     if config.cfg.DATA_SETS_TYPE == 'didi2':
         if_score = False
-        if 1:
-            dataset = {'nissan_brief': ['nissan06']}
-
-        else:
-            car = '3'
-            data = '7'
-            dataset = {
-                car: [data]
-            }
-
-            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-            #  fits you needs.
-            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
-
-        test_key_list = ['nissan_pulling_away',
-                          'nissan_pulling_up_to_it']
-
-        test_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in test_key_list]
-        test_value_list = [os.listdir(value)[0] for value in test_key_full_path_list]
-
-        test_bags = [k + '/' + v for k, v in zip(test_key_list, test_value_list)]
+        test_bags = [
+            'test_car/ford01',
+            'test_car/ford02',
+            'test_car/ford03',
+            'test_car/ford04',
+            'test_car/ford05',
+            'test_car/ford06',
+            'test_car/ford07',
+            'test_car/mustang01'
+        ]
 
 
     elif config.cfg.DATA_SETS_TYPE == 'didi':
-        if_score = True
-        if 1:
-            dataset = {'Round1Test': ['19_f2']}
-
-        else:
-            car = '3'
-            data = '7'
-            dataset = {
-                car: [data]
-            }
-
-            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-            #  fits you needs.
-            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
+        pass #todo
+        # if_score = True
+        # if 1:
+        #     dataset = {'Round1Test': ['19_f2']}
+        #
+        # else:
+        #     car = '3'
+        #     data = '7'
+        #     dataset = {
+        #         car: [data]
+        #     }
+        #
+        #     # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+        #     #  fits you needs.
+        #     gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
 
     elif config.cfg.DATA_SETS_TYPE == 'kitti':
-        if_score = False
-        car = '2011_09_26'
-        data = '0013'
-        dataset = {
-            car: [data]
-        }
+        pass #todo
+        # if_score = False
+        # car = '2011_09_26'
+        # data = '0013'
+        # dataset = {
+        #     car: [data]
+        # }
+        #
+        # # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+        # #  fits you needs.
+        # gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
+        #                                 'tracklet_labels.xml')
 
-        # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-        #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
-                                        'tracklet_labels.xml')
 
     test_tags = get_test_tags(test_bags)
 
-    with BatchLoading(test_bags, test_tags, require_shuffle=False, is_testset=True) as dataset_loader:
+    with BatchLoading(test_tags, require_shuffle=False, is_testset=True) as dataset_loader:
 
         # dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 

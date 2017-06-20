@@ -374,7 +374,7 @@ class MV3D(object):
                 text_pos = (0, 25)
                 cv2.putText(rpn_proposal, text, text_pos, font, 0.7, (0, 255, 100), 1, cv2.LINE_AA)
 
-            print('\nproposal_scores= {}\n'.format(proposal_scores))
+            # print('\nproposal_scores= {}\n'.format(proposal_scores))
             # nud.imsave('img_rpn_proposal', rpn_proposal, subdir)
             self.summary_image(rpn_proposal, scope_name + '/img_rpn_proposal',step=step)
 
