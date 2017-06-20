@@ -24,63 +24,43 @@ log_dir = os.path.join(cfg.LOG_DIR, log_subdir)
 fast_test = False
 
 
-def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
-                  frame_offset=0, log_tag=None, weights_tag=None):
+def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weights_tag=None):
     # Tracklet_saver will check whether the file already exists.
     tracklet = Tracklet_saver(tracklet_pred_dir)
-    os.makedirs(os.path.join(log_dir, 'image'), exist_ok=True)
 
     top_shape, front_shape, rgb_shape = dataset.get_shape()
     predict = mv3d.Predictor(top_shape, front_shape, rgb_shape, log_tag=log_tag, weights_tag=weights_tag)
-
-    if generate_video:
-        vid_in = skvideo.io.FFmpegWriter(os.path.join(log_dir, 'output.mp4'))
 
     # timer
     timer_step = 100
     if cfg.TRACKING_TIMER:
         time_it = timer()
 
-    frame_num = 0
     for i in range(dataset.size if fast_test == False else frame_offset + 1):
 
-        rgb, top, front, _, _, _ = dataset.load()
+        rgb, top, front, _, _, frame_id = dataset.load()
 
         frame_num = i - frame_offset
         if frame_num < 0:
             continue
 
+        # detection
         boxes3d, probs = predict(top, front, rgb)
-        predict.dump_log(log_subdir=log_subdir, n_frame=i)
+        predict.dump_log(log_subdir=log_subdir, n_frame=i, frame_tag=frame_id)
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i % timer_step == 0 and i != 0:
             predict.track_log.write('It takes %0.2f secs for inferring %d frames. \n' % \
                                     (time_it.time_diff_per_n_loops(), timer_step))
 
-        # for debugging: save image and show image.
-        top_image = draw_top_image(top[0])
-        rgb_image = rgb[0]
-
         if len(boxes3d) != 0:
-            top_image = draw_box3d_on_top(top_image, boxes3d[:, :, :], color=(80, 80, 0), thickness=3)
-            rgb_image = draw_box3d_on_camera(rgb_image, boxes3d[:, :, :], color=(0, 0, 80), thickness=3)
             translation, size, rotation = boxes3d_decompose(boxes3d[:, :, :])
-            # todo: remove it after gtbox is ok
-            size[:, 1:3] = size[:, 1:3] / cfg.TRACKLET_GTBOX_LENGTH_SCALE
 
+            # add to tracklets
             for j in range(len(translation)):
                 if 0 < translation[j, 1] < 8:
                     tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
-        resize_scale = top_image.shape[0] / rgb_image.shape[0]
-        rgb_image = cv2.resize(rgb_image, (int(rgb_image.shape[1] * resize_scale), top_image.shape[0]))
-        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-        new_image = np.concatenate((top_image, rgb_image), axis=1)
-        cv2.imwrite(os.path.join(log_dir, 'image', '%5d_image.jpg' % i), new_image)
 
-        if generate_video:
-            vid_in.writeFrame(new_image)
-            vid_in.close()
 
     tracklet.write_tracklet()
     predict.dump_weigths(os.path.join(log_dir, 'pretrained_model'))
@@ -113,6 +93,8 @@ if __name__ == '__main__':
                         help='set weigths tag name')
     parser.add_argument('-t', '--fast_test', type=str2bool, nargs='?', default=False,
                         help='set fast_test model')
+    parser.add_argument('-s', '--n_skip_frames', type=int, nargs='?', default=0,
+                        help='set number of skip frames')
     args = parser.parse_args()
 
     print('\n\n{}\n\n'.format(args))
@@ -123,17 +105,21 @@ if __name__ == '__main__':
     weights_tag = args.weights if args.weights != '' else None
 
     fast_test = args.fast_test
+    n_skip_frames = args.n_skip_frames
 
     tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
     os.makedirs(tracklet_pred_dir, exist_ok=True)
 
-    # Set true if you want score after export predicted tracklet xml
-    # set false if you just want to export tracklet xml
+
     frame_offset = 0
     dataset_loader = None
+    gt_tracklet_file = None
+
+    # Set true if you want score after export predicted tracklet xml
+    # set false if you just want to export tracklet xml
+    if_score =False
 
     if config.cfg.DATA_SETS_TYPE == 'didi2':
-        if_score = False
         test_bags = [
             'test_car/ford01',
             'test_car/ford02',
@@ -144,7 +130,6 @@ if __name__ == '__main__':
             'test_car/ford07',
             'test_car/mustang01'
         ]
-
 
     elif config.cfg.DATA_SETS_TYPE == 'didi':
         pass #todo
@@ -178,9 +163,10 @@ if __name__ == '__main__':
         #                                 'tracklet_labels.xml')
 
 
+    ## detecting
     test_tags = get_test_tags(test_bags)
-
-    with BatchLoading(test_tags, require_shuffle=False, is_testset=True) as dataset_loader:
+    with BatchLoading(test_tags, require_shuffle=False, is_testset=True, n_skip_frames=n_skip_frames
+                      ) as dataset_loader:
 
         # dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
 

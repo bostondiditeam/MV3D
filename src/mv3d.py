@@ -242,27 +242,41 @@ class MV3D(object):
         return self.boxes3d, self.lables
 
 
-    def predict_log(self, log_subdir, log_rpn=False, step=None, scope_name='',loss:tuple =None):
-        self.top_image = data.draw_top_image(self.top_view[0])
-        self.top_image = self.top_image_padding(self.top_image)
-        if log_rpn: self.log_rpn(step=step ,scope_name=scope_name)
+    def predict_log(self, log_subdir, log_rpn=False, step=None, scope_name='',loss:tuple =None,
+                    frame_tag='unknown_tag'):
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        text_pos = (5, 25)
         self.log_fusion_net_detail(log_subdir, self.fuse_probs, self.fuse_deltas)
-        text_lables = ['No.%d class:1 prob: %.4f' % (i, prob) for i, prob in enumerate(self.probs)]
-        predict_camera_view = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d, text_lables=text_lables)
 
-        new_size = (predict_camera_view.shape[1] // 2, predict_camera_view.shape[0] // 2)
-        predict_camera_view = cv2.resize(predict_camera_view, new_size)
-        # nud.imsave('predict_camera_view' , predict_camera_view, log_subdir)
-        self.summary_image(predict_camera_view, scope_name + '/predict_camera_view', step=step)
+        # origin top view
+        self.top_image = data.draw_top_image(self.top_view[0])
+        top_view_log = self.top_image.copy()
 
+        # add text on origin
+        text = 'frame tag: ' + frame_tag
+        cv2.putText(top_view_log, text, text_pos, font, 0.4, (0, 255, 100), 0, cv2.LINE_AA)
+        if log_rpn:
+            rpn_img = self.log_rpn(step=step, scope_name=scope_name, is_train_mode=False, tensor_board=False)
+            top_view_log = np.concatenate((top_view_log, rpn_img), 1)
+
+        # prediction on top
         predict_top_view = data.draw_box3d_on_top(self.top_image, self.boxes3d)
-        # nud.imsave('predict_top_view' , predict_top_view, log_subdir)
-        if loss != None:
-            text = 'clas loss: %6f reg loss: %6f' % loss
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            text_pos = (0, 25)
-            cv2.putText(predict_top_view, text, text_pos, font, 0.7, (0, 255, 100), 1, cv2.LINE_AA)
-        self.summary_image(predict_top_view, scope_name + '/predict_top_view', step=step)
+        # add fusion loss text
+        text = 'fusion prediction: '
+        if loss != None: text += 'clas loss: %6f reg loss: %6f' % loss
+        cv2.putText(predict_top_view, text, text_pos, font, 0.4, (0, 255, 100), 0, cv2.LINE_AA)
+
+        # concatenate top_view_log and final prediction
+        top_view_log = np.concatenate((top_view_log, predict_top_view), 1)
+        # new_size = (top_view_log.shape[1] // 2, top_view_log.shape[0] // 2)
+        # top_view_log = cv2.resize(top_view_log, new_size)
+        self.summary_image(top_view_log, scope_name + '/top_view', step=step)
+        
+        # prediction on rgb
+        text_lables = ['No.%d class:1 prob: %.4f' % (i, prob) for i, prob in enumerate(self.probs)]
+        prediction_on_rgb = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d, text_lables=text_lables)
+        self.summary_image(prediction_on_rgb, scope_name + '/prediction_on_rgb', step=step)
 
 
 
@@ -338,7 +352,7 @@ class MV3D(object):
         return np.concatenate((top_image, np.zeros_like(top_image)*255,np.zeros_like(top_image)*255), 1)
 
 
-    def log_rpn(self,step=None, scope_name='',loss=None):
+    def log_rpn(self,step=None, scope_name='',loss=None, tensor_board=True, is_train_mode=True):
 
         top_image = self.top_image
         subdir = self.log_subdir
@@ -351,20 +365,18 @@ class MV3D(object):
         gt_top_boxes = self.batch_gt_top_boxes
         gt_labels = self.batch_gt_labels
 
-        if gt_top_boxes is not None:
+        total_img = None
+        if is_train_mode:
             img_gt = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
             # nud.imsave('img_rpn_gt', img_gt, subdir)
-            self.summary_image(img_gt, scope_name + '/img_rpn_gt', step=step)
 
-        if top_inds is not None:
             img_label = draw_rpn_labels(top_image, self.top_view_anchors, top_inds, top_labels)
             # nud.imsave('img_rpn_label', img_label, subdir)
-            self.summary_image(img_label, scope_name+ '/img_rpn_label', step=step)
+            total_img = np.concatenate((img_gt, img_label),1)
 
-        if top_pos_inds is not None:
             img_target = draw_rpn_targets(top_image, self.top_view_anchors, top_pos_inds, top_targets)
             # nud.imsave('img_rpn_target', img_target, subdir)
-            self.summary_image(img_target, scope_name+ '/img_rpn_target', step=step)
+            total_img = np.concatenate((total_img, img_target), 1)
 
         if proposals is not None:
             rpn_proposal = draw_rpn_proposal(top_image, proposals, proposal_scores)
@@ -374,9 +386,15 @@ class MV3D(object):
                 text_pos = (0, 25)
                 cv2.putText(rpn_proposal, text, text_pos, font, 0.7, (0, 255, 100), 1, cv2.LINE_AA)
 
+            if total_img!=None:
+                total_img = np.concatenate((total_img, rpn_proposal), 1)
+            else:
+                total_img = rpn_proposal
+
             # print('\nproposal_scores= {}\n'.format(proposal_scores))
             # nud.imsave('img_rpn_proposal', rpn_proposal, subdir)
-            self.summary_image(rpn_proposal, scope_name + '/img_rpn_proposal',step=step)
+            if tensor_board: self.summary_image(total_img, scope_name + '/top_view',step=step)
+        return total_img
 
 
 
@@ -448,12 +466,12 @@ class Predictor(MV3D):
     def __call__(self, top_view, front_view, rgb_image):
         return self.predict(top_view, front_view, rgb_image)
 
-    def dump_log(self,log_subdir, n_frame):
+    def dump_log(self,log_subdir, n_frame, frame_tag='unknown_tag'):
         n_start = n_frame - (n_frame % (self.n_max_log_per_scope))
         n_end = n_start + self.n_max_log_per_scope -1
 
         scope_name = 'predict_%d_%d' % (n_start, n_end)
-        self.predict_log(log_subdir=log_subdir,log_rpn=True, step=n_frame,scope_name=scope_name)
+        self.predict_log(log_subdir=log_subdir,log_rpn=True, step=n_frame,scope_name=scope_name,frame_tag=frame_tag)
 
 
 
@@ -549,7 +567,8 @@ class Trainer(MV3D):
                    print('\nClear old summary file: %s' % command)
                    os.system(command)
 
-            self.train_summary_writer = tf.summary.FileWriter(train_writer_dir,graph=tf.get_default_graph())
+            graph = None if continue_train else tf.get_default_graph()
+            self.train_summary_writer = tf.summary.FileWriter(train_writer_dir,graph=graph)
             self.val_summary_writer = tf.summary.FileWriter(val_writer_dir)
 
             summ = tf.summary.merge_all()
@@ -610,7 +629,9 @@ class Trainer(MV3D):
                        log_rpn=False, step=None, scope_name='',loss:tuple =None):
 
         boxes3d, lables = self.predict(batch_top_view, batch_front_view, batch_rgb_images)
-        self.predict_log(self.log_subdir,log_rpn=log_rpn, step=step, scope_name=scope_name, loss=loss)
+        self.predict_log(self.log_subdir,log_rpn=log_rpn, step=step, scope_name=scope_name, loss=loss,
+                         frame_tag=self.frame_id)
+
 
         if type(batch_gt_boxes3d)==np.ndarray and type(batch_gt_labels)==np.ndarray:
             inds = np.where(batch_gt_labels[0]!=0)
