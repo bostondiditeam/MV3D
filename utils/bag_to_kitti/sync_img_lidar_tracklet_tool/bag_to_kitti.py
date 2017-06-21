@@ -2,7 +2,7 @@ import os
 import sys
 sys.path.append(os.path.join(sys.path[0],"../../external_modules/didi-competition"))
 
-#user_path = os.environ['PYTHONPATH']
+user_path = os.environ['PYTHONPATH']
 #print('python path here: ', user_path)
 print('python path here: ', sys.path)
 CORRECT_BASIC = None
@@ -312,6 +312,8 @@ def main():
                 # Extract lwh and object type from CSV metadata mapping file
                 md = next(x for x in bs.metadata if x['obstacle_name'] == obs_name)
 
+                print 'md: ', md
+
                 obs_tracklet = Tracklet(
                     object_type=md['object_type'], l=md['l'], w=md['w'], h=md['h'], first_frame=0)
 
@@ -319,7 +321,7 @@ def main():
                 # metadata specify offsets from lower left, rear, ground corner of the vehicle. Where +ve is
                 # along the respective length, width, height axis away from that point. They are converted to
                 # velodyne/ROS compatible X,Y,Z where X +ve is forward, Y +ve is left, and Z +ve is up.
-                lrg_to_gps = [md['gps_l'], -md['gps_w'], md['gps_h']]
+                lrg_to_gps = [md['front_gps_l'], -md['front_gps_w'], md['front_gps_h']]
                 lrg_to_centroid = [md['l'] / 2., -md['w'] / 2., md['h'] / 2.]
                 gps_to_centroid = np.subtract(lrg_to_centroid, lrg_to_gps)
 

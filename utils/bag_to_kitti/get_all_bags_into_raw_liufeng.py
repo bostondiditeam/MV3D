@@ -55,8 +55,8 @@ if __name__ == '__main__':
     point_cloud_dir = [os.path.join(pc_common, bag_dir) for bag_dir in bag_dir_list]
 
     for i, o, pc in zip(input_common_dir, output_common_dir, point_cloud_dir):
-        #assert check_lidar_data(pc)
-        print "---",input_common_dir,output_common_dir,point_cloud_dir
+        assert check_lidar_data(pc)
+        print "---",i,o,pc
         subproc.call(('python', '-m', 'sync_img_lidar_tracklet_tool.bag_to_kitti', '-i', i, '-o', o, '-pc', pc))
 
 
