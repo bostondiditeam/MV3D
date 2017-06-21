@@ -318,5 +318,12 @@ def linear_bn_relu(input,  num_hiddens=1, name='conv'):
         block = relu(block)
     return block
 
+def linear_dropout_relu(input, keep=1.0, num_hiddens=1, name='linear_dropout_relu'):
+    with tf.variable_scope(name) as scope:
+        block = linear(input, num_hiddens=num_hiddens, has_bias=False)
+        block = dropout(block,keep=keep)
+        block = relu(block)
+    return block
+
 
 
