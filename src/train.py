@@ -103,8 +103,9 @@ if __name__ == '__main__':
                            '0061', '0015', '0028', '0051', '0064']
         }
 
-    with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True) as training:
-        with BatchLoading(tags=data_splitter.val_tags,queue_size=1, require_shuffle=True) as validation:
+    with BatchLoading(data_splitter.training_bags, data_splitter.training_tags, require_shuffle=True) as training:
+        with BatchLoading(data_splitter.val_bags, data_splitter.val_tags,
+                          queue_size=1, require_shuffle=True) as validation:
 
             train = mv3d.Trainer(train_set=training, validation_set=validation,
                                  pre_trained_weights=weights, train_targets=targets, log_tag=tag,

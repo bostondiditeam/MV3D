@@ -13,7 +13,7 @@ def get_test_tags(bags):
     all_tags = []
     for bag in bags:
         # get all tags start from bag string.
-        r = re.compile('^'+bag)
+        r = re.compile(bag + "*")
         tag_list = filter(r.match, tags_all)
         bag_tag_list = list(tag_list)
         all_tags += bag_tag_list
@@ -52,7 +52,7 @@ class TrainingValDataSplitter:
 
         img_num = len(glob.glob(img_path))
         lidar_num = len(glob.glob(lidar_path))
-        r = re.compile('^'+bag)
+        r = re.compile(bag + '*')
         tracklet_tag_list = filter(r.match, self.raw_tracklet_tag_list)
         tracklet_num = len(list(tracklet_tag_list))
         if not img_num == lidar_num == tracklet_num:
@@ -79,7 +79,7 @@ class TrainingValDataSplitter:
         all_tags = []
         for bag in self.bags:
             # get all tags start from bag string.
-            r = re.compile('^'+bag)
+            r = re.compile(bag + "*")
             tag_list = filter(r.match, self.tags_all)
             bag_tag_list = list(tag_list)
             all_tags += bag_tag_list
