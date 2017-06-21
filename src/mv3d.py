@@ -254,8 +254,8 @@ class MV3D(object):
         top_view_log = self.top_image.copy()
 
         # add text on origin
-        text = 'frame tag: ' + frame_tag
-        cv2.putText(top_view_log, text, text_pos, font, 0.4, (0, 255, 100), 0, cv2.LINE_AA)
+        text = frame_tag
+        cv2.putText(top_view_log, text, text_pos, font, 0.3, (0, 255, 100), 0, cv2.LINE_AA)
         if log_rpn:
             rpn_img = self.log_rpn(step=step, scope_name=scope_name, is_train_mode=is_train_mode, tensor_board=False)
             top_view_log = np.concatenate((top_view_log, rpn_img), 1)
@@ -263,8 +263,8 @@ class MV3D(object):
         # prediction on top
         predict_top_view = data.draw_box3d_on_top(self.top_image, self.boxes3d)
         # add fusion loss text
-        text = 'fusion prediction: '
-        if loss != None: text += 'clas loss: %6f reg loss: %6f' % loss
+        text = ''
+        if loss != None: text += 'loss c: %6f r: %6f' % loss
         cv2.putText(predict_top_view, text, text_pos, font, 0.4, (0, 255, 100), 0, cv2.LINE_AA)
 
         # concatenate top_view_log and final prediction
@@ -377,10 +377,10 @@ class MV3D(object):
         if proposals is not None:
             rpn_proposal = draw_rpn_proposal(top_image, proposals, proposal_scores)
             if loss != None:
-                text = 'clas loss: %6f reg loss: %6f' % loss
+                text = 'loss c: %6f r: %6f' % loss
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 text_pos = (0, 25)
-                cv2.putText(rpn_proposal, text, text_pos, font, 0.4, (5, 255, 100), 0, cv2.LINE_AA)
+                cv2.putText(rpn_proposal, text, text_pos, font, 0.3, (5, 255, 100), 0, cv2.LINE_AA)
             if total_img is not None:
                 total_img = np.concatenate((total_img, rpn_proposal), 1)
             else:
