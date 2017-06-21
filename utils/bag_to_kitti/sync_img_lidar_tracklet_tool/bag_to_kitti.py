@@ -1,6 +1,10 @@
 import os
-user_path = os.environ['PYTHONPATH']
-print('python path here: ', user_path)
+import sys
+sys.path.append(os.path.join(sys.path[0],"../../external_modules/didi-competition"))
+
+#user_path = os.environ['PYTHONPATH']
+#print('python path here: ', user_path)
+print('python path here: ', sys.path)
 CORRECT_BASIC = None
 
 from tracklets.python.bag_to_kitti import *

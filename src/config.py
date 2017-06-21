@@ -27,7 +27,7 @@ __C.TEST_KEY=11
 
 #['didi2', 'didi','kitti','test']
 # 'didi2' means configuration for round 2, 'didi' means configuration for round 1 data, 'kitti' means for kitti dataset.
-__C.DATA_SETS_TYPE='kitti'
+__C.DATA_SETS_TYPE='didi2'
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
@@ -38,6 +38,7 @@ else:
     __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR, 'data')
 
 __C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', __C.DATA_SETS_TYPE)
+if __C.DATA_SETS_TYPE == "didi2": __C.RAW_DATA_SETS_DIR = "/ext/Data/Round_2/release/car/training"
 __C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
 __C.PREPROCESSING_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessing', __C.DATA_SETS_TYPE)
 __C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_TYPE)
