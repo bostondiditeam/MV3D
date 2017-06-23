@@ -487,7 +487,7 @@ class Trainer(MV3D):
         self.val_summary_writer = None
         self.tensorboard_dir = None
         self.summ = None
-        self.iter_debug = 300
+        self.iter_debug = 600
         self.n_global_step = 0
         self.validation_step = 40
         self.ckpt_save_step = 200
@@ -674,7 +674,7 @@ class Trainer(MV3D):
             if (self.n_iter+1) % self.iter_debug == 0 or self.fast_test_mode:
                 log_this_iter = True
                 print('Summary log image')
-                for i in range(len(self.log_iou_range)*2):
+                for i in range(len(self.log_iou_range)*3):
                     for is_validation in [False, True]:
                         yield log_this_iter, is_validation
 
