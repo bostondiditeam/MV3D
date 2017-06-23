@@ -17,6 +17,7 @@ from utils.timer import timer
 from time import localtime, strftime
 from utils.batch_loading import BatchLoading2 as BatchLoading
 from utils.training_validation_data_splitter import get_test_tags
+from collections import deque
 
 log_dir = None
 
@@ -24,24 +25,38 @@ fast_test = False
 
 
 def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weights_tag=None):
-    # Tracklet_saver will check whether the file already exists.
-    tracklet = Tracklet_saver(tracklet_pred_dir, exist_ok=True)
-
     top_shape, front_shape, rgb_shape = dataset.get_shape()
     predict = mv3d.Predictor(top_shape, front_shape, rgb_shape, log_tag=log_tag, weights_tag=weights_tag)
+
+    queue = deque(maxlen=1)
 
     # timer
     timer_step = 100
     if cfg.TRACKING_TIMER:
         time_it = timer()
 
+    frame_counter = 0
     for i in range(dataset.size if fast_test == False else frame_offset + 1):
 
         rgb, top, front, _, _, frame_id = dataset.load()
 
-        frame_num = i - frame_offset
-        if frame_num < 0:
-            continue
+        # handling multiple bags.
+        current_tag = dataset.tags[dataset.tag_index]
+        current_bag = current_tag.split('/')[1]
+        if i == 0:
+            prev_tag_bag = None
+        else:
+            prev_tag_bag = queue[0]
+        if current_bag != prev_tag_bag:
+            if i != 0:
+                tracklet.write_tracklet()
+            tracklet = Tracklet_saver(tracklet_pred_dir, current_bag)
+            frame_counter = 0
+        queue.append(current_bag)
+
+        # frame_num = i - frame_offset
+        # if frame_num < 0:
+        #     continue
 
         # detection
         boxes3d, probs = predict(top, front, rgb)
@@ -58,7 +73,9 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
             # add to tracklets
             for j in range(len(translation)):
                 if 0 < translation[j, 1] < 8:
-                    tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
+                    tracklet.add_tracklet(frame_counter, size[j], translation[j], rotation[j])
+
+        frame_counter += 1
 
 
     tracklet.write_tracklet()
@@ -98,7 +115,7 @@ if __name__ == '__main__':
 
     print('\n\n{}\n\n'.format(args))
     tag = args.tag
-    if tag == 'unknow_tag':
+    if tag == 'unknown_tag':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' % tag)
     weights_tag = args.weights if args.weights != '' else None
@@ -112,7 +129,6 @@ if __name__ == '__main__':
 
     tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
     os.makedirs(tracklet_pred_dir, exist_ok=True)
-
 
 
     frame_offset = 0
