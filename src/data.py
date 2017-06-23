@@ -19,9 +19,10 @@ from numba import autojit
 
 import sys
 
-so_path = os.path.join(os.path.split(__file__)[0], "lidar_data_preprocess/Python_to_C_Interface/ver3/LidarTopPreprocess.so")
-assert (os.path.exists(so_path))
 if config.cfg.USE_CLIDAR_TO_TOP:
+    so_path = os.path.join(os.path.split(__file__)[0],
+                           "lidar_data_preprocess/Python_to_C_Interface/ver3/LidarTopPreprocess.so")
+    assert (os.path.exists(so_path))
     SharedLib = ctypes.cdll.LoadLibrary(so_path)
 
 class Preprocess(object):
