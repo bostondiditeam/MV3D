@@ -27,7 +27,7 @@ __C.TEST_KEY=11
 
 #['didi2', 'didi','kitti','test']
 # 'didi2' means configuration for round 2, 'didi' means configuration for round 1 data, 'kitti' means for kitti dataset.
-__C.DATA_SETS_TYPE='kitti'
+__C.DATA_SETS_TYPE='didi2'
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
