@@ -62,7 +62,7 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
 
 
     tracklet.write_tracklet()
-    predict.dump_weigths(os.path.join(log_dir, 'pretrained_model'))
+    predict.save_weights(dir=os.path.join(log_dir, 'pretrained_model'))
 
     if cfg.TRACKING_TIMER:
         predict.log_msg.write('It takes %0.2f secs for inferring the whole test dataset. \n' % \

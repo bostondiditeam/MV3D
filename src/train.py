@@ -8,6 +8,13 @@ import os
 from utils.training_validation_data_splitter import TrainingValDataSplitter
 from utils.batch_loading import BatchLoading2 as BatchLoading
 
+def str2bool(v):
+    if v.lower() in ('true'):
+        return True
+    elif v.lower() in ('false'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training')
@@ -26,7 +33,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
                         help='set log tag')
 
-    parser.add_argument('-c', '--continue_train', type=bool, nargs='?', default=False,
+    parser.add_argument('-c', '--continue_train', type=str2bool, nargs='?', default=False,
                         help='set continue train flag')
     args = parser.parse_args()
 
@@ -35,6 +42,7 @@ if __name__ == '__main__':
     if tag == 'unknown_tag':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
+
 
     max_iter = args.max_iter
     weights=[]
@@ -108,5 +116,6 @@ if __name__ == '__main__':
 
             train = mv3d.Trainer(train_set=training, validation_set=validation,
                                  pre_trained_weights=weights, train_targets=targets, log_tag=tag,
-                                 continue_train = args.continue_train)
+                                 continue_train = args.continue_train,
+                                 fast_test_mode=True if max_iter==1 else False)
             train(max_iter=max_iter)
