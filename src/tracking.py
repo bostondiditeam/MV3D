@@ -50,7 +50,7 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
         if current_bag != prev_tag_bag:
             if i != 0:
                 tracklet.write_tracklet()
-            tracklet = Tracklet_saver(tracklet_pred_dir, current_bag)
+            tracklet = Tracklet_saver(tracklet_pred_dir, current_bag,exist_ok=True)
             frame_counter = 0
         queue.append(current_bag)
 
@@ -147,8 +147,8 @@ if __name__ == '__main__':
             'test_car/ford04',
             'test_car/ford05',
             'test_car/ford06',
-            'test_car/ford07',
-            'test_car/mustang01'
+            # 'test_car/ford07',
+            # 'test_car/mustang01'
         ]
 
     elif config.cfg.DATA_SETS_TYPE == 'didi':
