@@ -14,10 +14,10 @@ import os
 import sys
 
 class Tracklet_saver():
-    def __init__(self, dir_path):
+    def __init__(self, dir_path, exist_ok=False):
         # check if the tracklet file already exist, if yes, exit and print error message.
         file_path = os.path.join(dir_path, 'tracklet_labels_pred.xml')
-        if os.path.isfile(file_path):
+        if exist_ok==False and os.path.isfile(file_path):
             sys.stderr.write("Error: The tracklet file %s already exists, change file name before prediction.\n" % file_path)
             exit(-1)
         else:

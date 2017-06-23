@@ -15,6 +15,7 @@ from multiprocessing import Pool
 from collections import OrderedDict
 import config
 import ctypes
+from numba import autojit
 if config.cfg.USE_CLIDAR_TO_TOP:
     SharedLib = ctypes.cdll.LoadLibrary('/home/stu/MV3D/src/lidar_data_preprocess/'
                                         'Python_to_C_Interface/ver3/LidarTopPreprocess.so')
@@ -39,6 +40,9 @@ class Preprocess(object):
 
 
     def lidar_to_top(self, lidar :np.dtype) ->np.ndarray:
+        if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test' or cfg.DATA_SETS_TYPE == 'didi2'):
+            lidar = filter_center_car(lidar)
+
         if cfg.USE_CLIDAR_TO_TOP:
             top = clidar_to_top(lidar)
         else:
@@ -85,9 +89,6 @@ def draw_top_image(lidar_top):
 
 
 def clidar_to_top(lidar):
-    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test'):
-        lidar=filter_center_car(lidar)
-
     # Calculate map size and pack parameters for top view and front view map (DON'T CHANGE THIS !)
     Xn = math.floor((TOP_X_MAX - TOP_X_MIN) / TOP_X_DIVISION)
     Yn = math.floor((TOP_Y_MAX - TOP_Y_MIN) / TOP_Y_DIVISION)
@@ -113,7 +114,7 @@ def clidar_to_top(lidar):
     return top
 
 
-## lidar to top ##
+@autojit
 def lidar_to_top(lidar):
 
     idx = np.where (lidar[:,0]>TOP_X_MIN)
@@ -131,8 +132,6 @@ def lidar_to_top(lidar):
     idx = np.where (lidar[:,2]<TOP_Z_MAX)
     lidar = lidar[idx]
 
-    if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test' or cfg.DATA_SETS_TYPE=='didi2'):
-        lidar=filter_center_car(lidar)
 
 
     pxs=lidar[:,0]

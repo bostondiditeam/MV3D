@@ -18,15 +18,14 @@ from time import localtime, strftime
 from utils.batch_loading import BatchLoading2 as BatchLoading
 from utils.training_validation_data_splitter import get_test_tags
 
-log_subdir = os.path.join('tracking', strftime("%Y_%m_%d_%H_%M_%S", localtime()))
-log_dir = os.path.join(cfg.LOG_DIR, log_subdir)
+log_dir = None
 
 fast_test = False
 
 
 def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weights_tag=None):
     # Tracklet_saver will check whether the file already exists.
-    tracklet = Tracklet_saver(tracklet_pred_dir)
+    tracklet = Tracklet_saver(tracklet_pred_dir, exist_ok=True)
 
     top_shape, front_shape, rgb_shape = dataset.get_shape()
     predict = mv3d.Predictor(top_shape, front_shape, rgb_shape, log_tag=log_tag, weights_tag=weights_tag)
@@ -46,7 +45,7 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
 
         # detection
         boxes3d, probs = predict(top, front, rgb)
-        predict.dump_log(log_subdir=log_subdir, n_frame=i, frame_tag=frame_id)
+        predict.dump_log(log_subdir=os.path.join('tracking',log_tag), n_frame=i, frame_tag=frame_id)
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i % timer_step == 0 and i != 0:
@@ -107,8 +106,13 @@ if __name__ == '__main__':
     fast_test = args.fast_test
     n_skip_frames = args.n_skip_frames
 
+    #log dir
+    log_dir = os.path.join(config.cfg.LOG_DIR,'tracking', tag)
+
+
     tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
     os.makedirs(tracklet_pred_dir, exist_ok=True)
+
 
 
     frame_offset = 0

@@ -41,17 +41,20 @@ class Task(object):
 
 
 
-    def train_img_and_fusion(self):
+    def train_img_and_fusion(self, continue_train=False, init_train=4000,tracking_max=5,
+                             train_epoch=2500,tracking_skip_frames=0):
 
         iter = lambda i:  i if self.fast_test==False else 1
 
-        run_task('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i %d '
-                 '-n %s' % (iter(2000), self.tag))
+        if continue_train == False:
+            run_task('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i %d '
+                     '-n %s' % (iter(init_train), self.tag))
 
-        for i in range(iter(5)):
+        for i in range(iter(tracking_max)):
             run_task('python train.py -w "top_view_rpn,image_feature,fusion" -t "image_feature,fusion" -i %d '
-                     ' -n %s -c True' %(iter(2500), tag))
-            run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 10' % (tag,i,tag,self.fast_test))
+                     ' -n %s -c True' %(iter(train_epoch), tag))
+            run_task('python tracking.py -n %s_%d -w "%s" -t %s -s %d' % (tag,i,tag,self.fast_test,
+                                                                          tracking_skip_frames))
 
 def str2bool(v: str):
     if v.lower() in ('true'):
@@ -77,5 +80,5 @@ if __name__ == '__main__':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
 
-    Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion()
+    Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion(train_epoch=3000)
     # Task(tag=tag, fast_test=args.fast_test).train_rpn()
