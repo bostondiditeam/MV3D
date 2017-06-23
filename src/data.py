@@ -15,12 +15,9 @@ from multiprocessing import Pool
 from collections import OrderedDict
 import config
 import ctypes
-import sys
-
-so_path = os.path.join(os.path.split(__file__)[0], "lidar_data_preprocess/Python_to_C_Interface/ver3/LidarTopPreprocess.so")
-assert(os.path.exists(so_path))
 if config.cfg.USE_CLIDAR_TO_TOP:
-    SharedLib = ctypes.cdll.LoadLibrary(so_path)
+    SharedLib = ctypes.cdll.LoadLibrary('/home/stu/MV3D/src/lidar_data_preprocess/'
+                                        'Python_to_C_Interface/ver3/LidarTopPreprocess.so')
 
 class Preprocess(object):
 

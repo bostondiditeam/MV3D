@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     print('\n\n{}\n\n'.format(args))
     tag = args.tag
-    if tag == 'unknown_tag':
+    if tag == 'unknow_tag':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' % tag)
     weights_tag = args.weights if args.weights != '' else None
@@ -121,14 +121,14 @@ if __name__ == '__main__':
 
     if config.cfg.DATA_SETS_TYPE == 'didi2':
         test_bags = [
-            'testing/ford01',
-            'testing/ford02',
-            'testing/ford03',
-            'testing/ford04',
-            'testing/ford05',
-            'testing/ford06',
-            'testing/ford07',
-            'testing/mustang01'
+            'test_car/ford01',
+            'test_car/ford02',
+            'test_car/ford03',
+            'test_car/ford04',
+            'test_car/ford05',
+            'test_car/ford06',
+            'test_car/ford07',
+            'test_car/mustang01'
         ]
 
     elif config.cfg.DATA_SETS_TYPE == 'didi':

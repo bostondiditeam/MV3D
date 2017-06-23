@@ -34,11 +34,8 @@ top_paras = (TOP_X_MIN, TOP_X_MAX, TOP_Y_MIN, TOP_Y_MAX, TOP_Z_MIN, TOP_Z_MAX, T
 
 
 #------------------- 2. SET SOURCE RAW DATA TO BE PROCESSED --------------------
-# load lidar raw data  (presumed raw data dimension : num x 4)
-lidar_data_src_dir = "../../raw/kitti/2011_09_26/2011_09_26_drive_0001_sync/velodyne_points/data/"
-lidar_data_src_path = lidar_data_src_dir + "0000000004.bin"
-raw = np.fromfile(lidar_data_src_path, dtype=np.float32)
-raw = raw.reshape((-1,4))
+# load lidar raw data  (presumed raw data dimension : num x 4)    
+raw = np.load("raw_kitti_2011_09_26_0005_0000000004.npy")
 num = raw.shape[0]  # DON'T CHANGE THIS !
 # num : number of points in one lidar frame
 # 4 : total channels of single point (x, y, z, intensity)

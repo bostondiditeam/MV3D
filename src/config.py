@@ -145,7 +145,7 @@ __C.DATAPY_TIMER = False
 # print(cfg.PREPROCESSED_DATA_SETS_DIR)
 # print(cfg.PREDICTED_XML_DIR)
 
-__C.USE_CLIDAR_TO_TOP = True
+__C.USE_CLIDAR_TO_TOP = False
 
 def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the
