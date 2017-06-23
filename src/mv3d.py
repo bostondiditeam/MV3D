@@ -698,7 +698,7 @@ class Trainer(MV3D):
                 if (iter+1) % validation_step == 0:  summary_it,print_loss = True,True # summary train loss
                 if iter % 20 == 0: print_loss = True #print train loss
 
-                if 1 and  iter%900 == 0: summary_it,summary_runmeta = True,True
+                if 1 and  iter == 0: summary_it,summary_runmeta = True,True
 
                 if iter % self.iter_debug == 0 or (iter + 1) % self.iter_debug == 0:
                     log_this_iter = True
