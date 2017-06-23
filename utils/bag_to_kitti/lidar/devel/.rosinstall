@@ -1,2 +1,2 @@
 - setup-file:
-    local-name: /ext2/didigithub/ros/src/detector/MV3D/utils/bag_to_kitti/lidar/devel/setup.sh
+    local-name: /home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/devel/setup.sh

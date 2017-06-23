@@ -1,8 +1,6 @@
 import os
-import sys
 user_path = os.environ['PYTHONPATH']
-#print('python path here: ', user_path)
-sys.path.append(os.path.join(sys.path[0],"../../external_modules/didi-competition"))
+print('python path here: ', user_path)
 CORRECT_BASIC = None
 
 from tracklets.python.bag_to_kitti import *
@@ -317,7 +315,7 @@ def main():
                 # metadata specify offsets from lower left, rear, ground corner of the vehicle. Where +ve is
                 # along the respective length, width, height axis away from that point. They are converted to
                 # velodyne/ROS compatible X,Y,Z where X +ve is forward, Y +ve is left, and Z +ve is up.
-                lrg_to_gps = [md['front_gps_l'], -md['front_gps_w'], md['front_gps_h']]
+                lrg_to_gps = [md['gps_l'], -md['gps_w'], md['gps_h']]
                 lrg_to_centroid = [md['l'] / 2., -md['w'] / 2., md['h'] / 2.]
                 gps_to_centroid = np.subtract(lrg_to_centroid, lrg_to_gps)
 

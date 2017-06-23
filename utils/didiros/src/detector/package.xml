@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>detector2</name>
+  <name>detector</name>
   <version>0.0.0</version>
   <description>detection package</description>
   <maintainer email="prerit.jaiswal@gmail.com">Prerit Jaiswal</maintainer>

@@ -1,8 +1,8 @@
-prefix=/ext2/didigithub/ros/src/detector/MV3D/utils/bag_to_kitti/lidar/devel
+prefix=/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/devel
 
 Name: radar
 Description: Description of radar
 Version: 0.0.0
 Cflags: 
-Libs: -L/ext2/didigithub/ros/src/detector/MV3D/utils/bag_to_kitti/lidar/devel/lib 
+Libs: -L/home/prerit/DiDi/MV3D/utils/bag_to_kitti/lidar/devel/lib 
 Requires: 
