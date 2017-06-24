@@ -3,7 +3,6 @@ building blocks of network
 #http://programtalk.com/vs2/python/3069/image_captioning/utils/nn.py/
 '''
 import tensorflow as tf
-from net.common import *
 import numpy as np
 
 

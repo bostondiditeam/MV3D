@@ -7,6 +7,7 @@ if __name__ == '__main__':
     home_dir='/home/stu'
     unsynced_dir='round12_data/unsynced'
     os.system('pkill -f rosmaster')
+    os.makedirs('./lidar_data',exist_ok=True)
     time.sleep(0.5)
     os.system('roscore &')
     time.sleep(0.5)

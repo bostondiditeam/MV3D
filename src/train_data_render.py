@@ -1,4 +1,4 @@
-import model as mod
+import mv3d as mod
 import glob
 from config import *
 import utils.batch_loading as ub
@@ -8,7 +8,7 @@ import net.utility.draw as draw
 import skvideo.io
 import data
 from config import cfg
-from net.common import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
     TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 
 dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR

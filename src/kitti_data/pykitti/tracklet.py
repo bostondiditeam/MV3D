@@ -126,7 +126,7 @@ def parseXML(trackletFile):
 
   # convert tracklet XML data to a tree structure
   eTree = ElementTree()
-  print ('parsing tracklet file', trackletFile)
+  # print ('parsing tracklet file', trackletFile)
   with open(trackletFile) as f:
     eTree.parse(f)
 
@@ -139,7 +139,7 @@ def parseXML(trackletFile):
     #print 'track:', trackletElem.tag
     if trackletElem.tag == 'count':
       nTracklets = int(trackletElem.text)
-      print ('file contains', nTracklets, 'tracklets')
+      # print ('file contains', nTracklets, 'tracklets')
     elif trackletElem.tag == 'item_version':
       pass
     elif trackletElem.tag == 'item':
@@ -270,7 +270,7 @@ def parseXML(trackletFile):
       raise ValueError('unexpected tracklet info')
   #end: for tracklet list items
 
-  print ('loaded', trackletIdx, 'tracklets')
+  # print ('loaded', trackletIdx, 'tracklets')
 
   # final consistency check
   if trackletIdx != nTracklets:

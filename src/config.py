@@ -33,22 +33,27 @@ __C.DATA_SETS_TYPE='kitti'
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
 
 if __C.DATA_SETS_TYPE=='test':
-    __C.DATA_SETS_DIR = osp.abspath('/home/stu/round12_data')
+    __C.DATA_SETS_DIR = osp.abspath('/home/stu/round12_data_test')
 else:
-    __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR,'data')
+    __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR, 'data')
 
 __C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', __C.DATA_SETS_TYPE)
 __C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
-__C.PREPROCESSING_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
+__C.PREPROCESSING_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessing', __C.DATA_SETS_TYPE)
 __C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_TYPE)
 
 __C.CHECKPOINT_DIR=osp.join(__C.ROOT_DIR,'checkpoint')
 __C.LOG_DIR=osp.join(__C.ROOT_DIR,'log')
 
-__C.IMAGE_FUSION_DIABLE = True
-
 __C.USE_RESNET_AS_TOP_BASENET = True
-__C.USE_RESNET_AS_RGB_BASENET = False
+
+__C.IMAGE_FUSION_DIABLE = False
+__C.RGB_BASENET = 'VGG'  # 'resnet' 、'xception' 'VGG'
+if __C.RGB_BASENET == 'xception':
+    __C.USE_IMAGENET_PRE_TRAINED_MODEL = True
+else:
+    __C.USE_IMAGENET_PRE_TRAINED_MODEL =False
+
 __C.TRACKLET_GTBOX_LENGTH_SCALE = 1.6
 
 # image crop config
@@ -78,6 +83,56 @@ elif __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE ==  'didi2':
 elif __C.DATA_SETS_TYPE == 'kitti':
     __C.IMAGE_WIDTH=1242
     __C.IMAGE_HEIGHT=375
+
+
+# config for lidar to top
+if __C.DATA_SETS_TYPE == 'didi' or __C.DATA_SETS_TYPE == 'test':
+    TOP_Y_MIN = -10
+    TOP_Y_MAX = +10
+    TOP_X_MIN = -45
+    TOP_X_MAX = 45
+    TOP_Z_MIN = -3.0
+    TOP_Z_MAX = 0.7
+
+    TOP_X_DIVISION = 0.2
+    TOP_Y_DIVISION = 0.2
+    TOP_Z_DIVISION = 0.3
+elif __C.DATA_SETS_TYPE == 'didi2':
+    TOP_Y_MIN = -30
+    TOP_Y_MAX = 30
+    TOP_X_MIN = -50
+    TOP_X_MAX = 50
+    TOP_Z_MIN = -3.5
+    TOP_Z_MAX = 0.6
+
+    TOP_X_DIVISION = 0.2
+    TOP_Y_DIVISION = 0.2
+    TOP_Z_DIVISION = 0.3
+elif __C.DATA_SETS_TYPE == 'kitti':
+    TOP_Y_MIN = -20
+    TOP_Y_MAX = +20
+    TOP_X_MIN = 0
+    TOP_X_MAX = 40
+    TOP_Z_MIN = -2.0
+    TOP_Z_MAX = 0.5
+
+    TOP_X_DIVISION = 0.1
+    TOP_Y_DIVISION = 0.1
+    TOP_Z_DIVISION = 0.3
+else:
+    raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(__C.DATA_SETS_TYPE))
+
+
+if __C.DATA_SETS_TYPE == 'kitti':
+    MATRIX_Mt = ([[  2.34773698e-04,   1.04494074e-02,   9.99945389e-01,  0.00000000e+00],
+                  [ -9.99944155e-01,   1.05653536e-02,   1.24365378e-04,  0.00000000e+00],
+                  [ -1.05634778e-02,  -9.99889574e-01,   1.04513030e-02,  0.00000000e+00],
+                  [  5.93721868e-02,  -7.51087914e-02,  -2.72132796e-01,  1.00000000e+00]])
+
+    MATRIX_Kt = ([[ 721.5377,    0.    ,    0.    ],
+                  [   0.    ,  721.5377,    0.    ],
+                  [ 609.5593,  172.854 ,    1.    ]])
+
 # if timer is needed.
 __C.TRAINING_TIMER = True
 __C.TRACKING_TIMER = True
@@ -87,6 +142,7 @@ __C.DATAPY_TIMER = False
 # print(cfg.PREPROCESSED_DATA_SETS_DIR)
 # print(cfg.PREDICTED_XML_DIR)
 
+__C.USE_CLIDAR_TO_TOP = False
 
 def _merge_a_into_b(a, b):
     """Merge config dictionary a into config dictionary b, clobbering the

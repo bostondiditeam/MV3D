@@ -13,7 +13,8 @@ import numpy as np
 import cv2
 import mayavi.mlab as mlab
 import config
-from  net.common import *
+from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
+    TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 
 
 
