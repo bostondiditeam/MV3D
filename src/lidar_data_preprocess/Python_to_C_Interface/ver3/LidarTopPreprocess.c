@@ -82,10 +82,13 @@ extern "C"
 			}
 		}
 
-		//allocate point cloud for temporally data visualization (only used for validation)
+		// This is the data structure that is used to create the height planes of the 3D data cube.
 		vector<std::vector<PointT> > height_cloud_vec;
 
-		// Initialize the vector of vectors with a dummy. The dummy is later deleted.
+		// Initialize height_cloud_vec with a dummy. The dummy is later deleted.
+		// This is needed because without initialization, the "at" method for vectors cannot be used to add data. 
+		// Only the "push_back" method can be used. But with push_back, data can be added only at the end of the vector.
+		// With "at", data can be added at any random location.
 		for(int i = 0; i < Z_SIZE; i++){
 			std::vector<PointT> dummy;
 			PointT dummy_member;
@@ -93,6 +96,7 @@ extern "C"
 			height_cloud_vec.push_back(dummy);
 		}
 
+		// These are the data structures used to create the intensity and the desnity planes of the data cube.
 		vector<PointT> intensity_cloud;
 		vector<PointT> density_cloud;
 
@@ -108,9 +112,9 @@ extern "C"
 			//Y = (int)((point.y-y_MIN)/y_DIVISION);
 			//Z = (int)((point.z-z_MIN)/z_DIVISION);
 
-			X = (int)floor((point.x-x_MIN)/x_DIVISION);	// X_SIZE is 400   qxs
-		    Y = (int)floor((point.y-y_MIN)/y_DIVISION);   // Y_SIZE is 400  qys
-		    Z = (int)floor((point.z-z_MIN)/z_DIVISION);   // Z_SIZE is 6  qzs
+			X = (int)floor((point.x-x_MIN)/x_DIVISION);	
+		    Y = (int)floor((point.y-y_MIN)/y_DIVISION);   
+		    Z = (int)floor((point.z-z_MIN)/z_DIVISION);
 			
 			//For every point in each cloud, only select points inside a predefined 3D grid box
 			if (X >= 0 && Y>= 0 && Z >=0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)
