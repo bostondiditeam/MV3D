@@ -56,6 +56,11 @@ class Task(object):
             run_task('python tracking.py -n %s_%d -w "%s" -t %s -s %d' % (tag,i,tag,self.fast_test,
                                                                           tracking_skip_frames))
 
+    def tracking(self, tracking_skip_frames=0,weights=None):
+        weights = self.tag if weights==None else weights
+        run_task('python tracking.py -n %s -w "%s" -t %s -s %d' % (tag, weights ,self.fast_test,
+                                                                          tracking_skip_frames))
+
 def str2bool(v: str):
     if v.lower() in ('true'):
         return True
