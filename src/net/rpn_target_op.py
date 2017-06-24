@@ -218,7 +218,7 @@ def draw_rpn_gt(image, gt_boxes, gt_labels=None):
 
 def draw_rpn_labels(image, anchors, inds, labels):
 
-    is_print=1
+    is_print=0
     ## yellow (thick): gt
     ## red     : regression target (before)
     ## yellow  : regression target (after)
