@@ -1,5 +1,75 @@
 import numpy as np
 import math
+
+
+# -------------------- 0. Original Python Lidar preprocess (Perit's version), used for comparison ---------
+def lidar_to_top(lidar):
+    idx = np.where (lidar[:,0]>TOP_X_MIN)
+    lidar = lidar[idx]
+    idx = np.where (lidar[:,0]<TOP_X_MAX)
+    lidar = lidar[idx]
+
+    idx = np.where (lidar[:,1]>TOP_Y_MIN)
+    lidar = lidar[idx]
+    idx = np.where (lidar[:,1]<TOP_Y_MAX)
+    lidar = lidar[idx]
+
+    idx = np.where (lidar[:,2]>TOP_Z_MIN)
+    lidar = lidar[idx]
+    idx = np.where (lidar[:,2]<TOP_Z_MAX)
+    lidar = lidar[idx]
+
+    pxs=lidar[:,0]
+    pys=lidar[:,1]
+    pzs=lidar[:,2]
+    prs=lidar[:,3]
+    qxs=((pxs-TOP_X_MIN)//TOP_X_DIVISION).astype(np.int32)
+    qys=((pys-TOP_Y_MIN)//TOP_Y_DIVISION).astype(np.int32)
+    #qzs=((pzs-TOP_Z_MIN)//TOP_Z_DIVISION).astype(np.int32)
+    qzs=(pzs-TOP_Z_MIN)/TOP_Z_DIVISION
+    quantized = np.dstack((qxs,qys,qzs,prs)).squeeze()
+
+    X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
+    Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
+    Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
+    height  = Xn - X0
+    width   = Yn - Y0
+    channel = Zn - Z0  + 2
+    #print('height,width,channel=%d,%d,%d'%(height,width,channel))
+    top = np.zeros(shape=(height,width,channel), dtype=np.float32)
+
+    # histogram = Bin(channel, 0, Zn, "z", Bin(height, 0, Yn, "y", Bin(width, 0, Xn, "x", Maximize("intensity"))))
+    # histogram.fill.numpy({"x": qxs, "y": qys, "z": qzs, "intensity": prs})
+
+    #if 1:  #new method
+    for x in range(Xn):
+        ix  = np.where(quantized[:,0]==x)
+        quantized_x = quantized[ix]
+        if len(quantized_x) == 0 : continue
+        yy = -x
+
+        for y in range(Yn):
+            iy  = np.where(quantized_x[:,1]==y)
+            quantized_xy = quantized_x[iy]
+            count = len(quantized_xy)
+            if  count==0 : continue
+            xx = -y
+
+            top[yy,xx,Zn+1] = min(1, np.log(count+1)/math.log(32))
+            max_height_point = np.argmax(quantized_xy[:,2])
+            top[yy,xx,Zn]=quantized_xy[max_height_point, 3]
+
+            for z in range(Zn):
+                iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<=z+1))
+                quantized_xyz = quantized_xy[iz]
+                if len(quantized_xyz) == 0 : continue
+                zz = z
+
+                #height per slice
+                max_height = max(0,np.max(quantized_xyz[:,2])-z)
+                top[yy,xx,zz]=max_height
+    return top
+
 # -------------------- 1. SETTING PARAMETERS HERE !!! ----------------------------
 # initial setting for  Kitti/2011_09_26/2011_09_26_drive_0005_sync/velodyne_points/data/0000000004.bin
 TOP_X_MIN =0  
@@ -82,29 +152,75 @@ front = np.flipud(np.fliplr(front_flip))
 # ------------------------------------------------------------------------------
 
 
-#------------------- 4. SHOW TOP VIEW AND FRONT VIEW MAPS (optional) -----------
+#------------------- 4. SHOW TOP VIEW MAPS (optional) --------------------------
 import matplotlib.pyplot as plt
-# SHOW TOP VIEW MAPS (optional)
+# SHOW TOP VIEW MAPS OF C VERSION (optional)
 map_num = len(top[0][0])
-plt.figure()
+plt.figure('C version - top view')
 for i in range(map_num):
 	plt.subplot(1, map_num, i+1)
 	plt.imshow(top[:,:,i])
 	plt.gray()
 plt.show()
 
-# SHOW FRONT VIEW MAPS (optional)
+# SHOW TOP VIEW MAPS of Python version (optional)
+#python_top=lidar_to_top(raw)
+
+#map_num = len(python_top[0][0])
+#plt.figure('Python version - top view')
+#for i in range(map_num):
+#	plt.subplot(1, map_num, i+1)
+#	plt.imshow(python_top[:,:,i])
+#	plt.gray()
+#plt.show()
+
+for i in range(map_num-2):
+	print('Top view layer ', i,':')
+	print('- max in    C   ver:',max(top[:,:,i].flatten()) )
+#	print('- max in Python ver:',max(python_top[:,:,i].flatten()) )
+	print('- min in    C   ver:',min(top[:,:,i].flatten()) )
+#	print('- min in Python ver:',min(python_top[:,:,i].flatten()) )
+
+print('Top view layer ', map_num-2,' (density map) :')
+print('- max in    C   ver:',max(top[:,:,map_num-2].flatten()) )
+#print('- max in Python ver:',max(python_top[:,:,map_num-2].flatten()) )
+print('- min in    C   ver:',min(top[:,:,map_num-2].flatten()) )
+#print('- min in Python ver:',min(python_top[:,:,map_num-2].flatten()) )
+
+print('Top view layer ', map_num-1,' (intensity map) :')
+print('- max in    C   ver:',max(top[:,:,map_num-1].flatten()) )
+#print('- max in Python ver:',max(python_top[:,:,map_num-1].flatten()) )
+print('- min in    C   ver:',min(top[:,:,map_num-1].flatten()) )
+#print('- min in Python ver:',min(python_top[:,:,map_num-1].flatten()) )
+
+
+#------------------- 5. SHOW FRONT VIEW MAPS (optional) --------------------------
+# SHOW FRONT VIEW MAPS OF C VERSION (optional)
+plt.figure('height map - front view')
 plt.imshow(front[:,:,0])
 plt.gray()
 plt.show()
+
+plt.figure('distance map - front view')
 plt.imshow(front[:,:,1])
 plt.gray()
 plt.show()
+
+plt.figure('intensity map - front view')
 plt.imshow(front[:,:,2])
 plt.gray()
 plt.show()
-# ------------------------------------------------------------------------------
 
+print ('Front view height map :')
+print ('- max value : ', max(front[:,:,0].flatten()))
+print ('- min value : ', min(front[:,:,0].flatten()))
+print ('Front view distance map :')
+print ('- max value : ', max(front[:,:,1].flatten()))
+print ('- min value : ', min(front[:,:,1].flatten()))
+print ('Front view intensity map :')
+print ('- max value : ', max(front[:,:,2].flatten()))
+print ('- min value : ', min(front[:,:,2].flatten()))
+# ------------------------------------------------------------------------------
 
 
 

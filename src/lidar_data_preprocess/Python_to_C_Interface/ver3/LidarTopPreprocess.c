@@ -44,7 +44,7 @@ extern "C"
 		int Z = 0;
 
 		//height features X_SIZE * Y_SIZE * Z_SIZE
-		vector<vector<vector<float> > > height_maps;
+		vector<vector<vector<float> > > height_maps;  // quantized 
 
 		//max height X_SIZE * Y_SIZE * 1  (used to record current highest cell for X,Y while parsing data)
 		vector<vector<float> > max_height_map;
@@ -102,20 +102,21 @@ extern "C"
 		    point.x = *px;
 		    point.y = *py;
 		    point.z = *pz;
-			point.intensity = (*pr) * 255;	//TODO : check if original Kitti data normalized between 0 and 1 ?
+			point.intensity = (*pr);// * 255;	//TODO : check if original Kitti data normalized between 0 and 1 ?
 		
 			//X = (int)((point.x-x_MIN)/x_DIVISION);
 			//Y = (int)((point.y-y_MIN)/y_DIVISION);
 			//Z = (int)((point.z-z_MIN)/z_DIVISION);
 
-			X = (int)floor((point.x-x_MIN)/x_DIVISION);	// X_SIZE is 400
-		    Y = (int)floor((point.y-y_MIN)/y_DIVISION);   // Y_SIZE is 400
-		    Z = (int)floor((point.z-z_MIN)/z_DIVISION);   // Z_SIZE is 6
-	
+			X = (int)floor((point.x-x_MIN)/x_DIVISION);	// X_SIZE is 400   qxs
+		    Y = (int)floor((point.y-y_MIN)/y_DIVISION);   // Y_SIZE is 400  qys
+		    Z = (int)floor((point.z-z_MIN)/z_DIVISION);   // Z_SIZE is 6  qzs
+			
 			//For every point in each cloud, only select points inside a predefined 3D grid box
 			if (X >= 0 && Y>= 0 && Z >=0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)
 			{
-				//For every point in predefined 3D grid box.....
+				// For every point in predefined 3D grid box.....
+				// height map
 				if ((point.z - z_MIN) > height_maps[X][Y][Z])
 				{	
 					height_maps[X][Y][Z] = point.z - z_MIN;
@@ -126,16 +127,26 @@ extern "C"
 					grid_point.y = Y;
 					grid_point.z = 0;
 					grid_point.intensity = point.z - z_MIN;
+					
 					// height_cloud_vec[Z].push_back(grid_point);
 
 					height_cloud_vec.at(Z).push_back(grid_point);
 				}
 			
+				// density map
+				density_map[X][Y]++;	// update count#, need to be normalized afterwards
+				PointT grid_point;
+				grid_point.x = X;
+				grid_point.y = Y;
+				grid_point.z = 0;
+				grid_point.intensity = density_map[X][Y];
+				density_cloud.push_back(grid_point);
+
+				// intensity map
 				if ((point.z - z_MIN) > max_height_map[X][Y])
 				{
 					max_height_map[X][Y] = point.z - z_MIN;
 					intensity_map[X][Y] = point.intensity;
-					density_map[X][Y]++;	// update count#, need to be normalized afterwards
 
 					//Save to point cloud for visualization -----
 					PointT grid_point;
@@ -144,15 +155,12 @@ extern "C"
 					grid_point.z = 0;
 					grid_point.intensity = point.intensity;
 					intensity_cloud.push_back(grid_point);
-					
-					grid_point.intensity = density_map[X][Y];
-					density_cloud.push_back(grid_point);
 				}
+
 				
 			}
 		    px+=4; py+=4; pz+=4; pr+=4;
-		}
-
+		}		
 
 		// erase the dummy vector added at the start
 		for(int i = 0; i < Z_SIZE; i++){
@@ -161,8 +169,8 @@ extern "C"
 
 		// normalization
 		for (unsigned int i=0; i < density_cloud.size(); i++){
-
-			float val = log10(density_cloud.at(i).intensity+1)/log10(64);
+//			float val = log10(density_cloud.at(i).intensity+1)/log10(64);
+			float val = log(density_cloud.at(i).intensity+1)/log(32);	//In DiDi, we use velodyne 32 beam
 
 			if(val < 1)	
             	density_cloud.at(i).intensity = val;
@@ -199,12 +207,13 @@ extern "C"
 
 				float value = cloud_demo->at(i).intensity;
 
-				top_cube[array_idx] = value;
+				//top_cube[array_idx] = value;
+				top_cube[array_idx] = value/z_DIVISION - k;	//normalized relative to the current grid
 			}
 		}
-
-		// Treat the density map
-		cloud_demo = &density_cloud;
+		
+		// Treat the intensity map
+		cloud_demo = &intensity_cloud;
 		int cloud_size = cloud_demo->size();
 		int plane_idx = Z_SIZE;	// because this is the 6th plane (starting from zero)
 
@@ -212,15 +221,15 @@ extern "C"
 			int x_coord = (int)cloud_demo->at(i).x;
 			int y_coord = (int)cloud_demo->at(i).y;
 
-			// array_idx equals 400*8*x + 8*y + 6 where 6 is the 6th (starting at 0) 400x400 plane
+			// array_idx equals 400*8*x + 8*y + 7 where 7 is the 7th (starting at 0) 400x400 plane
 			int array_idx = Y_SIZE * (Z_SIZE + 2) * x_coord + (Z_SIZE + 2) * y_coord + plane_idx;
 			float value = cloud_demo->at(i).intensity;
 
 			top_cube[array_idx] = value;
 		}
-		
-		// Treat the intensity map
-		cloud_demo = &intensity_cloud;
+
+		// Treat the density map	(last layer)
+		cloud_demo = &density_cloud;
 		cloud_size = cloud_demo->size();
 		plane_idx = Z_SIZE + 1;	// because this is the 7th plane (starting from zero)
 
@@ -228,7 +237,7 @@ extern "C"
 			int x_coord = (int)cloud_demo->at(i).x;
 			int y_coord = (int)cloud_demo->at(i).y;
 
-			// array_idx equals 400*8*x + 8*y + 7 where 7 is the 7th (starting at 0) 400x400 plane
+			// array_idx equals 400*8*x + 8*y + 6 where 6 is the 6th (starting at 0) 400x400 plane
 			int array_idx = Y_SIZE * (Z_SIZE + 2) * x_coord + (Z_SIZE + 2) * y_coord + plane_idx;
 			float value = cloud_demo->at(i).intensity;
 
