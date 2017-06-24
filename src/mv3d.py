@@ -406,6 +406,10 @@ class MV3D(object):
 
     def summary_image(self, image, tag, summary_writer=None,step=None):
 
+        #reduce image size
+        new_size = (image.shape[1]//2, image.shape[0]//2)
+        image=cv2.resize(image,new_size)
+
         if summary_writer == None:
             summary_writer=self.default_summary_writer
 
@@ -494,6 +498,7 @@ class Trainer(MV3D):
         self.log_image_count=0
         self.n_iter=0
         self.fast_test_mode = fast_test_mode
+        self.iou_statistic =[]
 
         # saver
         with self.sess.as_default():
@@ -671,15 +676,22 @@ class Trainer(MV3D):
 
     def summary_log_image_gen(self):
         while True:
+            summary_iou = False
+            iou_statistic =False
             if (self.n_iter+1) % self.iter_debug == 0 or self.fast_test_mode:
                 log_this_iter = True
                 print('Summary log image')
-                for i in range(len(self.log_iou_range)*3):
-                    for is_validation in [False, True]:
-                        yield log_this_iter, is_validation
+                for is_validation in [False, True]:
+                    for i in range(len(self.log_iou_range)*3):
+                        iou_statistic = True
+                        yield log_this_iter, is_validation,summary_iou,iou_statistic
+
+                    summary_iou=True
+                    iou_statistic=False
+                    yield log_this_iter, is_validation, summary_iou, iou_statistic
 
             else:
-                yield False, False
+                yield False, False, False,False
 
 
     def __call__(self, max_iter=1000, train_set =None, validation_set =None):
@@ -716,7 +728,7 @@ class Trainer(MV3D):
 
                 if 1 and  iter == 0: summary_it,summary_runmeta = True,True
 
-                log_this_iter, is_validation = next(need_summmary_image)
+                log_this_iter, is_validation, summary_iou, iou_statistic = next(need_summmary_image)
 
 
                 data_set = self.validation_set if is_validation else self.train_set
@@ -743,7 +755,8 @@ class Trainer(MV3D):
                     self.fit_iteration(self.batch_rgb_images, self.batch_top_view, self.batch_front_view,
                                        self.batch_gt_labels, self.batch_gt_boxes3d, self.frame_id,
                                        is_validation =is_validation, summary_it=summary_it,
-                                       summary_runmeta=summary_runmeta, log=log_this_iter)
+                                       summary_runmeta=summary_runmeta, log=log_this_iter,
+                                       summary_iou=summary_iou, iou_statistic=summary_iou)
 
                 if print_loss:
                     self.log_msg.write('%10s: |  %5d/%5d  %0.5f   %0.5f   |   %0.5f   %0.5f \n' % \
@@ -771,7 +784,8 @@ class Trainer(MV3D):
 
     def fit_iteration(self, batch_rgb_images, batch_top_view, batch_front_view,
                       batch_gt_labels, batch_gt_boxes3d, frame_id, is_validation =False,
-                      summary_it=False, summary_runmeta=False, log=False):
+                      summary_it=False, summary_runmeta=False, log=False,
+                      summary_iou=False, iou_statistic=False):
 
         net = self.net
         sess = self.sess
@@ -885,8 +899,12 @@ class Trainer(MV3D):
                 inds = np.where(batch_gt_labels[0] != 0)
                 try:
                     iou = box.boxes3d_score_iou(batch_gt_boxes3d[0][inds], boxes3d)
-                    tag = os.path.join('IOU')
-                    self.summary_scalar(value=iou, tag=tag, step=self.n_global_step)
+                    if iou_statistic: self.iou_statistic.append(iou)
+                    if summary_iou:
+                        iou_aver = sum(self.iou_statistic)/len(self.iou_statistic)
+                        self.iou_statistic=[]
+                        tag = os.path.join('IOU')
+                        self.summary_scalar(value=iou_aver, tag=tag, step=self.n_global_step)
                 except ValueError:
                     print("waring :", sys.exc_info()[0])
                 self.log_msg.write('\n %s iou: %.5f\n' % (self.step_name, iou))
@@ -899,7 +917,7 @@ class Trainer(MV3D):
                     if int(iou*100) in iou_range:
                         scope_name = os.path.join(scope_name , 'iou_{}'.format (iou_range))
 
-            print('Summary log image, scope name: {}'.format(scope_name))
+            # print('Summary log image, scope name: {}'.format(scope_name))
 
             self.log_fusion_net_target(batch_rgb_images[0], scope_name=scope_name)
             log_info_str = 'frame info: ' + self.frame_info + '\n'
