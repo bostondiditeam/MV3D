@@ -41,7 +41,7 @@ class Task(object):
 
 
 
-    def train_img_and_fusion(self, continue_train=False, init_train=4000,tracking_max=5,
+    def train_img_and_fusion(self, continue_train=False, init_train=4000,tracking_max=3,
                              train_epoch=2500,tracking_skip_frames=0):
 
         iter = lambda i:  i if self.fast_test==False else 1
@@ -80,5 +80,7 @@ if __name__ == '__main__':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
 
-    Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion(train_epoch=3000)
+    Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion(init_train=8000,
+                                                                 train_epoch=2000,tracking_max=3,
+                                                                 tracking_skip_frames=10)
     # Task(tag=tag, fast_test=args.fast_test).train_rpn()
