@@ -163,6 +163,13 @@ class MV3D(object):
                                                                        top_shape[0:2], top_feature_shape[0:2])
         self.anchors_inside_inds = np.arange(0, len(self.top_view_anchors), dtype=np.int32)  # use all  #<todo>
 
+        # init rnn states
+        self.top_last_states_c = {}
+        self.top_last_states_h = {}
+        for step_name in ['training','validation','prediction']:
+            self.top_last_states_c[step_name] = np.zeros((1, mv3d_net.n_top_rnn_hidden))
+            self.top_last_states_h[step_name] = np.zeros((1, mv3d_net.n_top_rnn_hidden))
+
         self.log_subdir = None
         self.top_image = None
         self.time_str = None
@@ -190,23 +197,42 @@ class MV3D(object):
         self.log_iou_range = [range(0,2),range(2,30),range(30,60),range(60,100)]
 
 
+    def rpn_proposal(self, is_train_phase):
 
-    def predict(self, top_view, front_view, rgb_image):
-        self.lables = []  # todo add lables output
 
-        self.top_view = top_view
-        self.rgb_image = rgb_image
-        self.front_view = front_view
-        fd1 = {
-            self.net['top_view']: self.top_view,
+        self.fd1 = {
+            self.net['top_view']: self.batch_top_view,
             self.net['top_anchors']: self.top_view_anchors,
             self.net['top_inside_inds']: self.anchors_inside_inds,
-            blocks.IS_TRAIN_PHASE: False,
+            self.net['top_rnn_states_c']: self.top_last_states_c[self.step_name],
+            self.net['top_rnn_states_h']: self.top_last_states_h[self.step_name],
+            blocks.IS_TRAIN_PHASE: is_train_phase,
             K.learning_phase(): True
         }
 
-        self.batch_proposals, self.batch_proposal_scores = \
-            self.sess.run([self.net['proposals'], self.net['proposal_scores']], fd1)
+        self.batch_proposals, self.batch_proposal_scores, self.batch_top_features, self.top_states  = \
+            self.sess.run([self.net['proposals'], self.net['proposal_scores'],
+                           self.net['top_features'],self.net['top_states']], self.fd1)
+
+        # update rnn states
+        if self.frame_id.split('/')[2]=='00000':
+            print('\nReset rnn states.')
+            self.top_last_states_c[self.step_name] =np.zeros((1, mv3d_net.n_top_rnn_hidden))
+            self.top_last_states_h[self.step_name] =np.zeros((1, mv3d_net.n_top_rnn_hidden))
+        else:
+            self.top_last_states_c[self.step_name] = self.top_states.c
+            self.top_last_states_h[self.step_name] = self.top_states.h
+
+
+    def predict(self, top_view, front_view, rgb_image):
+        self.lables = []  # todo add lables output
+        self.batch_top_view = top_view
+        self.batch_rgb_images = rgb_image
+        self.front_view = front_view
+        self.step_name = 'prediction'
+
+        self.rpn_proposal(is_train_phase=False)
+
         self.batch_proposal_scores = np.reshape(self.batch_proposal_scores, (-1))
         self.top_rois = self.batch_proposals
         if len(self.top_rois) == 0:
@@ -217,9 +243,9 @@ class MV3D(object):
         self.rgb_rois = project_to_rgb_roi(self.rois3d)
 
         fd2 = {
-            **fd1,
+            **self.fd1,
             self.net['front_view']: self.front_view,
-            self.net['rgb_images']: self.rgb_image,
+            self.net['rgb_images']: self.batch_rgb_images,
 
             self.net['top_rois']: self.top_rois,
             self.net['front_rois']: self.front_rois,
@@ -245,7 +271,7 @@ class MV3D(object):
         self.log_fusion_net_detail(log_subdir, self.fuse_probs, self.fuse_deltas)
 
         # origin top view
-        self.top_image = data.draw_top_image(self.top_view[0])
+        self.top_image = data.draw_top_image(self.batch_top_view[0])
         top_view_log = self.top_image.copy()
 
         # add text on origin
@@ -273,7 +299,7 @@ class MV3D(object):
 
         # prediction on rgb
         text_lables = ['No.%d class:1 prob: %.4f' % (i, prob) for i, prob in enumerate(self.probs)]
-        prediction_on_rgb = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d,
+        prediction_on_rgb = nud.draw_box3d_on_camera(self.batch_rgb_images[0], self.boxes3d,
                                                           text_lables=text_lables)
         self.summary_image(prediction_on_rgb, scope_name + '/prediction_on_rgb', step=step)
 
@@ -799,17 +825,7 @@ class Trainer(MV3D):
 
         self.batch_gt_top_boxes = data.box3d_to_top_box(self.batch_gt_boxes3d[0])
 
-        ## run propsal generation
-        fd1 = {
-            net['top_view']: self.batch_top_view,
-            net['top_anchors']: self.top_view_anchors,
-            net['top_inside_inds']: self.anchors_inside_inds,
-
-            blocks.IS_TRAIN_PHASE: True,
-            K.learning_phase(): 1
-        }
-        self.batch_proposals, self.batch_proposal_scores, self.batch_top_features = \
-            sess.run([net['proposals'], net['proposal_scores'], net['top_features']], fd1)
+        self.rpn_proposal(is_train_phase=True)
 
         ## generate  train rois  for RPN
         self.batch_top_inds, self.batch_top_pos_inds, self.batch_top_labels, self.batch_top_targets = \
@@ -827,7 +843,7 @@ class Trainer(MV3D):
 
         ## run classification and regression loss -----------
         fd2 = {
-            **fd1,
+            **self.fd1,
 
             net['top_view']: self.batch_top_view,
             net['front_view']: self.batch_front_view,

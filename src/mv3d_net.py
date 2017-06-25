@@ -19,12 +19,14 @@ from keras.layers import (
     BatchNormalization,
     MaxPooling2D
     )
+from tensorflow.contrib import rnn
 import config
 
 top_view_rpn_name = 'top_view_rpn'
 imfeature_net_name = 'image_feature'
 fusion_net_name = 'fusion'
 
+n_top_rnn_hidden = 2394
 
 def top_feature_net(input, anchors, inds_inside, num_bases):
     """temporary net for debugging only. may not follow the paper exactly .... 
@@ -88,7 +90,7 @@ def top_feature_net(input, anchors, inds_inside, num_bases):
     return feature, scores, probs, deltas, rois, roi_scores, stride
 
 
-def top_feature_net_r(input, anchors, inds_inside, num_bases):
+def top_feature_net_r(input, anchors, inds_inside, num_bases, top_last_states=None):
     """
     :param input: 
     :param anchors: 
@@ -112,6 +114,21 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
         # # print(resnet_f.summary())
         # block = resnet_f(input)
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME', name='2')
+
+    with tf.variable_scope('memory') as scope:
+        with tf.variable_scope('get_last_channel') as scope:
+            lstm_input = block[:, :, :, 127]
+            ori_shape = lstm_input.get_shape().as_list()
+            # [batch_size, sequence_length_max, vector_size]
+            lstm_input = tf.reshape(lstm_input, [-1, 1, np.prod(ori_shape[1:])])
+        with tf.variable_scope('lstm') as scope:
+            lstm_cell = rnn.BasicLSTMCell(np.prod(ori_shape[1:]))
+            outputs, top_states = tf.nn.dynamic_rnn(lstm_cell, lstm_input, initial_state=top_last_states,
+                                                    dtype=tf.float32)
+            outputs = tf.reshape(outputs, [-1, ori_shape[1], ori_shape[2]], 'reshape')
+        with tf.variable_scope('merge') as scope:
+            block = tf.concat([block[:, :, :, 0:127], tf.reshape(outputs, [-1, ori_shape[1], ori_shape[2], 1])], 3)
+
         stride = 8
         feature = block
 
@@ -141,7 +158,7 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
 
 
     print ('top: scale=%f, stride=%d'%(1./stride, stride))
-    return feature, scores, probs, deltas, rois, roi_scores, stride
+    return feature, scores, probs, deltas, rois, roi_scores, stride, top_states
 
 
 
@@ -485,12 +502,18 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     top_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='top_rois')  # todo: change to int32???
     front_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='front_rois')
     rgb_rois = tf.placeholder(shape=[None, 5], dtype=tf.float32, name='rgb_rois')
+    top_rnn_states_c = tf.placeholder(dtype=tf.float32, shape=[None, n_top_rnn_hidden], name='rnn_states_c')
+    top_rnn_states_h = tf.placeholder(dtype=tf.float32, shape=[None, n_top_rnn_hidden], name='rnn_states_h')
+    top_last_states = tf.contrib.rnn.LSTMStateTuple(top_rnn_states_c, top_rnn_states_h)
+
 
     with tf.variable_scope(top_view_rpn_name):
         # top feature
         if cfg.USE_RESNET_AS_TOP_BASENET==True:
-            top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
-                top_feature_net_r(top_view, top_anchors, top_inside_inds, len_bases)
+            top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores,\
+            top_feature_stride, top_states = top_feature_net_r(top_view, top_anchors,
+                                                               top_inside_inds, len_bases,
+                                                               top_last_states= top_last_states)
         else:
             top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
                 top_feature_net(top_view, top_anchors, top_inside_inds, len_bases)
@@ -596,7 +619,10 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
         'fuse_scores':fuse_scores,
         'fuse_deltas':fuse_deltas,
 
-        'top_feature_stride':top_feature_stride
+        'top_feature_stride':top_feature_stride,
+        'top_rnn_states_c':top_rnn_states_c,
+        'top_rnn_states_h':top_rnn_states_h,
+        'top_states' :top_states
 
     }
 
