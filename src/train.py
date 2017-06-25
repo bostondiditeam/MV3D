@@ -1,3 +1,4 @@
+import numpy as np
 import mv3d
 import mv3d_net
 import glob
@@ -150,9 +151,8 @@ if __name__ == '__main__':
 
     data_splitter = TrainingValDataSplitter(train_n_val_dataset)
 
-    with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True, random_num=666) as training:
-        with BatchLoading(tags=data_splitter.val_tags, queue_size=1, require_shuffle=False) as \
-                validation:
+    with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True, random_num=np.random.randint(100)) as training:
+        with BatchLoading(tags=data_splitter.val_tags, queue_size=1, require_shuffle=False) as validation:
             train = mv3d.Trainer(train_set=training, validation_set=validation,
                                  pre_trained_weights=weights, train_targets=targets, log_tag=tag,
                                  continue_train=args.continue_train,
