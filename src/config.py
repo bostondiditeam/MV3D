@@ -49,7 +49,7 @@ __C.USE_RESNET_AS_TOP_BASENET = True
 __C.TOP_CONV_KERNEL_SIZE = 32   #default 3
 
 __C.IMAGE_FUSION_DIABLE = False
-__C.RGB_BASENET = 'VGG'  # 'resnet' 、'xception' 'VGG'
+__C.RGB_BASENET = 'resnet'  # 'resnet' 、'xception' 'VGG'
 if __C.RGB_BASENET == 'xception':
     __C.USE_IMAGENET_PRE_TRAINED_MODEL = True
 else:
