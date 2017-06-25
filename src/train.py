@@ -8,6 +8,7 @@ import os
 from utils.training_validation_data_splitter import TrainingValDataSplitter
 from utils.batch_loading import BatchLoading2 as BatchLoading
 
+
 def str2bool(v):
     if v.lower() in ('true'):
         return True
@@ -16,16 +17,17 @@ def str2bool(v):
     else:
         raise argparse.ArgumentTypeError('Boolean value expected.')
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training')
 
-    all= '%s,%s,%s' % (mv3d_net.top_view_rpn_name ,mv3d_net.imfeature_net_name,mv3d_net.fusion_net_name)
+    all = '%s,%s,%s' % (mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name)
 
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
-        help='use pre trained weights example: -w "%s" ' % (all))
+                        help='use pre trained weights example: -w "%s" ' % (all))
 
     parser.add_argument('-t', '--targets', type=str, nargs='?', default=all,
-        help='train targets example: -w "%s" ' % (all))
+                        help='train targets example: -w "%s" ' % (all))
 
     parser.add_argument('-i', '--max_iter', type=int, nargs='?', default=1000,
                         help='max count of train iter')
@@ -41,15 +43,14 @@ if __name__ == '__main__':
     tag = args.tag
     if tag == 'unknown_tag':
         tag = input('Enter log tag : ')
-        print('\nSet log tag :"%s" ok !!\n' %tag)
-
+        print('\nSet log tag :"%s" ok !!\n' % tag)
 
     max_iter = args.max_iter
-    weights=[]
+    weights = []
     if args.weights != '':
         weights = args.weights.split(',')
 
-    targets=[]
+    targets = []
     if args.targets != '':
         targets = args.targets.split(',')
 
@@ -149,11 +150,11 @@ if __name__ == '__main__':
 
     data_splitter = TrainingValDataSplitter(train_n_val_dataset)
 
-    with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True) as training:
-        with BatchLoading(tags=data_splitter.val_tags,queue_size=1, require_shuffle=False) as validation:
-
+    with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True, random_num=666) as training:
+        with BatchLoading(tags=data_splitter.val_tags, queue_size=1, require_shuffle=False) as \
+                validation:
             train = mv3d.Trainer(train_set=training, validation_set=validation,
                                  pre_trained_weights=weights, train_targets=targets, log_tag=tag,
-                                 continue_train = args.continue_train,
-                                 fast_test_mode=True if max_iter==1 else False)
+                                 continue_train=args.continue_train,
+                                 fast_test_mode=True if max_iter == 1 else False)
             train(max_iter=max_iter)
