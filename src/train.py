@@ -57,38 +57,34 @@ if __name__ == '__main__':
 
     if cfg.DATA_SETS_TYPE == 'didi2':
 
-        train_key_list = ['suburu_pulling_up_to_it',
-                          'nissan_brief',
-                          'cmax_sitting_still',
-                          'nissan_pulling_up_to_it',
-                          'suburu_sitting_still',
-                          'nissan_pulling_to_left',
-                          'bmw_sitting_still',
-                          'suburu_follows_capture',
-                          'nissan_pulling_away',
-                          'suburu_pulling_to_left',
-                          'bmw_following_long',
-                          'nissan_pulling_to_right',
-                          'suburu_driving_towards_it',
-                          'suburu_following_long',
-                          'suburu_not_visible',
-                          'suburu_leading_front_left',
-                          'nissan_sitting_still',
-                          'cmax_following_long',
-                          'nissan_following_long',
-                          'suburu_driving_away',
-                          'suburu_leading_at_distance',
-                          'nissan_driving_past_it',
-                          'suburu_driving_past_it',
-                          'suburu_driving_parallel',
-                          ]
-
-        train_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in train_key_list]
-        train_value_list = [os.listdir(value)[0] for value in train_key_full_path_list]
-
-        train_n_val_dataset = [k + '/' + v for k, v in zip(train_key_list, train_value_list)]
-
-        data_splitter = TrainingValDataSplitter(train_n_val_dataset)
+        train_n_val_dataset=[
+            'suburu_pulling_up_to_it/suburu02',
+            'nissan_brief/nissan06',
+            'cmax_sitting_still/cmax01',
+            # 'suburu_pulling_to_right/suburu03_bak',
+            'nissan_pulling_up_to_it/nissan02',
+            # 'ped_train/ped_train',
+            'suburu_sitting_still/suburu01',
+            'nissan_pulling_to_left/nissan03',
+            'bmw_sitting_still/bmw01',
+            'suburu_follows_capture/suburu09',
+            'nissan_pulling_away/nissan05',
+            'suburu_pulling_to_left/suburu04',
+            'bmw_following_long/bmw02',
+            'nissan_pulling_to_right/nissan04',
+            'suburu_driving_towards_it/suburu06',
+            'suburu_following_long/suburu08',
+            'suburu_not_visible/suburu12',
+            'suburu_leading_front_left/suburu11',
+            'nissan_sitting_still/nissan01',
+            'cmax_following_long/cmax02',
+            'nissan_following_long/nissan07',
+            'suburu_driving_away/suburu05',
+            'suburu_leading_at_distance/suburu12',
+            'nissan_driving_past_it/nissan07',
+            'suburu_driving_past_it/suburu07',
+            'suburu_driving_parallel/suburu10',
+        ]
 
 
     elif cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
@@ -101,15 +97,57 @@ if __name__ == '__main__':
             '1': ['15']}
 
     elif cfg.DATA_SETS_TYPE == 'kitti':
-        training_dataset = {
-            '2011_09_26': ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0056',  '0019',
-                       '0036', '0005',
-                       '0057', '0084', '0020', '0039', '0086', '0011', '0023', '0046', '0060', '0091']}
+        train_n_val_dataset = [
+            '2011_09_26/2011_09_26_drive_0001_sync',
+            '2011_09_26/2011_09_26_drive_0002_sync',
+            '2011_09_26/2011_09_26_drive_0005_sync',
+            # '2011_09_26/2011_09_26_drive_0009_sync',
+            '2011_09_26/2011_09_26_drive_0011_sync',
+            '2011_09_26/2011_09_26_drive_0013_sync',
+            '2011_09_26/2011_09_26_drive_0014_sync',
+            '2011_09_26/2011_09_26_drive_0015_sync',
+            '2011_09_26/2011_09_26_drive_0017_sync',
+            '2011_09_26/2011_09_26_drive_0018_sync',
+            '2011_09_26/2011_09_26_drive_0019_sync',
+            '2011_09_26/2011_09_26_drive_0020_sync',
+            '2011_09_26/2011_09_26_drive_0022_sync',
+            '2011_09_26/2011_09_26_drive_0023_sync',
+            '2011_09_26/2011_09_26_drive_0027_sync',
+            '2011_09_26/2011_09_26_drive_0028_sync',
+            '2011_09_26/2011_09_26_drive_0029_sync',
+            '2011_09_26/2011_09_26_drive_0032_sync',
+            '2011_09_26/2011_09_26_drive_0035_sync',
+            '2011_09_26/2011_09_26_drive_0036_sync',
+            '2011_09_26/2011_09_26_drive_0039_sync',
+            '2011_09_26/2011_09_26_drive_0046_sync',
+            '2011_09_26/2011_09_26_drive_0048_sync',
+            '2011_09_26/2011_09_26_drive_0051_sync',
+            '2011_09_26/2011_09_26_drive_0052_sync',
+            '2011_09_26/2011_09_26_drive_0056_sync',
+            '2011_09_26/2011_09_26_drive_0057_sync',
+            '2011_09_26/2011_09_26_drive_0059_sync',
+            '2011_09_26/2011_09_26_drive_0060_sync',
+            '2011_09_26/2011_09_26_drive_0061_sync',
+            '2011_09_26/2011_09_26_drive_0064_sync',
+            '2011_09_26/2011_09_26_drive_0070_sync',
+            '2011_09_26/2011_09_26_drive_0079_sync',
+            '2011_09_26/2011_09_26_drive_0084_sync',
+            '2011_09_26/2011_09_26_drive_0086_sync',
+            '2011_09_26/2011_09_26_drive_0087_sync',
+            '2011_09_26/2011_09_26_drive_0091_sync',
+            # '2011_09_26/2011_09_26_drive_0093_sync',  #data size not same
+            # '2011_09_26/2011_09_26_drive_0095_sync',
+            # '2011_09_26/2011_09_26_drive_0096_sync',
+            # '2011_09_26/2011_09_26_drive_0104_sync',
+            # '2011_09_26/2011_09_26_drive_0106_sync',
+            # '2011_09_26/2011_09_26_drive_0113_sync',
+            # '2011_09_26/2011_09_26_drive_0117_sync',
+            '2011_09_26/2011_09_26_drive_0119_sync'
+        ]
 
-        validation_dataset = {
-            '2011_09_26': ['0013', '0027', '0048',
-                           '0061', '0015', '0028', '0051', '0064']
-        }
+
+
+    data_splitter = TrainingValDataSplitter(train_n_val_dataset)
 
     with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True) as training:
         with BatchLoading(tags=data_splitter.val_tags,queue_size=1, require_shuffle=False) as validation:
