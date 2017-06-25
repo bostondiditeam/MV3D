@@ -7,6 +7,15 @@ from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
     TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
 
+
+def heat_map_rgb(minimum, maximum, value):
+    minimum, maximum = float(minimum), float(maximum)
+    ratio = 2 * (value-minimum) / (maximum - minimum)
+    b = int(max(0, 255*(1 - ratio)))
+    r = int(max(0, 255*(ratio - 1)))
+    g = 255 - b - r
+    return (r, g, b)
+
 ##extension for 3d
 def top_to_lidar_coords(xx,yy):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
@@ -190,7 +199,7 @@ def draw_rgb_projections(image, projections, color=(255,0,255), thickness=2, dar
     return img
 
 
-def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1):
+def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1,scores=None):
 
     img = image.copy()
     num =len(boxes3d)
@@ -208,6 +217,7 @@ def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1):
         u1,v1=lidar_to_top_coords(x1,y1)
         u2,v2=lidar_to_top_coords(x2,y2)
         u3,v3=lidar_to_top_coords(x3,y3)
+        color=heat_map_rgb(0.,1.,scores[n]) if scores is not None else 255
         cv2.line(img, (u0,v0), (u1,v1), color, thickness, cv2.LINE_AA)
         cv2.line(img, (u1,v1), (u2,v2), color, thickness, cv2.LINE_AA)
         cv2.line(img, (u2,v2), (u3,v3), color, thickness, cv2.LINE_AA)

@@ -56,6 +56,7 @@ else:
     __C.USE_IMAGENET_PRE_TRAINED_MODEL =False
 
 __C.TRACKLET_GTBOX_LENGTH_SCALE = 1.6
+__C.PREDICT_SCORE_THRESHOLD = 0.5
 
 # image crop config
 if __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE   ==  'test':

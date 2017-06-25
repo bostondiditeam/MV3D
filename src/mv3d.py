@@ -230,7 +230,9 @@ class MV3D(object):
         self.fuse_probs, self.fuse_deltas = \
             self.sess.run([self.net['fuse_probs'], self.net['fuse_deltas']], fd2)
 
-        self.probs, self.boxes3d = rcnn_nms(self.fuse_probs, self.fuse_deltas, self.rois3d, score_threshold=0.5)
+        self.probs, self.boxes3d = rcnn_nms(self.fuse_probs, self.fuse_deltas,
+                                            self.rois3d,
+                                            score_threshold=config.cfg.PREDICT_SCORE_THRESHOLD)
 
         return self.boxes3d, self.lables
 
@@ -253,22 +255,26 @@ class MV3D(object):
             rpn_img = self.log_rpn(step=step, scope_name=scope_name, is_train_mode=is_train_mode, tensor_board=False)
             top_view_log = np.concatenate((top_view_log, rpn_img), 1)
 
-        # prediction on top
-        predict_top_view = data.draw_box3d_on_top(self.top_image, self.boxes3d)
+        # all prediction on top
+        probs, boxes3d = rcnn_nms(self.fuse_probs, self.fuse_deltas,self.rois3d, score_threshold=0.)
+        fusion_proposal_top = data.draw_box3d_on_top(self.top_image, boxes3d,scores=probs,thickness=0)
+        prediction_top = data.draw_box3d_on_top(self.top_image, self.boxes3d, scores=self.probs,
+                                                     thickness=0)
         # add fusion loss text
         text = ''
         if loss != None: text += 'loss c: %6f r: %6f' % loss
-        cv2.putText(predict_top_view, text, text_pos, font, 0.5, (0, 255, 100), 0, cv2.LINE_AA)
+        cv2.putText(fusion_proposal_top, text, text_pos, font, 0.5, (0, 255, 100), 0, cv2.LINE_AA)
 
         # concatenate top_view_log and final prediction
-        top_view_log = np.concatenate((top_view_log, predict_top_view), 1)
-        # new_size = (top_view_log.shape[1] // 2, top_view_log.shape[0] // 2)
-        # top_view_log = cv2.resize(top_view_log, new_size)
+        top_view_log = np.concatenate((top_view_log, fusion_proposal_top), 1)
+        top_view_log = np.concatenate((top_view_log, prediction_top), 1)
+
         self.summary_image(top_view_log, scope_name + '/top_view', step=step)
 
         # prediction on rgb
         text_lables = ['No.%d class:1 prob: %.4f' % (i, prob) for i, prob in enumerate(self.probs)]
-        prediction_on_rgb = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d, text_lables=text_lables)
+        prediction_on_rgb = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d,
+                                                          text_lables=text_lables)
         self.summary_image(prediction_on_rgb, scope_name + '/prediction_on_rgb', step=step)
 
 
