@@ -252,7 +252,7 @@ class MV3D(object):
         text = frame_tag
         cv2.putText(top_view_log, text, text_pos, font, 0.5, (0, 255, 100), 0, cv2.LINE_AA)
         if log_rpn:
-            rpn_img = self.log_rpn(step=step, scope_name=scope_name, is_train_mode=is_train_mode, tensor_board=False)
+            rpn_img = self.log_rpn(step=step, scope_name=scope_name, tensor_board=False)
             top_view_log = np.concatenate((top_view_log, rpn_img), 1)
 
         # all prediction on top
@@ -354,7 +354,7 @@ class MV3D(object):
         return np.concatenate((top_image, np.zeros_like(top_image)*255,np.zeros_like(top_image)*255), 1)
 
 
-    def log_rpn(self,step=None, scope_name='',loss=None, tensor_board=True, is_train_mode=True):
+    def log_rpn(self, step=None, scope_name='', loss=None, tensor_board=True, draw_rpn_target=False):
 
         top_image = self.top_image
         subdir = self.log_subdir
@@ -367,7 +367,7 @@ class MV3D(object):
         gt_top_boxes = self.batch_gt_top_boxes
         gt_labels = self.batch_gt_labels
         total_img = None
-        if is_train_mode:
+        if draw_rpn_target:
             img_gt = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
             # nud.imsave('img_rpn_gt', img_gt, subdir)
             img_label = draw_rpn_labels(top_image, self.top_view_anchors, top_inds, top_labels)
