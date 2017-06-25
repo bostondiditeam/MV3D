@@ -113,6 +113,7 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
         # block = resnet_f(input)
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME', name='2')
         stride = 8
+        feature = block
 
 
     with tf.variable_scope('predict') as scope:
@@ -137,8 +138,7 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
                                        nms_thresh=0.7, min_size=stride, nms_pre_topn=500, nms_post_topn=100,
                                        name ='nms')
 
-    #<todo> feature = upsample2d(block, factor = 4,  ...)
-    feature = block
+
 
     print ('top: scale=%f, stride=%d'%(1./stride, stride))
     return feature, scores, probs, deltas, rois, roi_scores, stride
