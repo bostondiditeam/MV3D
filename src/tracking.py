@@ -59,7 +59,7 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
         #     continue
 
         # detection
-        boxes3d, probs = predict(top, front, rgb)
+        boxes3d, probs = predict(top, front, rgb, frame_id=frame_id)
         predict.dump_log(log_subdir=os.path.join('tracking',log_tag), n_frame=i, frame_tag=frame_id)
 
         # time timer_step iterations. Turn it on/off in config.py

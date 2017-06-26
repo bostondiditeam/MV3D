@@ -392,14 +392,16 @@ class MV3D(object):
         proposal_scores = self.batch_proposal_scores
         gt_top_boxes = self.batch_gt_top_boxes
         gt_labels = self.batch_gt_labels
-        
-        total_img = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
+
+        total_img = None
+        if gt_top_boxes is not None:
+            total_img = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
         # nud.imsave('img_rpn_gt', img_gt, subdir)
 
         if draw_rpn_target:
             img_label = draw_rpn_labels(top_image, self.top_view_anchors, top_inds, top_labels)
             # nud.imsave('img_rpn_label', img_label, subdir)
-            total_img = np.concatenate((total_img, img_label), 1)
+            total_img = np.concatenate((total_img, img_label), 1) if total_img is not None else img_label
             img_target = draw_rpn_targets(top_image, self.top_view_anchors, top_pos_inds, top_targets)
             # nud.imsave('img_rpn_target', img_target, subdir)
             total_img = np.concatenate((total_img, img_target), 1)
@@ -491,7 +493,8 @@ class Predictor(MV3D):
         self.n_max_log_per_scope= 10
 
 
-    def __call__(self, top_view, front_view, rgb_image):
+    def __call__(self, top_view, front_view, rgb_image, frame_id=None):
+        self.frame_id = frame_id
         return self.predict(top_view, front_view, rgb_image)
 
     def dump_log(self,log_subdir, n_frame, frame_tag='unknown_tag'):
