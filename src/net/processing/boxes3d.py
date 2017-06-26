@@ -366,7 +366,7 @@ def box3d_compose(translation,size,rotation):
             [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
             [0.0, 0.0, 0.0, 0.0, h, h, h, h]])
     elif cfg.DATA_SETS_TYPE == 'didi2':
-        h, w = 1.5 * h, 1.7 * w
+        l, h, w = 1.1 * l, 1.2 * h, 1.1 * w
         trackletBox = np.array([
             [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
             [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
