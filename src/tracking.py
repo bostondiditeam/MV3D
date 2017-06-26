@@ -35,23 +35,25 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
     if cfg.TRACKING_TIMER:
         time_it = timer()
 
-    frame_counter = 0
-    for i in range(dataset.size if fast_test == False else frame_offset + 1):
+    # dataset.size - 1 for in dataset.get_shape(), a frame is used. So it'll omit first frame for prediction,
+    # fix this if has more time
+    for i in range(dataset.size-1 if fast_test == False else frame_offset + 1):
 
         rgb, top, front, _, _, frame_id = dataset.load()
 
         # handling multiple bags.
-        current_tag = dataset.tags[dataset.tag_index]
-        current_bag = current_tag.split('/')[1]
+        current_bag = frame_id.split('/')[1]
+        current_frame_num = int(frame_id.split('/')[2])
         if i == 0:
             prev_tag_bag = None
         else:
             prev_tag_bag = queue[0]
         if current_bag != prev_tag_bag:
+            # print('current bag name: ', current_bag, '. previous bag name ', prev_tag_bag)
             if i != 0:
                 tracklet.write_tracklet()
             tracklet = Tracklet_saver(tracklet_pred_dir, current_bag,exist_ok=True)
-            frame_counter = 0
+            # print('frame counter reset to 0. ')
         queue.append(current_bag)
 
         # frame_num = i - frame_offset
@@ -72,10 +74,12 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
 
             # add to tracklets
             for j in range(len(translation)):
-                if 0 < translation[j, 1] < 8:
-                    tracklet.add_tracklet(frame_counter, size[j], translation[j], rotation[j])
+                # if 0 < translation[j, 1] < 8:
+                # print('pose wrote. ')
+                tracklet.add_tracklet(current_frame_num, size[j], translation[j], rotation[j])
 
-        frame_counter += 1
+        # print('frame_counter is here: ', current_frame_num, ' and i is here: ', i, 'frame id is here: ', frame_id)
+
 
 
     tracklet.write_tracklet()
@@ -106,7 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
                         help='set log tag')
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
-                        help='set weigths tag name')
+                        help='set weights tag name')
     parser.add_argument('-t', '--fast_test', type=str2bool, nargs='?', default=False,
                         help='set fast_test model')
     parser.add_argument('-s', '--n_skip_frames', type=int, nargs='?', default=0,
