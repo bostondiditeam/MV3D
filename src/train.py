@@ -8,6 +8,7 @@ import argparse
 import os
 from utils.training_validation_data_splitter import TrainingValDataSplitter
 from utils.batch_loading import BatchLoading2 as BatchLoading
+from sklearn.utils import shuffle
 
 
 def str2bool(v):
@@ -38,6 +39,9 @@ if __name__ == '__main__':
 
     parser.add_argument('-c', '--continue_train', type=str2bool, nargs='?', default=False,
                         help='set continue train flag')
+
+    parser.add_argument('-s', '--n_skip_frames', type=int, nargs='?', default=0,
+                        help='set number of skip frames')
     args = parser.parse_args()
 
     print('\n\n{}\n\n'.format(args))
@@ -54,6 +58,8 @@ if __name__ == '__main__':
     targets = []
     if args.targets != '':
         targets = args.targets.split(',')
+
+    n_skip_frames = args.n_skip_frames
 
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
@@ -150,9 +156,12 @@ if __name__ == '__main__':
 
 
     data_splitter = TrainingValDataSplitter(train_n_val_dataset)
+    training_tags = shuffle(data_splitter.training_tags) if args.continue_train else data_splitter.training_tags
 
-    with BatchLoading(tags=data_splitter.training_tags, require_shuffle=False) as training:
-        with BatchLoading(tags=data_splitter.val_tags, queue_size=1, require_shuffle=False) as validation:
+
+    with BatchLoading(tags=training_tags, require_shuffle=False,n_skip_frames=n_skip_frames) as training:
+        with BatchLoading(tags=data_splitter.val_tags, queue_size=1, require_shuffle=False,
+                          n_skip_frames=n_skip_frames) as validation:
             train = mv3d.Trainer(train_set=training, validation_set=validation,
                                  pre_trained_weights=weights, train_targets=targets, log_tag=tag,
                                  continue_train=args.continue_train,

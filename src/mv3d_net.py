@@ -123,6 +123,89 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases, top_last_states=No
             lstm_input = tf.reshape(lstm_input, [-1, 1, np.prod(ori_shape[1:])])
         with tf.variable_scope('lstm') as scope:
             lstm_cell = rnn.BasicLSTMCell(np.prod(ori_shape[1:]))
+            # lstm_cell =tf.cond(IS_TRAIN_PHASE,
+            #                    lambda :rnn.DropoutWrapper(lstm_cell, input_keep_prob=0.8, output_keep_prob=0.8),
+            #                    lambda :rnn.DropoutWrapper(lstm_cell, input_keep_prob=1., output_keep_prob=1.)
+            #                    )
+            lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=0.5, output_keep_prob=0.5,state_keep_prob=0.5)
+
+            outputs, top_states = tf.nn.dynamic_rnn(lstm_cell, lstm_input, initial_state=top_last_states,
+                                                    dtype=tf.float32)
+            outputs = tf.reshape(outputs, [-1, ori_shape[1], ori_shape[2]], 'reshape')
+        with tf.variable_scope('merge') as scope:
+            block = tf.concat([block[:, :, :, 0:127], tf.reshape(outputs, [-1, ori_shape[1], ori_shape[2], 1])], 3)
+
+        stride = 8
+        feature = block
+
+
+    with tf.variable_scope('predict') as scope:
+        # up     = upsample2d(block, factor = 2, has_bias=True, trainable=True, name='1')
+        # up     = block
+        kernel_size = config.cfg.TOP_CONV_KERNEL_SIZE
+        print('\ntop_predict kernal_size: {}\n'.format(kernel_size) )
+        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(kernel_size, kernel_size),
+                            stride=[1, 1, 1, 1], padding='SAME', name='1')
+        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(kernel_size, kernel_size),
+                            stride=[1, 1, 1, 1], padding='SAME', name='2')
+        scores = conv2d(block, num_kernels=2 * num_bases, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',name='score')
+        probs = tf.nn.softmax(tf.reshape(scores, [-1, 2]), name='prob')
+        deltas = conv2d(block, num_kernels=4 * num_bases, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',name='delta')
+
+    #<todo> flip to train and test mode nms (e.g. different nms_pre_topn values): use tf.cond
+    with tf.variable_scope('NMS') as scope:    #non-max
+
+        img_scale = 1
+        rois, roi_scores = tf_rpn_nms( probs, deltas, anchors, inds_inside,
+                                       stride, img_width, img_height, img_scale,
+                                       nms_thresh=0.7, min_size=stride, nms_pre_topn=500, nms_post_topn=100,
+                                       name ='nms')
+
+
+
+    print ('top: scale=%f, stride=%d'%(1./stride, stride))
+    return feature, scores, probs, deltas, rois, roi_scores, stride, top_states
+
+
+def top_feature_net_r(input, anchors, inds_inside, num_bases, top_last_states=None):
+    """
+    :param input:
+    :param anchors:
+    :param inds_inside:
+    :param num_bases:
+    :return:
+            top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores
+    """
+    stride=1.
+    #with tf.variable_scope('top-preprocess') as scope:
+    #    input = input
+    batch_size, img_height, img_width, img_channel = input.get_shape().as_list()
+
+    with tf.variable_scope('feature-extract-resnet') as scope:
+        print('build_resnet')
+        block = ResnetBuilder.resnet_tiny(input)
+
+        # resnet_input = resnet.get_layer('input_1').input
+        # resnet_output = resnet.get_layer('add_7').output
+        # resnet_f = Model(inputs=resnet_input, outputs=resnet_output)  # add_7
+        # # print(resnet_f.summary())
+        # block = resnet_f(input)
+        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME', name='2')
+
+    with tf.variable_scope('memory') as scope:
+        with tf.variable_scope('get_last_channel') as scope:
+            lstm_input = block[:, :, :, 127]
+            ori_shape = lstm_input.get_shape().as_list()
+            # [batch_size, sequence_length_max, vector_size]
+            lstm_input = tf.reshape(lstm_input, [-1, 1, np.prod(ori_shape[1:])])
+        with tf.variable_scope('lstm') as scope:
+            lstm_cell = rnn.BasicLSTMCell(np.prod(ori_shape[1:]))
+            # lstm_cell =tf.cond(IS_TRAIN_PHASE,
+            #                    lambda :rnn.DropoutWrapper(lstm_cell, input_keep_prob=0.8, output_keep_prob=0.8),
+            #                    lambda :rnn.DropoutWrapper(lstm_cell, input_keep_prob=1., output_keep_prob=1.)
+            #                    )
+            lstm_cell = rnn.DropoutWrapper(lstm_cell, input_keep_prob=0.5, output_keep_prob=0.5,state_keep_prob=0.5)
+
             outputs, top_states = tf.nn.dynamic_rnn(lstm_cell, lstm_input, initial_state=top_last_states,
                                                     dtype=tf.float32)
             outputs = tf.reshape(outputs, [-1, ori_shape[1], ori_shape[2]], 'reshape')

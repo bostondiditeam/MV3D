@@ -196,6 +196,11 @@ class MV3D(object):
 
         self.log_iou_range = [range(0,2),range(2,30),range(30,60),range(60,100)]
 
+        self.last_bag = {}
+        for step_name in ['training','validation','prediction']:
+            self.last_bag[step_name] = ''
+
+
 
     def rpn_proposal(self, is_train_phase):
 
@@ -215,7 +220,9 @@ class MV3D(object):
                            self.net['top_features'],self.net['top_states']], self.fd1)
 
         # update rnn states
-        if self.frame_id.split('/')[2]=='00000':
+        bag_name = self.frame_id.split('/')[1]
+        if bag_name != self.last_bag[self.step_name]:
+            self.last_bag[self.step_name] = bag_name
             print('\nReset rnn states.')
             self.top_last_states_c[self.step_name] =np.zeros((1, mv3d_net.n_top_rnn_hidden))
             self.top_last_states_h[self.step_name] =np.zeros((1, mv3d_net.n_top_rnn_hidden))
@@ -663,25 +670,25 @@ class Trainer(MV3D):
         self.summary_image(img_cat, scope_name+'/fusion_target', step=self.n_global_step)
 
 
-    def log_prediction(self, batch_top_view, batch_front_view, batch_rgb_images,
-                       batch_gt_labels=None, batch_gt_boxes3d=None, print_iou=False,
-                       log_rpn=False, step=None, scope_name='',loss:tuple =None):
-
-        boxes3d, lables = self.predict(batch_top_view, batch_front_view, batch_rgb_images)
-        self.predict_log(self.log_subdir,log_rpn=log_rpn, step=step, scope_name=scope_name, loss=loss,
-                         frame_tag=self.frame_id, is_train_mode=True)
-
-
-        if type(batch_gt_boxes3d)==np.ndarray and type(batch_gt_labels)==np.ndarray:
-            inds = np.where(batch_gt_labels[0]!=0)
-            try:
-                iou = box.boxes3d_score_iou(batch_gt_boxes3d[0][inds], boxes3d)
-                tag = os.path.join('IOU')
-                self.summary_scalar(value=iou, tag=tag, step=self.n_global_step)
-            except ValueError:
-                iou= -1
-                print("waring :", sys.exc_info()[0])
-            if print_iou: self.log_msg.write('\n %s iou: %.5f\n' % (self.step_name, iou))
+    # def log_prediction(self, batch_top_view, batch_front_view, batch_rgb_images,
+    #                    batch_gt_labels=None, batch_gt_boxes3d=None, print_iou=False,
+    #                    log_rpn=False, step=None, scope_name='',loss:tuple =None):
+    #
+    #     boxes3d, lables = self.predict(batch_top_view, batch_front_view, batch_rgb_images)
+    #     self.predict_log(self.log_subdir,log_rpn=log_rpn, step=step, scope_name=scope_name, loss=loss,
+    #                      frame_tag=self.frame_id, is_train_mode=True)
+    #
+    #
+    #     if type(batch_gt_boxes3d)==np.ndarray and type(batch_gt_labels)==np.ndarray:
+    #         inds = np.where(batch_gt_labels[0]!=0)
+    #         try:
+    #             iou = box.boxes3d_score_iou(batch_gt_boxes3d[0][inds], boxes3d)
+    #             tag = os.path.join('IOU')
+    #             self.summary_scalar(value=iou, tag=tag, step=self.n_global_step)
+    #         except ValueError:
+    #             iou= -1
+    #             print("waring :", sys.exc_info()[0])
+    #         if print_iou: self.log_msg.write('\n %s iou: %.5f\n' % (self.step_name, iou))
 
 
     def log_info(self, subdir, info):
@@ -917,29 +924,30 @@ class Trainer(MV3D):
 
             boxes3d, lables = self.predict(self.batch_top_view, self.batch_front_view, self.batch_rgb_images)
 
-            # get iou
-            iou = -1
-            inds = np.where(self.batch_gt_labels[0] != 0)
-            try:
-                iou = box.boxes3d_score_iou(self.batch_gt_boxes3d[0][inds], boxes3d)
-                if iou_statistic: self.iou_store.append(iou)
-                if summary_iou:
-                    iou_aver = sum(self.iou_store)/len(self.iou_store)
-                    self.iou_store=[]
-                    tag = os.path.join('IOU')
-                    self.summary_scalar(value=iou_aver, tag=tag, step=self.n_global_step)
-                    self.log_msg.write('\n %s iou average: %.5f\n' % (self.step_name, iou_aver))
-            except ValueError:
-                # print("waring :", sys.exc_info()[0])
-                pass
+            if set([mv3d_net.top_view_rpn_name]) != set(self.train_target):
+                # get iou
+                iou = -1
+                inds = np.where(self.batch_gt_labels[0] != 0)
+                try:
+                    iou = box.boxes3d_score_iou(self.batch_gt_boxes3d[0][inds], boxes3d)
+                    if iou_statistic: self.iou_store.append(iou)
+                    if summary_iou:
+                        iou_aver = sum(self.iou_store)/len(self.iou_store)
+                        self.iou_store=[]
+                        tag = os.path.join('IOU')
+                        self.summary_scalar(value=iou_aver, tag=tag, step=self.n_global_step)
+                        self.log_msg.write('\n %s iou average: %.5f\n' % (self.step_name, iou_aver))
+                except ValueError:
+                    # print("waring :", sys.exc_info()[0])
+                    pass
 
-            #set scope name
-            if iou == -1:
-                scope_name = os.path.join(scope_name, 'iou_error'.format(range(5, 8)))
-            else:
-                for iou_range in self.log_iou_range:
-                    if int(iou*100) in iou_range:
-                        scope_name = os.path.join(scope_name , 'iou_{}'.format (iou_range))
+                #set scope name
+                if iou == -1:
+                    scope_name = os.path.join(scope_name, 'iou_error'.format(range(5, 8)))
+                else:
+                    for iou_range in self.log_iou_range:
+                        if int(iou*100) in iou_range:
+                            scope_name = os.path.join(scope_name , 'iou_{}'.format (iou_range))
 
             # print('Summary log image, scope name: {}'.format(scope_name))
 
