@@ -1,7 +1,7 @@
 import numpy as np
 import math
 
-# -------------------- 0. Original Python Lidar preprocess (Perit's version), used for comparison ---------
+# -------------------- 0. Python Lidar preprocess, used for comparison ---------
 def lidar_to_top(lidar):
     idx = np.where (lidar[:,0]>TOP_X_MIN)
     lidar = lidar[idx]
@@ -22,18 +22,24 @@ def lidar_to_top(lidar):
     pys=lidar[:,1]
     pzs=lidar[:,2]
     prs=lidar[:,3]
-    qxs=((pxs-TOP_X_MIN)//TOP_X_DIVISION).astype(np.int32)
-    qys=((pys-TOP_Y_MIN)//TOP_Y_DIVISION).astype(np.int32)
+#    qxs=((pxs-TOP_X_MIN)//TOP_X_DIVISION).astype(np.int32)
+#    qys=((pys-TOP_Y_MIN)//TOP_Y_DIVISION).astype(np.int32)
+    qxs=((pxs-TOP_X_MIN)/TOP_X_DIVISION).astype(np.int32)
+    qys=((pys-TOP_Y_MIN)/TOP_Y_DIVISION).astype(np.int32)
     #qzs=((pzs-TOP_Z_MIN)//TOP_Z_DIVISION).astype(np.int32)
     qzs=(pzs-TOP_Z_MIN)/TOP_Z_DIVISION
     quantized = np.dstack((qxs,qys,qzs,prs)).squeeze()
 
-    X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
-    Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
+#    X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
+#    Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
+#    Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
+    X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)/TOP_X_DIVISION)
+    Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)/TOP_Y_DIVISION)
     Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
     height  = Xn - X0
     width   = Yn - Y0
     channel = Zn - Z0  + 2
+
     #print('height,width,channel=%d,%d,%d'%(height,width,channel))
     top = np.zeros(shape=(height,width,channel), dtype=np.float32)
 
@@ -59,7 +65,8 @@ def lidar_to_top(lidar):
             top[yy,xx,Zn]=quantized_xy[max_height_point, 3]
 
             for z in range(Zn):
-                iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<=z+1))
+#                iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<=z+1))
+                iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<z+1))
                 quantized_xyz = quantized_xy[iz]
                 if len(quantized_xyz) == 0 : continue
                 zz = z
@@ -82,21 +89,32 @@ TOP_Y_DIVISION = 0.1
 TOP_Z_DIVISION = 0.4
 
 # setting for DiDi from xuefung
-#TOP_X_MIN =-45   #-15
-#TOP_X_MAX =45	#45
-#TOP_Y_MIN =-10  #-30
-#TOP_Y_MAX =10	#30
+TOP_X_MIN =-45   #-15
+TOP_X_MAX =45	#45
+TOP_Y_MIN =-10  #-30
+TOP_Y_MAX =10	#30
+TOP_Z_MIN =-3
+TOP_Z_MAX =1.0
+TOP_X_DIVISION = 0.2 #0.2
+TOP_Y_DIVISION = 0.2 #0.2
+TOP_Z_DIVISION = 1 #0.5
+
+# setting for DiDi from xuefung  (weird slit appears in original Python version)
+#TOP_X_MIN =-45  
+#TOP_X_MAX =45	
+#TOP_Y_MIN =-10 
+#TOP_Y_MAX =10	
 #TOP_Z_MIN =-3
 #TOP_Z_MAX =1.0
-#TOP_X_DIVISION = 0.2
-#TOP_Y_DIVISION = 0.2
-#TOP_Z_DIVISION = 0.5
+#TOP_X_DIVISION = 5 
+#TOP_Y_DIVISION = 5 
+#TOP_Z_DIVISION = 1 
 
 
 # Calculate map size and pack parameters for top view and front view map (DON'T CHANGE THIS !)
-Xn = math.floor((TOP_X_MAX-TOP_X_MIN)/TOP_X_DIVISION)  
-Yn = math.floor((TOP_Y_MAX-TOP_Y_MIN)/TOP_Y_DIVISION)   
-Zn = math.floor((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)   
+Xn = int((TOP_X_MAX-TOP_X_MIN)/TOP_X_DIVISION)
+Yn = int((TOP_Y_MAX-TOP_Y_MIN)/TOP_Y_DIVISION)
+Zn = int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)  
 
 top_paras = (TOP_X_MIN, TOP_X_MAX, TOP_Y_MIN, TOP_Y_MAX, TOP_Z_MIN, TOP_Z_MAX, TOP_X_DIVISION, TOP_Y_DIVISION, TOP_Z_DIVISION, Xn, Yn, Zn)
 #------------------------------------------------------------------------------
@@ -104,7 +122,8 @@ top_paras = (TOP_X_MIN, TOP_X_MAX, TOP_Y_MIN, TOP_Y_MAX, TOP_Z_MIN, TOP_Z_MAX, T
 
 #------------------- 2. SET SOURCE RAW DATA TO BE PROCESSED --------------------
 # load lidar raw data  (presumed raw data dimension : num x 4)    
-raw = np.load("raw_kitti_2011_09_26_0005_0000000004.npy")
+#raw = np.load("raw_kitti_2011_09_26_0005_0000000004.npy")
+raw = np.load("raw_0.npy")
 num = raw.shape[0]  # DON'T CHANGE THIS !
 # num : number of points in one lidar frame
 # 4 : total channels of single point (x, y, z, intensity)
@@ -114,6 +133,7 @@ num = raw.shape[0]  # DON'T CHANGE THIS !
 top_flip = np.ones((Xn, Yn, Zn+2), dtype = np.double) 	# DON'T CHANGE THIS !
 # top-view maps : Zn height maps + 1 density map + 1 intensity map
 # top-view map size : Xn * Yn
+print (Xn,',', Yn, ',',Zn+2)
 # ------------------------------------------------------------------------------
 
 
@@ -170,6 +190,12 @@ print('- max in Python ver:',max(python_top[:,:,map_num-1].flatten()) )
 print('- min in    C   ver:',min(top[:,:,map_num-1].flatten()) )
 print('- min in Python ver:',min(python_top[:,:,map_num-1].flatten()) )
 
+# PRINT DIFFERENT VALUES BETWEEN PYTHON AND C VERSION (optional)
+#map_num = len(python_top[0][0])
+#for i in range(map_num):
+#	for j in zip(top[:,:,i].flatten(),python_top[:,:,i].flatten()):
+#		if (abs(j[0]-j[1])>0.01):
+#			print(j[0],',',j[1])
 
 
 

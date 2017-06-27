@@ -31,13 +31,13 @@ extern "C"
     {	    
 		float * raw_cube = (float *) raw_data;
 		double * top_cube = (double *) top_data;
-		
+
 		//int32_t num = 123586;
 	    float *px = raw_cube+0;
 		float *py = raw_cube+1;
 		float *pz = raw_cube+2;
 		float *pr = raw_cube+3;
-
+		
 		//3D grid box index
 		int X = 0;	
 		int Y = 0;
@@ -82,13 +82,10 @@ extern "C"
 			}
 		}
 
-		// This is the data structure that is used to create the height planes of the 3D data cube.
+		//allocate point cloud for temporally data visualization (only used for validation)
 		vector<std::vector<PointT> > height_cloud_vec;
 
-		// Initialize height_cloud_vec with a dummy. The dummy is later deleted.
-		// This is needed because without initialization, the "at" method for vectors cannot be used to add data. 
-		// Only the "push_back" method can be used. But with push_back, data can be added only at the end of the vector.
-		// With "at", data can be added at any random location.
+		// Initialize the vector of vectors with a dummy. The dummy is later deleted.
 		for(int i = 0; i < Z_SIZE; i++){
 			std::vector<PointT> dummy;
 			PointT dummy_member;
@@ -96,10 +93,8 @@ extern "C"
 			height_cloud_vec.push_back(dummy);
 		}
 
-		// These are the data structures used to create the intensity and the desnity planes of the data cube.
 		vector<PointT> intensity_cloud;
 		vector<PointT> density_cloud;
-
 
 		for (int32_t i=0; i<num; i++) {
 			PointT point;
@@ -107,14 +102,10 @@ extern "C"
 		    point.y = *py;
 		    point.z = *pz;
 			point.intensity = (*pr);// * 255;	//TODO : check if original Kitti data normalized between 0 and 1 ?
-		
-			//X = (int)((point.x-x_MIN)/x_DIVISION);
-			//Y = (int)((point.y-y_MIN)/y_DIVISION);
-			//Z = (int)((point.z-z_MIN)/z_DIVISION);
-
-			X = (int)floor((point.x-x_MIN)/x_DIVISION);	
-		    Y = (int)floor((point.y-y_MIN)/y_DIVISION);   
-		    Z = (int)floor((point.z-z_MIN)/z_DIVISION);
+				
+			X = (int)((point.x-x_MIN)/x_DIVISION);
+			Y = (int)((point.y-y_MIN)/y_DIVISION);
+			Z = (int)((point.z-z_MIN)/z_DIVISION);
 			
 			//For every point in each cloud, only select points inside a predefined 3D grid box
 			if (X >= 0 && Y>= 0 && Z >=0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)
@@ -127,8 +118,8 @@ extern "C"
 					
 					//Save to point cloud for visualization -----				
 					PointT grid_point;
-					grid_point.x = X;
-					grid_point.y = Y;
+					grid_point.x = X-1;	//-1 used for offset compensation between C and Python version
+					grid_point.y = Y-1;	//-1 used for offset compensation between C and Python version
 					grid_point.z = 0;
 					grid_point.intensity = point.z - z_MIN;
 					
@@ -140,8 +131,8 @@ extern "C"
 				// density map
 				density_map[X][Y]++;	// update count#, need to be normalized afterwards
 				PointT grid_point;
-				grid_point.x = X;
-				grid_point.y = Y;
+				grid_point.x = X-1;		//-1 used for offset compensation between C and Python version
+				grid_point.y = Y-1; 	//-1 used for offset compensation between C and Python version
 				grid_point.z = 0;
 				grid_point.intensity = density_map[X][Y];
 				density_cloud.push_back(grid_point);
@@ -154,8 +145,8 @@ extern "C"
 
 					//Save to point cloud for visualization -----
 					PointT grid_point;
-					grid_point.x = X;
-					grid_point.y = Y;
+					grid_point.x = X-1; 	//-1 used for offset compensation between C and Python version
+					grid_point.y = Y-1; 	//-1 used for offset compensation between C and Python version
 					grid_point.z = 0;
 					grid_point.intensity = point.intensity;
 					intensity_cloud.push_back(grid_point);
@@ -212,7 +203,8 @@ extern "C"
 				float value = cloud_demo->at(i).intensity;
 
 				//top_cube[array_idx] = value;
-				top_cube[array_idx] = value/z_DIVISION - k;	//normalized relative to the current grid
+				top_cube[array_idx] = value/z_DIVISION - k;	//normalized relative to the current grid (within 0~1)
+
 			}
 		}
 		
@@ -225,7 +217,7 @@ extern "C"
 			int x_coord = (int)cloud_demo->at(i).x;
 			int y_coord = (int)cloud_demo->at(i).y;
 
-			// array_idx equals 400*8*x + 8*y + 7 where 7 is the 7th (starting at 0) 400x400 plane
+			// array_idx equals 400*8*x + 8*y + 6 where 6 is the 6th (starting at 0) 400x400 plane
 			int array_idx = Y_SIZE * (Z_SIZE + 2) * x_coord + (Z_SIZE + 2) * y_coord + plane_idx;
 			float value = cloud_demo->at(i).intensity;
 
@@ -241,7 +233,7 @@ extern "C"
 			int x_coord = (int)cloud_demo->at(i).x;
 			int y_coord = (int)cloud_demo->at(i).y;
 
-			// array_idx equals 400*8*x + 8*y + 6 where 6 is the 6th (starting at 0) 400x400 plane
+			// array_idx equals 400*8*x + 8*y + 7 where 7 is the 7th (starting at 0) 400x400 plane
 			int array_idx = Y_SIZE * (Z_SIZE + 2) * x_coord + (Z_SIZE + 2) * y_coord + plane_idx;
 			float value = cloud_demo->at(i).intensity;
 
