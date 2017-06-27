@@ -27,6 +27,25 @@ if config.cfg.USE_CLIDAR_TO_TOP:
 
 class Preprocess(object):
 
+    def __init__(self):
+
+        self.labels_map = {
+            #background
+            'background':0,
+            #car
+            'Van':1,
+            'Truck': 1,
+            'Car': 1,
+            'Tram': 1,
+            #Pedestrian
+            'Pedestrian':2
+        }
+
+        self.n_class = max([self.labels_map[key] for key in self.labels_map]) + 1
+
+    @property
+    def num_class(self):
+        return self.n_class
 
     def rgb(self, rgb):
         rgb = crop_image(rgb)
@@ -38,9 +57,10 @@ class Preprocess(object):
 
 
     def label(self, obj):
-        label=0
-        if obj.type=='Van' or obj.type=='Truck' or obj.type=='Car' or obj.type=='Tram':# todo : only  support 'Van'
-            label = 1
+        if obj.type in self.labels_map.keys():
+            label = self.labels_map[obj.type]
+        else:
+            label = self.labels_map['background']
         return label
 
 

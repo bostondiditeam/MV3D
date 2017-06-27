@@ -121,7 +121,7 @@ class MV3D(object):
 
         # anchors
         self.top_stride=None
-        self.num_class = 2  # incude background
+        self.num_class = data.proprocess.num_class  # incude background
 
         ratios=np.array([0.5,1,2], dtype=np.float32)
         scales=np.array([1,2,3],   dtype=np.float32)
@@ -252,7 +252,7 @@ class MV3D(object):
         text = frame_tag
         cv2.putText(top_view_log, text, text_pos, font, 0.5, (0, 255, 100), 0, cv2.LINE_AA)
         if log_rpn:
-            rpn_img = self.log_rpn(step=step, scope_name=scope_name, tensor_board=False)
+            rpn_img = self.log_rpn(step=step, scope_name=scope_name, tensor_board=False,draw_rpn_target=False)
             top_view_log = np.concatenate((top_view_log, rpn_img), 1)
 
         # all prediction on top
@@ -621,7 +621,7 @@ class Trainer(MV3D):
         img_rgb_rois = box.draw_boxes(rgb, self.batch_rgb_rois[np.where(self.batch_fuse_labels == 0), 1:5][0],
                                       color=(0, 0, 255), thickness=1)
         img_rgb_rois = box.draw_boxes(img_rgb_rois,
-                                      self.batch_rgb_rois[np.where(self.batch_fuse_labels == 1), 1:5][0],
+                                      self.batch_rgb_rois[np.where(self.batch_fuse_labels != 0), 1:5][0],
                                       color=(255, 255, 255), thickness=3)
         # nud.imsave('img_rgb_rois', img_rgb_rois, subdir)
         self.summary_image(img_rgb_rois, scope_name+'/img_rgb_rois', step=self.n_global_step)
@@ -900,33 +900,34 @@ class Trainer(MV3D):
 
             boxes3d, lables = self.predict(self.batch_top_view, self.batch_front_view, self.batch_rgb_images)
 
-            # get iou
-            iou = -1
-            inds = np.where(self.batch_gt_labels[0] != 0)
-            try:
-                iou = box.boxes3d_score_iou(self.batch_gt_boxes3d[0][inds], boxes3d)
-                if iou_statistic: self.iou_store.append(iou)
-                if summary_iou:
-                    iou_aver = sum(self.iou_store)/len(self.iou_store)
-                    self.iou_store=[]
-                    tag = os.path.join('IOU')
-                    self.summary_scalar(value=iou_aver, tag=tag, step=self.n_global_step)
-                    self.log_msg.write('\n %s iou average: %.5f\n' % (self.step_name, iou_aver))
-            except ValueError:
-                # print("waring :", sys.exc_info()[0])
-                pass
+            if set(self.train_target) ==set(mv3d_net.top_view_rpn_name):
+                # get iou
+                iou = -1
+                inds = np.where(self.batch_gt_labels[0] != 0)
+                try:
+                    iou = box.boxes3d_score_iou(self.batch_gt_boxes3d[0][inds], boxes3d)
+                    if iou_statistic: self.iou_store.append(iou)
+                    if summary_iou:
+                        iou_aver = sum(self.iou_store)/len(self.iou_store)
+                        self.iou_store=[]
+                        tag = os.path.join('IOU')
+                        self.summary_scalar(value=iou_aver, tag=tag, step=self.n_global_step)
+                        self.log_msg.write('\n %s iou average: %.5f\n' % (self.step_name, iou_aver))
+                except ValueError:
+                    # print("waring :", sys.exc_info()[0])
+                    pass
 
-            #set scope name
-            if iou == -1:
-                scope_name = os.path.join(scope_name, 'iou_error'.format(range(5, 8)))
-            else:
-                for iou_range in self.log_iou_range:
-                    if int(iou*100) in iou_range:
-                        scope_name = os.path.join(scope_name , 'iou_{}'.format (iou_range))
+                #set scope name
+                if iou == -1:
+                    scope_name = os.path.join(scope_name, 'iou_error'.format(range(5, 8)))
+                else:
+                    for iou_range in self.log_iou_range:
+                        if int(iou*100) in iou_range:
+                            scope_name = os.path.join(scope_name , 'iou_{}'.format (iou_range))
 
-            # print('Summary log image, scope name: {}'.format(scope_name))
+                # print('Summary log image, scope name: {}'.format(scope_name))
 
-            self.log_fusion_net_target(self.batch_rgb_images[0], scope_name=scope_name)
+                self.log_fusion_net_target(self.batch_rgb_images[0], scope_name=scope_name)
             log_info_str = 'frame info: ' + self.frame_info + '\n'
             log_info_str += self.anchors_details()
             log_info_str += self.rpn_poposal_details()
