@@ -59,7 +59,28 @@ class TrainingValDataSplitter:
             return False
         return True
 
+    def handle_one_bag(self):
+        all_tags = []
+        for bag in self.bags:
+            r = re.compile('^' + bag)
+            tag_list = filter(r.match, self.tags_all)
+            bag_tag_list = list(tag_list)
+            all_tags += bag_tag_list
+
+        tag_size = len(all_tags)
+        split_point = round(tag_size * self.split_rate)
+
+        self.training_tags = all_tags[:split_point + 1]
+        self.val_tags = all_tags[split_point + 1:]
+        self.training_bags += [bag]
+        self.val_bags += [bag]
+
+
     def split_bags_by_tag_name(self):
+        if len(self.bags) == 1:
+            self.handle_one_bag()
+            return
+
         # input tags, split rate,
         # record: training_bags(a name list), training_tags(list), val_bags(a name list), val_tags(list)
         self.bags = shuffle(self.bags, random_state=0)
@@ -87,12 +108,14 @@ class TrainingValDataSplitter:
         tag_size = len(all_tags)
         split_point = round(tag_size * self.split_rate)
 
+
         for i in range(split_point, tag_size):
             first_frame = all_tags[i]
             sec_frame = all_tags[i + 1]
             if ('/').join(first_frame.split('/')[:2]) != ('/').join(sec_frame.split('/')[:2]):
                 split_point = i
                 break
+
 
         self.training_tags = all_tags[:split_point + 1]
         self.val_tags = all_tags[split_point + 1:]
@@ -101,7 +124,10 @@ class TrainingValDataSplitter:
         print('real split rate is here: ', self.real_split_rate)
         # print('first frame is here: ', all_tags[i], ' and sec is: ', all_tags[i + 1])
 
-        split_bag = ('/').join(all_tags[i + 1].split('/')[:2])
+        # get all bags:
+
+
+        split_bag = ('/').join(all_tags[split_point + 1].split('/')[:2])
 
         in_training_bag = True
         for i in self.bags:
@@ -135,7 +161,8 @@ if __name__ == '__main__':
                       'suburu_following_long',
                       'suburu_driving_past_it',
                       'nissan_brief',
-                      'suburu_leading_at_distance']
+                      'suburu_leading_at_distance'
+                      ]
 
     train_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in train_key_list]
     train_value_list = [os.listdir(value)[0] for value in train_key_full_path_list]
