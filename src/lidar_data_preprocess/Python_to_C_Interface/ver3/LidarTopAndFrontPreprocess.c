@@ -136,8 +136,8 @@ extern "C"
 					
 					//Save to point cloud for visualization -----				
 					PointT grid_point;
-					grid_point.x = X;
-					grid_point.y = Y;
+					grid_point.x = X-1;
+					grid_point.y = Y-1;
 					grid_point.z = 0;
 					//grid_point.intensity = point.z - z_MIN;
 					grid_point.intensity = (point.z - z_MIN)/z_DIVISION;
@@ -149,8 +149,8 @@ extern "C"
 				// density map
 				density_map[X][Y]++;	// update count#, need to be normalized afterwards
 				PointT grid_point;
-				grid_point.x = X;
-				grid_point.y = Y;
+				grid_point.x = X-1;
+				grid_point.y = Y-1;
 				grid_point.z = 0;
 				grid_point.intensity = density_map[X][Y];
 				density_cloud.push_back(grid_point);
@@ -163,8 +163,8 @@ extern "C"
 
 					//Save to point cloud for visualization -----
 					PointT grid_point;
-					grid_point.x = X;
-					grid_point.y = Y;
+					grid_point.x = X-1;
+					grid_point.y = Y-1;
 					grid_point.z = 0;
 					grid_point.intensity = point.intensity;
 					intensity_cloud.push_back(grid_point);
