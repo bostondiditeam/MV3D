@@ -194,11 +194,11 @@ class MV3D(object):
     def predict(self, top_view, front_view, rgb_image):
         self.lables = []  # todo add lables output
 
-        self.top_view = top_view
-        self.rgb_image = rgb_image
-        self.front_view = front_view
+        self.batch_top_view = top_view
+        self.batch_rgb_images = rgb_image
+        self.batch_front_view = front_view
         fd1 = {
-            self.net['top_view']: self.top_view,
+            self.net['top_view']: self.batch_top_view,
             self.net['top_anchors']: self.top_view_anchors,
             self.net['top_inside_inds']: self.anchors_inside_inds,
             blocks.IS_TRAIN_PHASE: False,
@@ -218,8 +218,8 @@ class MV3D(object):
 
         fd2 = {
             **fd1,
-            self.net['front_view']: self.front_view,
-            self.net['rgb_images']: self.rgb_image,
+            self.net['front_view']: self.batch_front_view,
+            self.net['rgb_images']: self.batch_rgb_images,
 
             self.net['top_rois']: self.top_rois,
             self.net['front_rois']: self.front_rois,
@@ -245,7 +245,7 @@ class MV3D(object):
         self.log_fusion_net_detail(log_subdir, self.fuse_probs, self.fuse_deltas)
 
         # origin top view
-        self.top_image = data.draw_top_image(self.top_view[0])
+        self.top_image = data.draw_top_image(self.batch_top_view[0])
         top_view_log = self.top_image.copy()
 
         # add text on origin
@@ -273,7 +273,7 @@ class MV3D(object):
 
         # prediction on rgb
         text_lables = ['No.%d class:1 prob: %.4f' % (i, prob) for i, prob in enumerate(self.probs)]
-        prediction_on_rgb = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d,
+        prediction_on_rgb = nud.draw_box3d_on_camera(self.batch_rgb_images[0], self.boxes3d,
                                                           text_lables=text_lables)
         self.summary_image(prediction_on_rgb, scope_name + '/prediction_on_rgb', step=step)
 

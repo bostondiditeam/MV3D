@@ -28,6 +28,8 @@ __C.TEST_KEY=11
 #['didi2', 'didi','kitti','test']
 # 'didi2' means configuration for round 2, 'didi' means configuration for round 1 data, 'kitti' means for kitti dataset.
 __C.DATA_SETS_TYPE='didi2'
+__C.SINGLE_CLASS_DETECTION = True
+__C.OBJ_TYPE = 'car' #'car' 'ped'
 
 # Root directory of project
 __C.ROOT_DIR = osp.abspath(osp.join(osp.dirname(__file__), '..'))
@@ -101,17 +103,34 @@ if __C.DATA_SETS_TYPE == 'didi' or __C.DATA_SETS_TYPE == 'test':
     TOP_X_DIVISION = 0.2
     TOP_Y_DIVISION = 0.2
     TOP_Z_DIVISION = 0.3
-elif __C.DATA_SETS_TYPE == 'didi2':
-    TOP_Y_MIN = -30
-    TOP_Y_MAX = 30
-    TOP_X_MIN = -50
-    TOP_X_MAX = 50
-    TOP_Z_MIN = -3.5
-    TOP_Z_MAX = 0.6
 
-    TOP_X_DIVISION = 0.2
-    TOP_Y_DIVISION = 0.2
-    TOP_Z_DIVISION = 0.3
+elif __C.DATA_SETS_TYPE == 'didi2':
+
+    if __C.OBJ_TYPE =='ped':
+        TOP_Y_MIN = -15
+        TOP_Y_MAX = 15
+        TOP_X_MIN = -25
+        TOP_X_MAX = 25
+        TOP_Z_MIN = -3.5
+        TOP_Z_MAX = 0.6
+
+        TOP_X_DIVISION = 0.1
+        TOP_Y_DIVISION = 0.1
+        TOP_Z_DIVISION = 0.3
+    elif __C.OBJ_TYPE =='car':
+        TOP_Y_MIN = -30
+        TOP_Y_MAX = 30
+        TOP_X_MIN = -50
+        TOP_X_MAX = 50
+        TOP_Z_MIN = -3.5
+        TOP_Z_MAX = 0.6
+
+        TOP_X_DIVISION = 0.2
+        TOP_Y_DIVISION = 0.2
+        TOP_Z_DIVISION = 0.3
+    else:
+        raise ValueError('unknown type:{}'.format(__C.OBJ_TYPE))
+
 elif __C.DATA_SETS_TYPE == 'kitti':
     TOP_Y_MIN = -20
     TOP_Y_MAX = +20

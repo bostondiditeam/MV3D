@@ -41,7 +41,10 @@ class Preprocess(object):
             'Pedestrian':2
         }
 
-        self.n_class = max([self.labels_map[key] for key in self.labels_map]) + 1
+        if config.cfg.SINGLE_CLASS_DETECTION==False:
+            self.n_class = max([self.labels_map[key] for key in self.labels_map]) + 1
+        else:
+            self.n_class = 2
 
     @property
     def num_class(self):
@@ -58,7 +61,7 @@ class Preprocess(object):
 
     def label(self, obj):
         if obj.type in self.labels_map.keys():
-            label = self.labels_map[obj.type]
+            label = self.labels_map[obj.type] if config.cfg.SINGLE_CLASS_DETECTION==False else 1
         else:
             label = self.labels_map['background']
         return label
@@ -113,11 +116,11 @@ def draw_top_image(lidar_top):
     return top_image
 
 
-def clidar_to_top(lidar):
+def clidar_to_top(lidar:np.ndarray):
     # Calculate map size and pack parameters for top view and front view map (DON'T CHANGE THIS !)
-    Xn = math.floor((TOP_X_MAX - TOP_X_MIN) / TOP_X_DIVISION)
-    Yn = math.floor((TOP_Y_MAX - TOP_Y_MIN) / TOP_Y_DIVISION)
-    Zn = math.floor((TOP_Z_MAX - TOP_Z_MIN) / TOP_Z_DIVISION)
+    Xn = int((TOP_X_MAX - TOP_X_MIN) / TOP_X_DIVISION)
+    Yn = int((TOP_Y_MAX - TOP_Y_MIN) / TOP_Y_DIVISION)
+    Zn = int((TOP_Z_MAX - TOP_Z_MIN) / TOP_Z_DIVISION)
 
     top_flip = np.ones((Xn, Yn, Zn + 2), dtype=np.double)  # DON'T CHANGE THIS !
 
