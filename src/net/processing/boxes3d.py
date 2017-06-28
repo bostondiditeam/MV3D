@@ -315,8 +315,8 @@ def regularise_box3d(boxes3d):
 
     return reg_boxes3d
 
-@jit
-def boxes3d_decompose(boxes3d):
+
+def boxes3d_decompose(boxes3d:np.ndarray):
 
     # translation
     if cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
