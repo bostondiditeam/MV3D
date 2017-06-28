@@ -82,7 +82,7 @@ class Preprocess(object):
 proprocess = Preprocess()
 
 
-
+@jit
 def filter_center_car(lidar):
     idx = np.where(np.logical_or(numpy.abs(lidar[:, 0]) > 4.7/2, numpy.abs(lidar[:, 1]) > 2.1/2))
     lidar = lidar[idx]
@@ -122,7 +122,7 @@ def clidar_to_top(lidar:np.ndarray):
     Yn = int((TOP_Y_MAX - TOP_Y_MIN) / TOP_Y_DIVISION)
     Zn = int((TOP_Z_MAX - TOP_Z_MIN) / TOP_Z_DIVISION)
 
-    top_flip = np.ones((Xn, Yn, Zn + 2), dtype=np.double)  # DON'T CHANGE THIS !
+    top_flip = np.ones((Xn, Yn, Zn + 2), dtype=np.float32)  # DON'T CHANGE THIS !
 
     num = lidar.shape[0]  # DON'T CHANGE THIS !
 
@@ -142,7 +142,7 @@ def clidar_to_top(lidar:np.ndarray):
     return top
 
 
-@autojit
+@jit
 def lidar_to_top(lidar):
 
     idx = np.where (lidar[:,0]>TOP_X_MIN)
