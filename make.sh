@@ -1,3 +1,4 @@
+sudo chmod 777 ./ -R
 cd ./src/
 cd ./net/lib/
 python ./setup.py build_ext --inplace
