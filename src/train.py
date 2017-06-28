@@ -2,6 +2,7 @@ import numpy as np
 import mv3d
 import mv3d_net
 import glob
+from sklearn.utils import shuffle
 from config import *
 # import utils.batch_loading as ub
 import argparse
@@ -62,31 +63,82 @@ if __name__ == '__main__':
         train_n_val_dataset=[
             'suburu_pulling_up_to_it/suburu02',
             'nissan_brief/nissan06',
-            'cmax_sitting_still/cmax01',
+            # 'cmax_sitting_still/cmax01',
             # 'suburu_pulling_to_right/suburu03_bak',
             'nissan_pulling_up_to_it/nissan02',
             # 'ped_train/ped_train',
-            'suburu_sitting_still/suburu01',
+            # 'suburu_sitting_still/suburu01', # tracklet is very inaccurate.
             'nissan_pulling_to_left/nissan03',
-            'bmw_sitting_still/bmw01',
-            'suburu_follows_capture/suburu09',
+            # 'bmw_sitting_still/bmw01',
             'nissan_pulling_away/nissan05',
             'suburu_pulling_to_left/suburu04',
-            'bmw_following_long/bmw02',
             'nissan_pulling_to_right/nissan04',
             'suburu_driving_towards_it/suburu06',
-            'suburu_following_long/suburu08',
             'suburu_not_visible/suburu12',
             'suburu_leading_front_left/suburu11',
-            'nissan_sitting_still/nissan01',
-            'cmax_following_long/cmax02',
-            'nissan_following_long/nissan07',
+            # 'nissan_sitting_still/nissan01',
             'suburu_driving_away/suburu05',
-            'suburu_leading_at_distance/suburu12',
             'nissan_driving_past_it/nissan07',
             'suburu_driving_past_it/suburu07',
             'suburu_driving_parallel/suburu10',
+
+            'bmw_following_long_split/001',
+            'bmw_following_long_split/002',
+            'bmw_following_long_split/003',
+            'bmw_following_long_split/004',
+            'bmw_following_long_split/005',
+            'bmw_following_long_split/006',
+            'bmw_following_long_split/007',
+            'bmw_following_long_split/008',
+            'bmw_following_long_split/009',
+            'bmw_following_long_split/010',
+            'bmw_following_long_split/011',
+
+            'cmax_following_long_split/001',
+            'cmax_following_long_split/002',
+            'cmax_following_long_split/003',
+            'cmax_following_long_split/004',
+            'cmax_following_long_split/005',
+            'cmax_following_long_split/006',
+            'cmax_following_long_split/007',
+            'cmax_following_long_split/008',
+            'cmax_following_long_split/009',
+            'cmax_following_long_split/010',
+            'cmax_following_long_split/011',
+
+            'nissan_following_long_split/001',
+            'nissan_following_long_split/002',
+            'nissan_following_long_split/003',
+            'nissan_following_long_split/004',
+            'nissan_following_long_split/005',
+            'nissan_following_long_split/006',
+            'nissan_following_long_split/007',
+            'nissan_following_long_split/008',
+            'nissan_following_long_split/009',
+            'nissan_following_long_split/010',
+            'nissan_following_long_split/011',
+
+            'suburu_following_long_split/001',
+            'suburu_following_long_split/002',
+            'suburu_following_long_split/003',
+            'suburu_following_long_split/004',
+            'suburu_following_long_split/005',
+            'suburu_following_long_split/006',
+            'suburu_following_long_split/007',
+
+            'suburu_follows_capture_split/001',
+            'suburu_follows_capture_split/002',
+            'suburu_follows_capture_split/003',
+            'suburu_follows_capture_split/004',
+            'suburu_follows_capture_split/005',
+
+            'suburu_leading_at_distance_split/001',
+            'suburu_leading_at_distance_split/002',
+            'suburu_leading_at_distance_split/003',
+            'suburu_leading_at_distance_split/004',
+
         ]
+
 
 
     elif cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
@@ -144,11 +196,11 @@ if __name__ == '__main__':
             # '2011_09_26/2011_09_26_drive_0106_sync',
             # '2011_09_26/2011_09_26_drive_0113_sync',
             # '2011_09_26/2011_09_26_drive_0117_sync',
-            '2011_09_26/2011_09_26_drive_0119_sync'
+            '2011_09_26/2011_09_26_drive_0119_sync',
         ]
 
-
-
+    # shuffle bag list or same kind of bags will only be in training or validation set.
+    train_n_val_dataset = shuffle(train_n_val_dataset, random_state=666)
     data_splitter = TrainingValDataSplitter(train_n_val_dataset)
 
     with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True, random_num=np.random.randint(100)) as training:
