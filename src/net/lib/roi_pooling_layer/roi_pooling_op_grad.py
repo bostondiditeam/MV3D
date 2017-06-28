@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.framework import ops
-import roi_pooling_op
+from net.lib.roi_pooling_layer import roi_pooling_op
 
 @ops.RegisterGradient("RoiPool")
 def _roi_pool_grad(op, grad, _):
