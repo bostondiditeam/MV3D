@@ -30,7 +30,8 @@ extern "C"
 	void createTopMaps(const void * raw_data, int num, const void * top_data, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION, int X_SIZE, int Y_SIZE, int Z_SIZE)
     {	    
 		float * raw_cube = (float *) raw_data;
-		double * top_cube = (double *) top_data;
+		float * top_cube = (float *) top_data;
+//		std::cout<<X_SIZE<<","<<Y_SIZE<<","<<Z_SIZE<<std::endl;
 
 		//int32_t num = 123586;
 	    float *px = raw_cube+0;
@@ -102,13 +103,13 @@ extern "C"
 		    point.y = *py;
 		    point.z = *pz;
 			point.intensity = (*pr);// * 255;	//TODO : check if original Kitti data normalized between 0 and 1 ?
-				
-			X = (int)((point.x-x_MIN)/x_DIVISION);
-			Y = (int)((point.y-y_MIN)/y_DIVISION);
-			Z = (int)((point.z-z_MIN)/z_DIVISION);
+			
+			X = (int)((point.x-x_MIN)/x_DIVISION);	// qxs in Python version  
+			Y = (int)((point.y-y_MIN)/y_DIVISION);	// qys in Python version  
+			Z = (int)((point.z-z_MIN)/z_DIVISION);	// qzs in Python version
 			
 			//For every point in each cloud, only select points inside a predefined 3D grid box
-			if (X >= 0 && Y>= 0 && Z >=0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)
+			if (X >= 1 && Y >= 1 && Z >= 0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)  // 1 used for X,Y offset compensation
 			{
 				// For every point in predefined 3D grid box.....
 				// height map
@@ -118,21 +119,20 @@ extern "C"
 					
 					//Save to point cloud for visualization -----				
 					PointT grid_point;
-					grid_point.x = X-1;	//-1 used for offset compensation between C and Python version
-					grid_point.y = Y-1;	//-1 used for offset compensation between C and Python version
+					grid_point.x = X-1;	  //-1 used for offset compensation between C and Python version
+					grid_point.y = Y-1;   //-1 used for offset compensation between C and Python version
 					grid_point.z = 0;
 					grid_point.intensity = point.z - z_MIN;
 					
 					// height_cloud_vec[Z].push_back(grid_point);
-
 					height_cloud_vec.at(Z).push_back(grid_point);
 				}
 			
 				// density map
 				density_map[X][Y]++;	// update count#, need to be normalized afterwards
 				PointT grid_point;
-				grid_point.x = X-1;		//-1 used for offset compensation between C and Python version
-				grid_point.y = Y-1; 	//-1 used for offset compensation between C and Python version
+				grid_point.x = X-1;	  //-1 used for offset compensation between C and Python version
+				grid_point.y = Y-1;   //-1 used for offset compensation between C and Python version	
 				grid_point.z = 0;
 				grid_point.intensity = density_map[X][Y];
 				density_cloud.push_back(grid_point);
@@ -142,20 +142,19 @@ extern "C"
 				{
 					max_height_map[X][Y] = point.z - z_MIN;
 					intensity_map[X][Y] = point.intensity;
-
 					//Save to point cloud for visualization -----
 					PointT grid_point;
-					grid_point.x = X-1; 	//-1 used for offset compensation between C and Python version
-					grid_point.y = Y-1; 	//-1 used for offset compensation between C and Python version
+					grid_point.x = X-1;	  //-1 used for offset compensation between C and Python version
+					grid_point.y = Y-1;   //-1 used for offset compensation between C and Python version
 					grid_point.z = 0;
 					grid_point.intensity = point.intensity;
 					intensity_cloud.push_back(grid_point);
 				}
-
-				
 			}
 		    px+=4; py+=4; pz+=4; pr+=4;
 		}		
+
+
 
 		// erase the dummy vector added at the start
 		for(int i = 0; i < Z_SIZE; i++){

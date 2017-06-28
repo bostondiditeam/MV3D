@@ -30,8 +30,8 @@ extern "C"
 	void createTopAndFrontMaps(const void * raw_data, int num, const void * top_data, const void * front_data, float x_MIN, float x_MAX, float y_MIN, float y_MAX, float z_MIN, float z_MAX, float x_DIVISION, float y_DIVISION, float z_DIVISION, int X_SIZE, int Y_SIZE, int Z_SIZE, float phi_MIN, float phi_MAX, float theta_MIN, float theta_MAX, float phi_DIVISION, float theta_DIVISION, float C_SIZE, float R_SIZE, float F_SIZE)
     {	    
 		float * raw_cube = (float *) raw_data;
-		double * top_cube = (double *) top_data;
-		double * front_cube = (double *) front_data;
+		float * top_cube = (float *) top_data;
+		float * front_cube = (float *) front_data;
 
 		const float RAD_TO_DEG = 180/3.141596;		
 		int FV_CENTER_C = C_SIZE/2;
@@ -126,7 +126,7 @@ extern "C"
 		    Z = (int)floor((point.z-z_MIN)/z_DIVISION);   // Z_SIZE is 6	qzs
 	
 			//For every point in each cloud, only select points inside a predefined 3D grid box
-			if (X >= 0 && Y>= 0 && Z >=0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)
+			if (X >= 1 && Y>= 1 && Z >=0 && X < X_SIZE && Y < Y_SIZE && Z < Z_SIZE)  // 1 used for X,Y offset compensation
 			{
 				// For every point in predefined 3D grid box.....
 				// height map
