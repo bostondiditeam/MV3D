@@ -1,7 +1,8 @@
 from net.utility.file import *
 from net.blocks import *
 from net.rpn_nms_op import tf_rpn_nms
-from net.roipooling_op import roi_pool as tf_roipooling
+from net.lib.roi_pooling_layer.roi_pooling_op import roi_pool as tf_roipooling
+# from net.roipooling_op import roi_pool as tf_roipooling
 from config import cfg
 from net.resnet import ResnetBuilder
 from keras.models import Model
