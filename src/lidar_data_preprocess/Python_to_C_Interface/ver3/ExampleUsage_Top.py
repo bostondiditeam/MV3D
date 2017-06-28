@@ -36,6 +36,7 @@ def lidar_to_top(lidar):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)/TOP_X_DIVISION)
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)/TOP_Y_DIVISION)
     Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
+
     height  = Xn - X0
     width   = Yn - Y0
     channel = Zn - Z0  + 2
@@ -124,16 +125,17 @@ top_paras = (TOP_X_MIN, TOP_X_MAX, TOP_Y_MIN, TOP_Y_MAX, TOP_Z_MIN, TOP_Z_MAX, T
 # load lidar raw data  (presumed raw data dimension : num x 4)    
 #raw = np.load("raw_kitti_2011_09_26_0005_0000000004.npy")
 raw = np.load("raw_0.npy")
+raw = np.load("./lidar_dumps/00000.npy")
 num = raw.shape[0]  # DON'T CHANGE THIS !
 # num : number of points in one lidar frame
 # 4 : total channels of single point (x, y, z, intensity)
 
 
 # top view, front view data structure for saving processed maps (initialized with 1's)
-top_flip = np.ones((Xn, Yn, Zn+2), dtype = np.double) 	# DON'T CHANGE THIS !
+#top_flip = np.ones((Xn, Yn, Zn+2), dtype = np.double) 	# DON'T CHANGE THIS !
+top_flip = np.ones((Xn, Yn, Zn+2), dtype = np.float32) 	# DON'T CHANGE THIS !
 # top-view maps : Zn height maps + 1 density map + 1 intensity map
 # top-view map size : Xn * Yn
-print (Xn,',', Yn, ',',Zn+2)
 # ------------------------------------------------------------------------------
 
 

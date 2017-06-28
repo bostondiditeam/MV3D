@@ -23,20 +23,21 @@ def lidar_to_top(lidar):
     pys=lidar[:,1]
     pzs=lidar[:,2]
     prs=lidar[:,3]
-##    qxs=((pxs-TOP_X_MIN)//TOP_X_DIVISION).astype(np.int32)
-##    qys=((pys-TOP_Y_MIN)//TOP_Y_DIVISION).astype(np.int32)
+#    qxs=((pxs-TOP_X_MIN)//TOP_X_DIVISION).astype(np.int32)
+#    qys=((pys-TOP_Y_MIN)//TOP_Y_DIVISION).astype(np.int32)
     qxs=((pxs-TOP_X_MIN)/TOP_X_DIVISION).astype(np.int32)
     qys=((pys-TOP_Y_MIN)/TOP_Y_DIVISION).astype(np.int32)
     #qzs=((pzs-TOP_Z_MIN)//TOP_Z_DIVISION).astype(np.int32)
     qzs=(pzs-TOP_Z_MIN)/TOP_Z_DIVISION
     quantized = np.dstack((qxs,qys,qzs,prs)).squeeze()
 
-##    X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
-##    Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
-##    Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
+#    X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
+#    Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
+#    Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)/TOP_X_DIVISION)
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)/TOP_Y_DIVISION)
     Z0, Zn = 0, int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)
+
     height  = Xn - X0
     width   = Yn - Y0
     channel = Zn - Z0  + 2
@@ -66,7 +67,7 @@ def lidar_to_top(lidar):
             top[yy,xx,Zn]=quantized_xy[max_height_point, 3]
 
             for z in range(Zn):
-##                iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<=z+1))
+#                iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<=z+1))
                 iz = np.where ((quantized_xy[:,2]>=z) & (quantized_xy[:,2]<z+1))
                 quantized_xyz = quantized_xy[iz]
                 if len(quantized_xyz) == 0 : continue
@@ -134,8 +135,8 @@ Xn = int((TOP_X_MAX-TOP_X_MIN)/TOP_X_DIVISION)
 Yn = int((TOP_Y_MAX-TOP_Y_MIN)/TOP_Y_DIVISION)
 Zn = int((TOP_Z_MAX-TOP_Z_MIN)/TOP_Z_DIVISION)  
 
-Rn = math.floor((FRONT_PHI_MAX-FRONT_PHI_MIN)/FRONT_PHI_DIVISION)  #deg/deg = grid #   vertical grid|
-Cn = math.floor((FRONT_THETA_MAX-FRONT_THETA_MIN)/FRONT_THETA_DIVISION) #deg/deg = grid #  horizontal grid-
+Rn = int((FRONT_PHI_MAX-FRONT_PHI_MIN)/FRONT_PHI_DIVISION)  #deg/deg = grid #   vertical grid|
+Cn = int((FRONT_THETA_MAX-FRONT_THETA_MIN)/FRONT_THETA_DIVISION) #deg/deg = grid #  horizontal grid-
 Fn = 3 
 
 top_paras = (TOP_X_MIN, TOP_X_MAX, TOP_Y_MIN, TOP_Y_MAX, TOP_Z_MIN, TOP_Z_MAX, TOP_X_DIVISION, TOP_Y_DIVISION, TOP_Z_DIVISION, Xn, Yn, Zn)
@@ -153,11 +154,11 @@ num = raw.shape[0]  # DON'T CHANGE THIS !
 
 
 # top view, front view data structure for saving processed maps (initialized with 1's)
-top_flip = np.ones((Xn, Yn, Zn+2), dtype = np.double) 	# DON'T CHANGE THIS !
+top_flip = np.ones((Xn, Yn, Zn+2), dtype = np.float32) 	# DON'T CHANGE THIS !
 # top-view maps : Zn height maps + 1 intensity map + 1 density map
 # top-view map size : Xn * Yn
 
-front_flip = np.ones((Rn, Cn, Fn), dtype = np.double)  # DON'T CHANGE THIS !
+front_flip = np.ones((Rn, Cn, Fn), dtype = np.float32)  # DON'T CHANGE THIS !
 # front-view maps : 1 height map + 1 distance map + 1 intensity map
 # front-view map size : Rn * Cn
 # ------------------------------------------------------------------------------
@@ -186,37 +187,37 @@ for i in range(map_num):
 	plt.subplot(1, map_num, i+1)
 	plt.imshow(top[:,:,i])
 	plt.gray()
-plt.show()
+#plt.show()
 
 # SHOW TOP VIEW MAPS of Python version (optional)
-#python_top=lidar_to_top(raw)
+python_top=lidar_to_top(raw)
 
-#map_num = len(python_top[0][0])
-#plt.figure('Python version - top view')
-#for i in range(map_num):
-#	plt.subplot(1, map_num, i+1)
-#	plt.imshow(python_top[:,:,i])
-#	plt.gray()
-#plt.show()
+map_num = len(python_top[0][0])
+plt.figure('Python version - top view')
+for i in range(map_num):
+	plt.subplot(1, map_num, i+1)
+	plt.imshow(python_top[:,:,i])
+	plt.gray()
+plt.show()
 
 for i in range(map_num-2):
 	print('Top view layer ', i,':')
 	print('- max in    C   ver:',max(top[:,:,i].flatten()) )
-#	print('- max in Python ver:',max(python_top[:,:,i].flatten()) )
+	print('- max in Python ver:',max(python_top[:,:,i].flatten()) )
 	print('- min in    C   ver:',min(top[:,:,i].flatten()) )
-#	print('- min in Python ver:',min(python_top[:,:,i].flatten()) )
+	print('- min in Python ver:',min(python_top[:,:,i].flatten()) )
 
 print('Top view layer ', map_num-2,' (density map) :')
 print('- max in    C   ver:',max(top[:,:,map_num-2].flatten()) )
-#print('- max in Python ver:',max(python_top[:,:,map_num-2].flatten()) )
+print('- max in Python ver:',max(python_top[:,:,map_num-2].flatten()) )
 print('- min in    C   ver:',min(top[:,:,map_num-2].flatten()) )
-#print('- min in Python ver:',min(python_top[:,:,map_num-2].flatten()) )
+print('- min in Python ver:',min(python_top[:,:,map_num-2].flatten()) )
 
 print('Top view layer ', map_num-1,' (intensity map) :')
 print('- max in    C   ver:',max(top[:,:,map_num-1].flatten()) )
-#print('- max in Python ver:',max(python_top[:,:,map_num-1].flatten()) )
+print('- max in Python ver:',max(python_top[:,:,map_num-1].flatten()) )
 print('- min in    C   ver:',min(top[:,:,map_num-1].flatten()) )
-#print('- min in Python ver:',min(python_top[:,:,map_num-1].flatten()) )
+print('- min in Python ver:',min(python_top[:,:,map_num-1].flatten()) )
 
 
 #------------------- 5. SHOW FRONT VIEW MAPS (optional) --------------------------
