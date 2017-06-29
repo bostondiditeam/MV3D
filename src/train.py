@@ -59,8 +59,9 @@ if __name__ == '__main__':
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
     if cfg.DATA_SETS_TYPE == 'didi2':
-
-        train_n_val_dataset=[
+        assert cfg.OBJ_TYPE == 'car' or cfg.OBJ_TYPE == 'ped'
+        if cfg.OBJ_TYPE == 'car':
+            train_n_val_dataset=[
             'suburu_pulling_up_to_it/suburu02',
             'nissan_brief/nissan06',
             # 'cmax_sitting_still/cmax01',
@@ -138,7 +139,10 @@ if __name__ == '__main__':
             'suburu_leading_at_distance_split/004',
 
         ]
-
+        else:
+            train_n_val_dataset=[
+                'ped_train/ped_train',
+            ]
 
 
     elif cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
