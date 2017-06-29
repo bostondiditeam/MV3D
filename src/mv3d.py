@@ -71,6 +71,7 @@ def  project_to_front_roi(rois3d):
 
 
 
+
 class Net(object):
 
     def __init__(self, prefix, scope_name, checkpoint_dir=None):
@@ -549,7 +550,10 @@ class Trainer(MV3D):
                     targets_loss = 1. * self.top_cls_loss + 0.005 * self.top_reg_loss
 
                 elif set([mv3d_net.imfeature_net_name]) == set(train_targets):
-                    targets_loss = 1. * self.fuse_cls_loss + 0.05 * self.fuse_reg_loss
+                    targets_loss = 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
+
+                elif set([mv3d_net.fusion_net_name]) == set(train_targets):
+                    targets_loss = 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
 
                 elif set([mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name]) == set(train_targets):
                     targets_loss = 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
@@ -557,7 +561,7 @@ class Trainer(MV3D):
                 elif set([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name,mv3d_net.fusion_net_name])\
                         == set(train_targets):
                     targets_loss = 1. * (1. * self.top_cls_loss + 0.05 * self.top_reg_loss) + \
-                                 1. * self.fuse_cls_loss + 0.1 * self.fuse_reg_loss
+                                 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
                 else:
                     ValueError('unknow train_target set')
 
