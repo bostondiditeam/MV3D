@@ -144,16 +144,22 @@ if __name__ == '__main__':
     if_score =False
 
     if config.cfg.DATA_SETS_TYPE == 'didi2':
-        test_bags = [
-            'test_car/ford01',
-            'test_car/ford02',
-            'test_car/ford03',
-            'test_car/ford04',
-            'test_car/ford05',
-            'test_car/ford06',
-            'test_car/ford07',
-            'test_car/mustang01'
-        ]
+        assert cfg.OBJ_TYPE == 'car' or cfg.OBJ_TYPE == 'ped'
+        if cfg.OBJ_TYPE == 'car':
+            test_bags = [
+                'test_car/ford01',
+                'test_car/ford02',
+                'test_car/ford03',
+                'test_car/ford04',
+                'test_car/ford05',
+                'test_car/ford06',
+                'test_car/ford07',
+                'test_car/mustang01'
+            ]
+        else:
+            test_bags = [
+                'test_ped/ped_test',
+            ]
 
     elif config.cfg.DATA_SETS_TYPE == 'didi':
         pass #todo
