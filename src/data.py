@@ -15,7 +15,8 @@ from multiprocessing import Pool
 from collections import OrderedDict
 import config
 import ctypes
-from numba import autojit
+from numba import jit
+from matplotlib import pyplot as plt
 
 import sys
 
@@ -78,6 +79,116 @@ class Preprocess(object):
 
         return top
 
+
+    # project 3D points to camera plane
+    def project_points(self, points):
+        pp = box3d_to_rgb_box(points)
+        return pp
+
+
+    # perspective transform camera image using bbox points
+    def transform_image(self, img, bbox_src, bbox_dst):
+        projected_pts_src = box3d_to_rgb_box(bbox_src)
+        # print('projected_pts_src dim: ', projected_pts_src.shape)
+        projected_pts_src = projected_pts_src.squeeze()
+        projected_pts_dst = box3d_to_rgb_box(bbox_dst)
+        # print('projected_pts_dst dim: ', projected_pts_dst.shape)
+        projected_pts_dst = projected_pts_dst.squeeze()
+        M1 = cv2.getPerspectiveTransform(np.float32(projected_pts_src[2:6]),
+                                         np.float32(projected_pts_dst[2:6]))
+        M2 = cv2.getPerspectiveTransform(np.float32(projected_pts_src[:4]),
+                                         np.float32(projected_pts_dst[:4]))
+        M = (M1 + M2) / 2
+        rows, cols = img.shape[:2]
+        new_img = cv2.warpPerspective(img, M, (cols, rows))
+        return new_img
+
+
+    def flip(self, rgb, top, boxes3d, axis=1):
+        assert (axis == 0) or (axis == 1), "axis can be 0 or 1."
+
+        rgb = rgb.squeeze()
+        tops = top.squeeze()
+        bbox = boxes3d
+
+        bbox_new = np.copy(bbox)
+        # self.display(tops, rgb, bbox)
+        # bbox_new = bbox_new.squeeze()
+        # (1, 8, 3)
+        bbox_new[:, :, axis] = -bbox_new[:, :, axis]
+        # print('bbox_new shape here: ', bbox_new.shape)
+        # if axis == 1:
+        #     rgb_new = self.transform_image(rgb, bbox, bbox_new)
+        #     # rgb_new = cv2.flip(rgb, axis)
+        # else:
+        # rgb_new = None
+        rgb_new = np.zeros(rgb.shape, dtype=np.int32)
+        tops_new = cv2.flip(tops, axis)
+        # self.display(tops_new, rgb_new, bbox_new)
+        return (tops_new, rgb_new, bbox_new)
+
+    # BGR to RGB conversion for opencv to matplotlib format
+    def BGR2RGB(self, img):
+        return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    # project 3D points to camera plane
+    def project_points(self, points):
+        pp = box3d_to_rgb_box(points)
+        print(pp.shape)
+        return pp
+
+    # draw bbox on camera image
+    def drawBbox(self, img, corners, color=(255, 255, 0)):
+        image = np.copy(img)
+        thickness = 10
+        for i in range(4):
+            pt1, pt2 = corners[2 * i], corners[2 * i + 1]
+            cv2.line(image, tuple(pt1.astype(int)), tuple(pt2.astype(int)),
+                     color=color, thickness=thickness)
+
+            pt1, pt2 = corners[i + 2 * (i // 2)], corners[3 - i + 6 * (i // 2)]
+            cv2.line(image, tuple(pt1.astype(int)), tuple(pt2.astype(int)),
+                     color=color, thickness=thickness)
+
+            pt1, pt2 = corners[i], corners[i + 4]
+            cv2.line(image, tuple(pt1.astype(int)), tuple(pt2.astype(int)),
+                     color=color, thickness=thickness)
+        return image
+
+    # display data
+    def display(self, top_slices=None, camera_img=None, gt_bbox=None):
+        if gt_bbox is not None:
+            # print('gt_bbox size here: ', gt_bbox.shape)
+            corners = gt_bbox  # .squeeze()
+            # print('after squeeze: ', corners.shape)
+            projected_corners = self.project_points(corners)
+            projected_corners = projected_corners.squeeze()
+
+            if camera_img is not None:
+                camera_img = self.drawBbox(camera_img, projected_corners)
+
+        fig_count = 0
+        if camera_img is not None:
+            fig_count += 1
+            plt.figure(fig_count)
+            plt.imshow(self.BGR2RGB(camera_img))
+            plt.title('Camera image')
+            plt.axis('off')
+        else:
+            print('No camera image available.')
+
+        if top_slices is not None:
+            fig_count += 1
+            plt.figure(fig_count)
+            n_height_maps = top_slices.shape[2]
+            fig, axes = plt.subplots(1, n_height_maps, figsize=(30, 16))
+            labels = ['height_' + str(i + 1) for i in range(n_height_maps - 2)] + ['Intensity', 'Density']
+
+            for i, ax in enumerate(axes):
+                top = top_slices[:, :, i]
+                ax.imshow(top, cmap="hot")
+                ax.set_title(labels[i])
+                ax.axis('off')
 
 proprocess = Preprocess()
 

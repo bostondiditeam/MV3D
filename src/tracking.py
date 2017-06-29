@@ -151,8 +151,8 @@ if __name__ == '__main__':
             'test_car/ford04',
             'test_car/ford05',
             'test_car/ford06',
-            # 'test_car/ford07',
-            # 'test_car/mustang01'
+            'test_car/ford07',
+            'test_car/mustang01'
         ]
 
     elif config.cfg.DATA_SETS_TYPE == 'didi':

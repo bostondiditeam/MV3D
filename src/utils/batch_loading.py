@@ -50,7 +50,7 @@ use_thread = True
 
 class BatchLoading2:
     def __init__(self, tags, queue_size=20, require_shuffle=False,
-                 require_log=False, is_testset=False, n_skip_frames=0, random_num=666):
+                 require_log=False, is_testset=False, n_skip_frames=0, random_num=666, is_flip=False):
         self.is_testset = is_testset
         self.shuffled = require_shuffle
         self.random_num = random_num
@@ -61,6 +61,7 @@ class BatchLoading2:
 
         # skit some frames
         self.tags = [tag for i, tag in enumerate(tags) if i % (n_skip_frames + 1) == 0]
+        self.is_flip = is_flip
 
         if self.shuffled:
             self.tags = shuffle(self.tags, random_state=self.random_num)
@@ -69,6 +70,8 @@ class BatchLoading2:
         self.size = len(self.tags)
 
         self.require_log = require_log
+        self.flip_axis = 1 # if axis=1, flip from y=0. If axis=0, flip from x=0
+        self.flip_rate = 4 # if flip_rate is 2, means every two frames
 
         self.cache_size = queue_size
         self.loader_need_exit = Value('i', 0)
@@ -126,13 +129,21 @@ class BatchLoading2:
     def preprocess_one_frame(self, rgb, lidar, obstacles):
         rgb = self.preprocess.rgb(rgb)
         top = self.preprocess.lidar_to_top(lidar)
+
         if self.is_testset:
             return rgb, top, None, None
         boxes3d = [self.preprocess.bbox3d(obs) for obs in obstacles]
         labels = [self.preprocess.label(obs) for obs in obstacles]
+        # flip in y axis.
+        if self.is_flip and len(boxes3d) > 0:
+            if self.tag_index % self.flip_rate == 1:
+                top, rgb, boxes3d = self.preprocess.flip(rgb, top, boxes3d, axis=1)
+            elif self.tag_index % self.flip_rate == 2:
+                top, rgb, boxes3d = self.preprocess.flip(rgb, top, boxes3d, axis=0)
         return rgb, top, boxes3d, labels
 
     def get_shape(self):
+        # todo for tracking, it means wasted a frame which will cause offset.
         train_rgbs, train_tops, train_fronts, train_gt_labels, train_gt_boxes3d, _ = self.load()
         top_shape = train_tops[0].shape
         front_shape = train_fronts[0].shape
@@ -294,7 +305,7 @@ if __name__ == '__main__':
 
     # bl = BatchLoading2(splitter.training_bags, splitter.training_tags)
 
-    with BatchLoading2(splitter.training_bags, splitter.training_tags) as bl:
+    with BatchLoading2(tags=splitter.training_tags, require_shuffle=True, random_num=np.random.randint(100)) as bl:
         time.sleep(5)
         for i in range(5):
             t0 = time.time()
