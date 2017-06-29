@@ -109,6 +109,7 @@ class Manager(Env):
         dep_copys={
             'didi_data': os.path.join(self.root_dir, '..', 'src', 'didi_data'),
             'kitti_data': os.path.join(self.root_dir, '..', 'src', 'kitti_data'),
+            'lidar_data_preprocess': os.path.join(self.root_dir, '..', 'src', 'lidar_data_preprocess'),
             'tracklets': os.path.join(self.root_dir, '..', 'src', 'tracklets'),
             'utils': os.path.join(self.root_dir, '..', 'src', 'utils'),
             'net': os.path.join(self.root_dir, '..', 'src', 'net'),
