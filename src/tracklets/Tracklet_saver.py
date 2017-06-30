@@ -12,6 +12,7 @@ from __future__ import print_function
 from tracklets.generate_tracklet import *
 import os
 import sys
+from config import cfg
 # from random import random
 import random
 random.seed()
@@ -39,7 +40,10 @@ class Tracklet_saver():
     # for add new tracklets
     # size is [h, w, l]
     def add_tracklet(self, first_frame_nb, size, transition, rotation):
-        obs_tracklet = Tracklet(object_type='Car', l=size[2], w=size[1], h=size[0], first_frame=first_frame_nb)
+        if cfg.OBJ_TYPE == 'car':
+            obs_tracklet = Tracklet(object_type='Car', l=size[2], w=size[1], h=size[0], first_frame=first_frame_nb)
+        elif cfg.OBJ_TYPE == 'ped':
+            obs_tracklet = Tracklet(object_type='Pedestrian', l=size[2], w=size[1], h=size[0], first_frame=first_frame_nb)
         self.add_tracklet_pose(obs_tracklet, transition, rotation)
         self.collection.tracklets.append(obs_tracklet)
         # if 0<transition[1]<8:
