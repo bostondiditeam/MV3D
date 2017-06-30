@@ -14,12 +14,6 @@ classA::classA() {
 
     is_initialized_ = false;
 
-    // if this is false, laser measurements will be ignored (except during init)
-    use_laser_ = true;
-
-    // if this is false, radar measurements will be ignored (except during init)
-    use_radar_ = true;
-
     // initial state vector
     x_ = VectorXd(n_x_);
 
@@ -115,8 +109,6 @@ void classA::initializeStateVector(const void * meas_package_input)
 
     // initialize P_ as a 5x5 identity matrix
     P_ = MatrixXd::Identity(5, 5);
-
-    previous_timestamp_= meas_package.timestamp_;
 }
 
 // calculate the co-ordinates of the sigma points
