@@ -108,7 +108,6 @@ ukf.initializeStateVector(ukfInstance, ctypes.c_void_p(meas_in_lidar1.ctypes.dat
 # Iteration 1
 timeDiff = meas_in_radar1[0] - meas_in_lidar1[0]
 delta_t = timeDiff * np.ones(1, dtype = np.double)
-# predictedState = np.zeros((5, 1), dtype = np.double)
 ukf.predict(ukfInstance, ctypes.c_void_p(predictedState.ctypes.data), ctypes.c_void_p(delta_t.ctypes.data))
 print "Predicted State: \n", predictedState
 print "********************************"
@@ -120,7 +119,6 @@ print "********************************"
 # Iteration 2
 timeDiff = meas_in_lidar2[0] - meas_in_radar1[0]
 delta_t = timeDiff * np.ones(1, dtype = np.double)
-# predictedState = np.zeros((5, 1), dtype = np.double)
 ukf.predict(ukfInstance, ctypes.c_void_p(predictedState.ctypes.data), ctypes.c_void_p(delta_t.ctypes.data))
 print "Predicted State: \n", predictedState
 print "********************************"
@@ -132,7 +130,6 @@ print "********************************"
 # Iteration 3
 timeDiff = meas_in_radar2[0] - meas_in_lidar2[0]
 delta_t = timeDiff * np.ones(1, dtype = np.double)
-# predictedState = np.zeros((5, 1), dtype = np.double)
 ukf.predict(ukfInstance, ctypes.c_void_p(predictedState.ctypes.data), ctypes.c_void_p(delta_t.ctypes.data))
 print "Predicted State: \n", predictedState
 print "********************************"
@@ -144,7 +141,6 @@ print "********************************"
 # Iteration 4
 timeDiff = meas_in_lidar3[0] - meas_in_radar2[0]
 delta_t = timeDiff * np.ones(1, dtype = np.double)
-# predictedState = np.zeros((5, 1), dtype = np.double)
 ukf.predict(ukfInstance, ctypes.c_void_p(predictedState.ctypes.data), ctypes.c_void_p(delta_t.ctypes.data))
 print "Predicted State: \n", predictedState
 print "********************************"
@@ -156,7 +152,6 @@ print "********************************"
 # Iteration 5
 timeDiff = meas_in_radar3[0] - meas_in_lidar3[0]
 delta_t = timeDiff * np.ones(1, dtype = np.double)
-# predictedState = np.zeros((5, 1), dtype = np.double)
 ukf.predict(ukfInstance, ctypes.c_void_p(predictedState.ctypes.data), ctypes.c_void_p(delta_t.ctypes.data))
 print "Predicted State: \n", predictedState
 print "********************************"

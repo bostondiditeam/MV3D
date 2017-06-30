@@ -63,7 +63,7 @@ void classA::initializeStateVector(const void * meas_package_input)
 {   
     std::cout << "initializeStateVector entered" << std::endl;
 
-    // convert meas_package_input to meas_package
+    // convert meas_package_input (C++) to meas_package (Python)
     const double * indata = (double *) meas_package_input;
 
     // LiDAR
@@ -162,7 +162,7 @@ void classA::passSigmaPointsToProcessFunc(MatrixXd Xsig_aug, const void * timeDi
 {
     // Comments: pass the sigma points through the process function
 
-    // convert the delta_t information from Python to the C++ format
+    // convert timeDiff (C++) to delta_t (Python)
     double * indata = (double *) timeDiff;
     double delta_t = *indata/1000000.0;
 
@@ -249,15 +249,11 @@ void classA::predictFinal(const void * predicted_state)
 
 void classA::update(const void * meas_package_input, const void * updated_state)
 {   
-    // convert meas_package_input to meas_package
+    // convert meas_package_input (C++) to meas_package (Python)
     const double * indata = (double *) meas_package_input;
-
-    // MeasurementPackage meas_package;
 
     // LiDAR
     if(indata[1] == 0){  
-        // std::cout << "reached here LiDAR process" << std::endl;
-
         meas_package.timestamp_ = indata[0];
         meas_package.sensor_type_ = MeasurementPackage::LASER;
 
@@ -266,8 +262,6 @@ void classA::update(const void * meas_package_input, const void * updated_state)
                                             indata[3];    
     // RADAR
     } else if(indata[1] == 1){
-        // std::cout << "reached here RADAR process" << std::endl;
-
         meas_package.timestamp_ = indata[0];
         meas_package.sensor_type_ = MeasurementPackage::RADAR;
 
@@ -390,7 +384,7 @@ void classA::updateRadar(const void * updated_state)
 // update x' and P' with incoming lidar measurement
 void classA::updateLidar(const void * updated_state)
 {   
-    // use the normal Kalman Filter equations as opposed to the EKF or the UKF
+    // use the normal Kalman Filter equations as opposed to those for the EKF or the UKF
 
     MatrixXd H_ = MatrixXd(2, 5);
 
