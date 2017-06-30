@@ -122,7 +122,7 @@ class MV3D(object):
 
         # anchors
         self.top_stride=None
-        self.num_class = data.proprocess.num_class  # incude background
+        self.num_class = data.preprocess.num_class  # incude background
 
         ratios=np.array([0.5,1,2], dtype=np.float32)
         scales=np.array([1,2,3],   dtype=np.float32)

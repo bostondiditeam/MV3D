@@ -4,12 +4,11 @@ matplotlib.use('AGG')
 import matplotlib.pyplot as plt
 import cv2
 import os
-import net.utility.file as file
 from config import cfg
 import net.processing.boxes3d as box3d
 
 
-file.makedirs(cfg.LOG_DIR)
+if os.path.exists(cfg.LOG_DIR)==False: os.makedirs(cfg.LOG_DIR)
 
 def imshow(name, image, resize=1):
     H,W,_ = image.shape

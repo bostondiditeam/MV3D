@@ -1,8 +1,10 @@
 import math
 import numpy as np
 import cv2
+import sys
 import net.processing.projection as proj
-from shapely.geometry import Polygon
+if sys.version_info[0]>=3:
+    from shapely.geometry import Polygon
 from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
     TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
@@ -316,7 +318,7 @@ def regularise_box3d(boxes3d):
     return reg_boxes3d
 
 
-def boxes3d_decompose(boxes3d:np.ndarray):
+def boxes3d_decompose(boxes3d):
 
     # translation
     if cfg.DATA_SETS_TYPE == 'didi2' or cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
@@ -493,7 +495,7 @@ def box3d_intersection(box_a, box_b):
     return z_intersection * xy_intersection
 
 
-def boxes3d_score_iou(gt_boxes3d: np.ndarray, pre_boxes3d: np.ndarray):
+def boxes3d_score_iou(gt_boxes3d, pre_boxes3d):
     n_pre_box = pre_boxes3d.shape[0]
     if n_pre_box ==0: return 0.
     n_gt_box = gt_boxes3d.shape[0]

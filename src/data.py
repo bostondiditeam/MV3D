@@ -68,7 +68,7 @@ class Preprocess(object):
         return label
 
 
-    def lidar_to_top(self, lidar :np.dtype) ->np.ndarray:
+    def lidar_to_top(self, lidar):
         if (cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test' or cfg.DATA_SETS_TYPE == 'didi2'):
             lidar = filter_center_car(lidar)
 
@@ -190,7 +190,7 @@ class Preprocess(object):
                 ax.set_title(labels[i])
                 ax.axis('off')
 
-proprocess = Preprocess()
+preprocess = Preprocess()
 
 
 @jit
@@ -227,7 +227,7 @@ def draw_top_image(lidar_top):
     return top_image
 
 
-def clidar_to_top(lidar:np.ndarray):
+def clidar_to_top(lidar):
     # Calculate map size and pack parameters for top view and front view map (DON'T CHANGE THIS !)
     Xn = int((TOP_X_MAX - TOP_X_MIN) / TOP_X_DIVISION)
     Yn = int((TOP_Y_MAX - TOP_Y_MIN) / TOP_Y_DIVISION)
@@ -370,7 +370,7 @@ def proprecess_rgb(save_preprocess_dir,dataset,date,drive,frames_index,overwrite
             continue
         print('rgb images={}'.format(n))
         rgb = dataset.rgb[count][0]
-        rgb = proprocess.rgb(rgb)
+        rgb = preprocess.rgb(rgb)
 
         # todo fit it to didi dataset later.
         cv2.imwrite(os.path.join(path), rgb)
