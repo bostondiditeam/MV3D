@@ -5,10 +5,12 @@ import rospy, rosbag
 from parse_tracklet import parse_xml
 from generate_tracklet import Tracklet, TrackletCollection
 from sort import Sort
+import os
 
-bag_file = '/media/prerit/Data/didi_data/ped/ped_test_003/003.bag'
-tracklet_file = '/media/prerit/Data/didi_data/ped/ped_test_003/003.xml'
-new_tracklet_file = '/media/prerit/Data/didi_data/ped/ped_test_003/003_corrected.xml' 
+bag_file = '/hdd/data/didi_competition/didi_dataset/round2/Data/test_ped/ped_test.bag'
+tracklet_dir = '/home/stu/didi/code/MV3D/log/tracking/exp_resnet_fuse_1_bak/tracklet'
+tracklet_file = os.path.join(tracklet_dir, 'ped_test.xml')
+new_tracklet_file = os.path.join(tracklet_dir, 'ped_test_corrected.xml')
 
 
 tracklets = parse_xml(tracklet_file)

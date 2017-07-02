@@ -37,7 +37,7 @@ class Task(object):
                  '-n %s -c True' % (iter(200), self.tag))
         run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, 100, tag, self.fast_test))
 
-        for i in range(iter(5)):
+        for i in range(iter(6)):
             run_task('python train.py -w "top_view_rpn" -t "top_view_rpn" -i %d '
                      ' -n %s -c True' % (iter(3000), tag))
             run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, i, tag, self.fast_test))
