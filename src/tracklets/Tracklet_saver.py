@@ -57,35 +57,45 @@ class Tracklet_saver():
 if __name__ == '__main__':
     #a test case
     os.makedirs('./test_output/', exist_ok=True)
-    a = Tracklet_saver('./test_output/', 'ford05.xml')
+    a = Tracklet_saver('./test_output/', 'ped_test', exist_ok=True)
     # The size is for obstacle car, the order for size is [height, width, length]
-    rate = 1.2
-    size = [1.466, 1.824, 4.359]
+    rate = 1.1
+    size = [1.7, 0.8, 0.8]
     for i in range(3):
         size[i] = size[i] * rate
 
 
-    # for tx, ty, tz for different poses.
-    transition = [0,3,0]
-    # for rx, ry, rz for different poses.
-    rotation = [0, 0, 0]
     # which frames you want the above posed in. Like the belowing example, I want to write size, transition and
     # rotation defined above to be in frame 324 to frame 647, then I define it in the following way.
     # for i in range(324,647):
     #     a.add_tracklet(i, size, transition, rotation)
 
-    objects = read_objects('./ford05.xml')
+    objects = read_objects('./input/ped_test.xml')
+
 
 
     # list here:
 
+    # for frame in objects: # (i, size, transition, rotation)
+    #     for item in frame:
+    #         after_size = [0,0,0]
+    #         random_list = [random.random()*0.12, random.random()*0.16, random.random()*0.17]
+    #         after_size = [0, 0, 0]
+    #         for i, s in enumerate(item[3]):
+    #             after_size[i] = size[i] + random_list[i]
+    #         a.add_tracklet(item[0], after_size, item[1], item[2])
+
     for frame in objects: # (i, size, transition, rotation)
         for item in frame:
-            after_size = [0,0,0]
-            random_list = [random.random()*0.12, random.random()*0.16, random.random()*0.17]
             after_size = [0, 0, 0]
+            size_np = np.array(item[3], dtype=np.float)
+            # print('size np here: ', size_np)
+            if np.any(size_np < 0.2):
+                print('filtered: ', size_np)
+                continue
+
             for i, s in enumerate(item[3]):
-                after_size[i] = size[i] + random_list[i]
+                after_size[i] = size[i] #+ random_list[i]
             a.add_tracklet(item[0], after_size, item[1], item[2])
 
 

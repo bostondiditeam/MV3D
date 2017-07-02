@@ -71,7 +71,7 @@ class BatchLoading2:
 
         self.require_log = require_log
         self.flip_axis = 1 # if axis=1, flip from y=0. If axis=0, flip from x=0
-        self.flip_rate = 4 # if flip_rate is 2, means every two frames
+        self.flip_rate = 2 # if flip_rate is 2, means every two frames
 
         self.cache_size = queue_size
         self.loader_need_exit = Value('i', 0)

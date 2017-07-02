@@ -105,27 +105,25 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
 
     with tf.variable_scope('feature-extract-resnet') as scope:
         print('build_resnet')
-        block = ResnetBuilder.resnet_tiny(input)
+        block = ResnetBuilder.resnet_tiny_smaller_kernel(input)
 
         # resnet_input = resnet.get_layer('input_1').input
         # resnet_output = resnet.get_layer('add_7').output
         # resnet_f = Model(inputs=resnet_input, outputs=resnet_output)  # add_7
         # # print(resnet_f.summary())
         # block = resnet_f(input)
-        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME', name='2')
-        stride = 8
+        block = upsample2d(block, factor=2, has_bias=True, trainable=True, name='upsampling')
+
+        stride = 2
         feature = block
 
 
     with tf.variable_scope('predict') as scope:
-        # up     = upsample2d(block, factor = 2, has_bias=True, trainable=True, name='1')
+        # block = upsample2d(block, factor=4, has_bias=True, trainable=True, name='1')
         # up     = block
-        kernel_size = config.cfg.TOP_CONV_KERNEL_SIZE
-        print('\ntop_predict kernal_size: {}\n'.format(kernel_size) )
-        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(kernel_size, kernel_size),
-                            stride=[1, 1, 1, 1], padding='SAME', name='1')
-        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(kernel_size, kernel_size),
-                            stride=[1, 1, 1, 1], padding='SAME', name='2')
+        # kernel_size = config.cfg.TOP_CONV_KERNEL_SIZE
+        block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',
+                               name='2')
         scores = conv2d(block, num_kernels=2 * num_bases, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',name='score')
         probs = tf.nn.softmax(tf.reshape(scores, [-1, 2]), name='prob')
         deltas = conv2d(block, num_kernels=4 * num_bases, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',name='delta')

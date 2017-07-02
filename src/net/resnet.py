@@ -251,12 +251,32 @@ class ResnetBuilder(object):
         return block
 
     @staticmethod
+    def build_tiny_smaller_kernel(input, block_fn, repetitions):
+
+        _handle_dim_ordering()
+        block_fn = _get_block(block_fn)
+        conv1 = _conv_bn_relu(filters=64, kernel_size=(3, 3), strides=(1, 1))(input)
+        pool1 = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), padding="same")(conv1)
+
+        block = pool1
+        filters = 64
+        for i, r in enumerate(repetitions):
+            block = _residual_block(block_fn, filters=filters, repetitions=r, is_first_layer=(i == 0))(block)
+            filters *= 2
+
+        return block
+
+    @staticmethod
     def build_resnet_18(input_shape, num_outputs):
         return ResnetBuilder.build(input_shape, num_outputs, basic_block, [2, 2, 2, 2])
 
     @staticmethod
     def resnet_tiny(input):
         return ResnetBuilder.build_tiny(input, bottleneck, [3, 4])
+
+    @staticmethod
+    def resnet_tiny_smaller_kernel(input):
+        return ResnetBuilder.build_tiny_smaller_kernel(input, bottleneck, [3, 4])
 
     @staticmethod
     def build_resnet_34(input_shape, num_outputs):

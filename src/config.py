@@ -109,14 +109,14 @@ elif __C.DATA_SETS_TYPE == 'didi2':
     if __C.OBJ_TYPE =='ped':
         TOP_Y_MIN = -15
         TOP_Y_MAX = 15
-        TOP_X_MIN = -25
-        TOP_X_MAX = 25
-        TOP_Z_MIN = -3.5
-        TOP_Z_MAX = 0.6
+        TOP_X_MIN = -15
+        TOP_X_MAX = 20
+        TOP_Z_MIN = -2.0
+        TOP_Z_MAX = 0.5
 
         TOP_X_DIVISION = 0.1
         TOP_Y_DIVISION = 0.1
-        TOP_Z_DIVISION = 0.3
+        TOP_Z_DIVISION = 0.2
     elif __C.OBJ_TYPE =='car':
         TOP_Y_MIN = -30
         TOP_Y_MAX = 30
