@@ -498,7 +498,7 @@ class Trainer(MV3D):
         self.iter_debug = 600
         self.n_global_step = 0
         self.validation_step = 40
-        self.ckpt_save_step = 200
+        self.ckpt_save_step = 2000
         self.log_image_count=0
         self.n_iter=0
         self.fast_test_mode = fast_test_mode
@@ -758,16 +758,19 @@ class Trainer(MV3D):
                     self.save_weights(self.train_target)
                     self.save_progress()
 
-
+                if (iter+1)%200==0:
                     if cfg.TRAINING_TIMER:
                         self.log_msg.write('It takes %0.2f secs to train %d iterations. \n' % \
-                                           (time_it.time_diff_per_n_loops(), self.ckpt_save_step))
+                                           (time_it.time_diff_per_n_loops(), 200))
                 self.n_global_step += 1
 
 
             if cfg.TRAINING_TIMER:
                 self.log_msg.write('It takes %0.2f secs to train the dataset. \n' % \
                                    (time_it.total_time()))
+
+            self.save_weights(self.train_target)
+            self.save_progress()
 
 
 
@@ -904,7 +907,7 @@ class Trainer(MV3D):
 
             boxes3d, lables = self.predict(self.batch_top_view, self.batch_front_view, self.batch_rgb_images)
 
-            if set(self.train_target) ==set(mv3d_net.top_view_rpn_name):
+            if 0 and set(self.train_target) !=set(mv3d_net.top_view_rpn_name):
                 # get iou
                 iou = -1
                 inds = np.where(self.batch_gt_labels[0] != 0)
