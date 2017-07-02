@@ -62,7 +62,7 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
 
         # detection
         boxes3d, probs = predict(top, front, rgb)
-        predict.dump_log(log_subdir=os.path.join('tracking',log_tag), n_frame=i, frame_tag=frame_id)
+        # predict.dump_log(log_subdir=os.path.join('tracking',log_tag), n_frame=i, frame_tag=frame_id)
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i % timer_step == 0 and i != 0:
@@ -71,12 +71,13 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
 
         if len(boxes3d) != 0:
             translation, size, rotation = boxes3d_decompose(boxes3d[:, :, :])
-
+            # print(translation)
+            # print(len(translation))
             # add to tracklets
             for j in range(len(translation)):
                 # if 0 < translation[j, 1] < 8:
-                # print('pose wrote. ')
-                tracklet.add_tracklet(current_frame_num, size[j], translation[j], rotation[j], probs[j])
+                # print('pose wrote. '
+                tracklet.add_tracklet(current_frame_num, size[j], translation[j], rotation[j], probs[j],boxes3d[j])
 
         # print('frame_counter is here: ', current_frame_num, ' and i is here: ', i, 'frame id is here: ', frame_id)
 
@@ -147,7 +148,7 @@ if __name__ == '__main__':
         assert cfg.OBJ_TYPE == 'car' or cfg.OBJ_TYPE == 'ped'
         if cfg.OBJ_TYPE == 'car':
             test_bags = [
-                'test_car/ford01',
+                # 'test_car/ford01',
                 'test_car/ford02',
                 'test_car/ford03',
                 'test_car/ford04',
