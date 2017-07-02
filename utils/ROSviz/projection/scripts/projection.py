@@ -171,7 +171,7 @@ class Projection:
             md = self.metadata
     
             # find obstacle rear RTK to centroid vector
-            lrg_to_gps = [md['gps_l'], -md['gps_w'], md['gps_h']]
+            lrg_to_gps = [md['rear_gps_l'], -md['rear_gps_w'], md['rear_gps_h']]
             lrg_to_centroid = [md['l'] / 2., -md['w'] / 2., md['h'] / 2.]
             obs_r_to_centroid = np.subtract(lrg_to_centroid, lrg_to_gps)
     
@@ -218,11 +218,11 @@ class Projection:
             print( e )
             return
     
-        tx, ty, tz, yaw, pitch, roll = [0.00749025, -0.40459941, -0.51372948, 
-                                        -1.66780896, -1.59875352, -3.05415572]
-        translation = [tx, ty, tz, 1]
-        rotationMatrix = tf.transformations.euler_matrix(roll, pitch, yaw)
-        rotationMatrix[:, 3] = translation
+        #tx, ty, tz, yaw, pitch, roll = [0.00749025, -0.40459941, -0.51372948, 
+        #                                -1.66780896, -1.59875352, -3.05415572]
+        #translation = [tx, ty, tz, 1]
+        #rotationMatrix = tf.transformations.euler_matrix(roll, pitch, yaw)
+        #rotationMatrix[:, 3] = translation
         md = self.metadata
         dims = np.array([md['l'], md['w'], md['h']])
         outputName = '/image_bbox'
@@ -251,9 +251,10 @@ class Projection:
         cameraModel = PinholeCameraModel()
         cam_info = load_cam_info(self.calib_file)
         cameraModel.fromCameraInfo(cam_info)
-        for pt in corners:
-            rotated_pt = rotationMatrix.dot(list(pt)+[1])
-            projected_pts.append(cameraModel.project3dToPixel(rotated_pt))
+        projected_pts = [cameraModel.project3dToPixel(list(pt)+[1]) for pt in corners]
+        #for pt in corners:
+        #    rotated_pt = rotationMatrix.dot(list(pt)+[1])
+        #    projected_pts.append(cameraModel.project3dToPixel(rotated_pt))
         projected_pts = np.array(projected_pts)
         center = np.mean(projected_pts, axis=0)
         out_img = drawBbox(img, projected_pts)

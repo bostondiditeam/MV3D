@@ -19,6 +19,7 @@ from camera_info import *
 from utils import *
 from parse_tracklet import *
 import argparse
+import pandas as pd
 
 # https://stackoverflow.com/questions/470690/how-to-automatically-generate-n-distinct-colors
 kelly_colors_dict = dict(
@@ -111,7 +112,6 @@ class Projection:
     def add_bbox(self):
         inputName = '/image_raw'
         rospy.Subscriber(inputName, Image, self.handle_img_msg, queue_size=1)
-         
 
     def create_marker(self):
         marker = Marker()
@@ -139,7 +139,8 @@ class Projection:
             print( e )
             return
 
-        self.frame_index = self.timestamp_map[img_msg.header.stamp.to_nsec()]
+        timestamp = img_msg.header.stamp.to_nsec()
+        self.frame_index = self.timestamp_map[timestamp]
         if self.offset :
             self.frame_index -= self.offset
         out_img = np.copy(img)
@@ -151,7 +152,7 @@ class Projection:
             marker.color.r = color[0]/255
             marker.color.g = color[1]/255
             marker.color.b = color[2]/255
-            marker.color.a = 0.75
+            marker.color.a = 0.5
         
             marker.header.stamp = now
             marker.pose.position = Point(*f.trans)
@@ -167,6 +168,10 @@ class Projection:
             dims = np.array([md['l'], md['w'], md['h']])
             obs_centroid = np.array(f.trans)
             orient = list(f.rotq)
+            #orient[2] -= 0.035
+            #R = tf.transformations.quaternion_matrix((0,0,-0.0065,1))
+            #obs_centroid = R.dot(list(obs_centroid)+[1])[:3]
+    
    
             if obs_centroid is None:
                 rospy.loginfo("Couldn't find obstacle centroid")
@@ -185,9 +190,21 @@ class Projection:
     
             # get bbox 
             R = tf.transformations.quaternion_matrix(orient)
+            #R = tf.transformations.quaternion_matrix([0,0,0,1])
             corners = [0.5*np.array([i,j,k])*dims for i in [-1,1] 
                         for j in [-1,1] for k in [-1,1]]
-            corners = [obs_centroid + R.dot(list(c)+[1])[:3] for c in corners]
+            corners = np.array([obs_centroid + R.dot(list(c)+[1])[:3] for c in corners])
+            #if self.ground_corr is not None:
+            #    z_min, x_min, y_min = self.ground_corr.loc[timestamp]
+            #    z_offset = z_min - min(corners[:,2])
+            #    x_offset = x_min - min(corners[:,0])
+            #    y_offset = y_min - min(corners[:,1])
+            #    corr = np.array([0, 0, z_offset])
+            #    #corr = np.array([0, 0,0])
+            #    #corr = np.array([x_offset, y_offset, z_offset])
+            #    corr[np.isnan(corr)]=0
+            #    corners+=corr
+            #print(corners)
             cameraModel = PinholeCameraModel()
             cam_info = load_cam_info(self.calib_file)
             cameraModel.fromCameraInfo(cam_info)

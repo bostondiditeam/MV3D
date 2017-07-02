@@ -8,6 +8,7 @@ import PyKDL as kd
 import numpy as np
 import tf
 import yaml
+import argparse
 
 
 
@@ -60,7 +61,6 @@ if __name__ == "__main__" :
     input_tracklet = sys.argv[1] 
     output_tracklet = sys.argv[2]
     offset_file = sys.argv[3]  
-        
 
     assert os.path.isfile(input_tracklet), 'Tracklet file %s does not exist' % input_tracklet
     assert os.path.isfile(offset_file), 'Meta file %s does not exist' % offset_file
