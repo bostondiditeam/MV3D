@@ -3,7 +3,7 @@ import glob
 import numpy as np
 from collections import defaultdict
 import shutil
-from tracklets.python.bag_to_kitti import *
+from ..bag_to_kitti import *
 
 
 def get_pitch_local(p1,p2):
@@ -12,6 +12,31 @@ def get_pitch_local(p1,p2):
     delta_heigth=p1[2] - p2[2]-0.3556 # 0.3556 = front_z-rear_z,refrence tf.launch
     return -np.arcsin(delta_heigth/LA.norm(p1-p2))
 
+def interpolate_to_camera(camera_df, other_dfs, filter_cols=[]):
+    if not isinstance(other_dfs, list):
+        other_dfs = [other_dfs]
+    if not isinstance(camera_df.index, pd.DatetimeIndex):
+        print('Error: Camera dataframe needs to be indexed by timestamp for interpolation')
+        return pd.DataFrame()
+
+    for o in other_dfs:
+        o['timestamp'] = pd.to_datetime(o['timestamp'])
+        o.set_index(['timestamp'], inplace=True)
+        o.index.rename('index', inplace=True)
+
+    merged = functools.reduce(lambda left, right: pd.merge(
+        left, right, how='outer', left_index=True, right_index=True), [camera_df] + other_dfs)
+    merged.interpolate(method='time', inplace=True, limit=100, limit_direction='both')
+
+    filtered = merged.loc[camera_df.index]  # back to only camera rows
+    filtered.fillna(0.0, inplace=True)
+    filtered['timestamp'] = filtered.index.astype('int')  # add back original timestamp integer col
+    if filter_cols:
+        if not 'timestamp' in filter_cols:
+            filter_cols += ['timestamp']
+        filtered = filtered[filter_cols]
+
+    return filtered
 
 def get_obstacle_pos_local(
         front,
@@ -60,11 +85,11 @@ def estimate_obstacle_poses_local(
 
     return output_poses
 
-def choose_udacity_or_local_correction(local_correction):
-    if local_correction:
-        return estimate_obstacle_poses_local
-    else:
-        return estimate_obstacle_poses
+# def choose_udacity_or_local_correction(local_correction):
+#     if local_correction:
+#         return estimate_obstacle_poses_local
+#     else:
+#         return estimate_obstacle_poses
 
 
 def syc_rtk_timestamp_to_camera(obs_rtk,camera):

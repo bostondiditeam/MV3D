@@ -1,6 +1,6 @@
 """ ROS Bag file topic definitions
 """
-print("bag_topic_def is here")
+
 SINGLE_CAMERA_TOPIC = "/image_raw"
 CAMERA_TOPICS = [SINGLE_CAMERA_TOPIC]
 
@@ -11,3 +11,4 @@ CAP_FRONT_RTK_TOPICS = ["/capture_vehicle/front/gps/rtkfix", "/objects/capture_v
 
 OBJECTS_TOPIC_ROOT = "/objects"
 
+TF_TOPIC = "/tf"
