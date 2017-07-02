@@ -76,7 +76,7 @@ def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weigh
             for j in range(len(translation)):
                 # if 0 < translation[j, 1] < 8:
                 # print('pose wrote. ')
-                tracklet.add_tracklet(current_frame_num, size[j], translation[j], rotation[j])
+                tracklet.add_tracklet(current_frame_num, size[j], translation[j], rotation[j], probs[j])
 
         # print('frame_counter is here: ', current_frame_num, ' and i is here: ', i, 'frame id is here: ', frame_id)
 

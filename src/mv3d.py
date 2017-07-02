@@ -235,7 +235,7 @@ class MV3D(object):
                                             self.rois3d,
                                             score_threshold=config.cfg.PREDICT_SCORE_THRESHOLD)
 
-        return self.boxes3d, self.lables
+        return self.boxes3d, self.probs
 
 
     def predict_log(self, log_subdir, log_rpn=False, step=None, scope_name='',loss:tuple =None,
