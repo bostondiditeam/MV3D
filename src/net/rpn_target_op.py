@@ -159,20 +159,20 @@ def rpn_target( anchors, inside_inds, gt_labels,  gt_boxes):
 
     # subsample positive labels
     num_fg = int(CFG.TRAIN.RPN_FG_FRACTION * CFG.TRAIN.RPN_BATCHSIZE)
-    fg_inds = np.where(labels != 0)[0]
+    fg_inds = np.where(labels == 1)[0]
     if len(fg_inds) > num_fg:
         disable_inds = np.random.choice( fg_inds, size=(len(fg_inds) - num_fg), replace=False)
         labels[disable_inds] = -1
 
     # subsample negative labels
-    num_bg = CFG.TRAIN.RPN_BATCHSIZE - np.sum(labels != 0)
+    num_bg = CFG.TRAIN.RPN_BATCHSIZE - np.sum(labels == 1)
     bg_inds = np.where(labels == 0)[0]
     if len(bg_inds) > num_bg:
         disable_inds = np.random.choice(bg_inds, size=(len(bg_inds) - num_bg), replace=False)
         labels[disable_inds] = -1
 
     idx_label  = np.where(labels != -1)[0]
-    idx_target = np.where(labels != 0)[0]
+    idx_target = np.where(labels ==  1)[0]
 
     pos_neg_inds   = inside_inds[idx_label]
     labels = labels[idx_label]
@@ -197,6 +197,7 @@ def rpn_target( anchors, inside_inds, gt_labels,  gt_boxes):
 #
 
 
+## unit test ##---
 def draw_rpn_gt(image, gt_boxes, gt_labels=None):
 
     ## gt
@@ -207,10 +208,10 @@ def draw_rpn_gt(image, gt_boxes, gt_labels=None):
     num =len(gt_boxes)
     for n in range(num):
         b = gt_boxes[n]
-        if gt_labels[n]!= 0:
-            cv2.rectangle(img_gt,(b[0],b[1]),(b[2],b[3]),(255,0,0),0)
+        if gt_labels[n]==1:
+            cv2.rectangle(img_gt,(b[0],b[1]),(b[2],b[3]),(255,0,0),2)
         elif gt_labels[n]==0:
-            cv2.rectangle(img_gt, (b[0], b[1]), (b[2], b[3]), (0, 255, 255), 0)
+            cv2.rectangle(img_gt, (b[0], b[1]), (b[2], b[3]), (0, 255, 255), 2)
 
     return img_gt
 
@@ -228,7 +229,7 @@ def draw_rpn_labels(image, anchors, inds, labels):
     num_anchors = len(anchors)
     labels = labels.reshape(-1)
 
-    fg_label_inds = inds[np.where(labels != 0)[0]]
+    fg_label_inds = inds[np.where(labels == 1)[0]]
     bg_label_inds = inds[np.where(labels == 0)[0]]
     num_pos_label = len(fg_label_inds)
     num_neg_label = len(bg_label_inds)
