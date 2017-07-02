@@ -16,6 +16,7 @@ import rosbag
 import datetime
 import pandas as pd
 import numpy as np
+import math
 
 
 SEC_PER_NANOSEC = 1e9
@@ -63,6 +64,23 @@ class ImageBridge:
             print(e)
         results['filename'] = image_filename
         return results
+
+
+def writeRadar(radar_msg, outdir):
+    radar_filename = os.path.join(outdir, str(radar_msg.header.stamp.to_nsec()) + '.csv')
+    radar_df = pd.DataFrame(columns=['id','x','y','vel'])
+    for i,track in enumerate(radar_msg.tracks):
+        if (track.status != 3) or (track.range>60) or (track.range<5) :
+            continue    
+        r = track.range
+        phi = track.angle/180*np.pi
+        x = r*math.cos(phi)+1.8
+        y = -r*math.sin(phi)
+        radar_df.loc[i] = [track.number, x, y, track.rate]
+    radar_df['id'] = radar_df['id'].astype(int)
+    radar_df.to_csv(radar_filename, index=False)
+    return radar_filename
+        
 
 
 def get_bag_info(bag_file, nanosec=True):

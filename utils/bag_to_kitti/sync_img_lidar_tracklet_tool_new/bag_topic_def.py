@@ -3,6 +3,7 @@
 
 SINGLE_CAMERA_TOPIC = "/image_raw"
 CAMERA_TOPICS = [SINGLE_CAMERA_TOPIC]
+RADAR_TOPICS = ["/radar/tracks"]
 
 CAP_REAR_GPS_TOPICS = ["/capture_vehicle/rear/gps/fix", "/objects/capture_vehicle/rear/gps/fix"]
 CAP_REAR_RTK_TOPICS = ["/capture_vehicle/rear/gps/rtkfix", "/objects/capture_vehicle/rear/gps/rtkfix"]

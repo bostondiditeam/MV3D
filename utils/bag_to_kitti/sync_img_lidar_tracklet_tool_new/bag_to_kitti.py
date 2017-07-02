@@ -47,6 +47,7 @@ FRONT_TO_LIDAR = [-1.0922, 0, -0.0508]
 BASE_LINK_TO_LIDAR_PED = [1.9, 0., 1.6]
 
 CAMERA_COLS = ["timestamp", "width", "height", "frame_id", "filename"]
+RADAR_COLS = ["timestamp", "filename"]
 GPS_COLS = ["timestamp", "lat", "long", "alt"]
 POS_COLS = ["timestamp", "tx", "ty", "tz", "rx", "ry", "rz"]
 
@@ -173,6 +174,11 @@ def pose2dict(timestamp, msg, pose_dict):
     pose_dict["rx"].append(rot_xyz[0])
     pose_dict["ry"].append(rot_xyz[1])
     pose_dict["rz"].append(rot_xyz[2])
+
+#ittwi:radar
+def radar2dict(timestamp, filename, radar_dict):
+    radar_dict["timestamp"].append(timestamp)
+    radar_dict["filename"].append(filename)
 
 
 def tf2dict(timestamp, tf, tf_dict):
@@ -690,6 +696,10 @@ def main():
 
     parser.add_argument('-m', dest='msg_only', action='store_true', help='Messages only, no images')
     parser.add_argument('-u', dest='unique_paths', action='store_true', help='Unique bag output paths')
+    # ittwi:radar
+    parser.add_argument('-r', dest='include_radar', action='store_true', help='Include radar data')
+    parser.set_defaults(include_radar=False)
+
     parser.set_defaults(msg_only=False)
     parser.set_defaults(unique_paths=False)
     parser.set_defaults(debug=False)
@@ -717,8 +727,12 @@ def main():
 
     include_images = False if msg_only else True
 
+    #ittwi:radar
+    include_radar = args.include_radar
+    
+
     filter_topics = CAMERA_TOPICS + CAP_FRONT_RTK_TOPICS + CAP_REAR_RTK_TOPICS \
-        + CAP_FRONT_GPS_TOPICS + CAP_REAR_GPS_TOPICS
+        + CAP_FRONT_GPS_TOPICS + CAP_REAR_GPS_TOPICS + RADAR_TOPICS
 
     # FIXME hard coded obstacles
     # The original intent was to scan bag info for obstacles and populate dynamically in combination
@@ -756,6 +770,9 @@ def main():
         get_outdir(outdir)
         if include_images:
             camera_outdir = get_outdir(outdir, "image_02/data")
+        #ittwi:radar
+        if include_radar:
+            radar_outdir = get_outdir(outdir, "radar/data")
         bs.write_infos(outdir)
         readers = bs.get_readers()
         stats_acc = defaultdict(int)
@@ -778,6 +795,15 @@ def main():
                 camera2dict(timestamp, msg, write_results, cap_data['camera'])
                 stats['img_count'] += 1
                 stats['msg_count'] += 1
+
+            elif topic in RADAR_TOPICS:
+                radar_filename=None
+                if include_radar:
+                    radar_filename = writeRadar(msg, radar_outdir)
+                    radar_filename = os.path.relpath(radar_filename, outdir)
+                radar2dict(timestamp, radar_filename, cap_data['radar'])
+                stats['msg_count'] += 1
+                
 
             elif topic in CAP_REAR_RTK_TOPICS:
                 pose2dict(timestamp, msg.pose, cap_data['rear_rtk'])
@@ -839,6 +865,11 @@ def main():
         camera_df = pd.DataFrame(data=cap_data['camera'], columns=CAMERA_COLS)
         if include_images:
             camera_df.to_csv(os.path.join(outdir, 'cap_camera.csv'), index=False)
+
+        #ittwi : radar
+        radar_df = pd.DataFrame(data=cap_data['radar'], columns=RADAR_COLS)
+        if include_radar:
+            radar_df.to_csv(os.path.join(outdir, 'cap_radar.csv'), index=False)
 
         if len(camera_df['timestamp']):
             # Interpolate samples from all used sensors to camera frame timestamps
