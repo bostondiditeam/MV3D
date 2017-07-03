@@ -30,17 +30,22 @@ class Tracklet_saver():
             self.path = file_path
         self.collection = TrackletCollection()
 
-    def add_tracklet_pose(self, obs_tracklet, translation, rotation, score,bbox):
-        keys = ['tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'score', 'bbox']
-        values = [translation[0], translation[1], translation[2], rotation[0], rotation[1], rotation[2],
-                  score,'{}'.format(bbox)]
+    def add_tracklet_pose(self, obs_tracklet, translation, rotation, score=None,bbox=None):
+        if cfg.TRACKLET_EXTRA_INFO:
+            keys = ['tx', 'ty', 'tz', 'rx', 'ry', 'rz', 'score', 'bbox']
+            values = [translation[0], translation[1], translation[2], rotation[0], rotation[1], rotation[2],
+                      score, '{}'.format(bbox)]
+        else:
+            keys = ['tx', 'ty', 'tz', 'rx', 'ry', 'rz']
+            values = [translation[0], translation[1], translation[2], rotation[0], rotation[1], rotation[2]]
+
         pose = {k: v for k, v in zip(keys, values)}
         obs_tracklet.poses = [pose]
         pass
 
     # for add new tracklets
     # size is [h, w, l]
-    def add_tracklet(self, first_frame_nb, size, transition, rotation, score,bbox):
+    def add_tracklet(self, first_frame_nb, size, transition, rotation, score=None,bbox=None):
         if cfg.OBJ_TYPE == 'car':
             obs_tracklet = Tracklet(object_type='Car', l=size[2], w=size[1], h=size[0], first_frame=first_frame_nb)
         elif cfg.OBJ_TYPE == 'ped':
@@ -60,7 +65,7 @@ if __name__ == '__main__':
     os.makedirs('./test_output/', exist_ok=True)
     a = Tracklet_saver('./test_output/', 'ped_test', exist_ok=True)
     # The size is for obstacle car, the order for size is [height, width, length]
-    rate = 1.1
+    rate = 1.0
     size = [1.7, 0.8, 0.8]
     for i in range(3):
         size[i] = size[i] * rate

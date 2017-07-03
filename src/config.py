@@ -61,6 +61,7 @@ else:
 
 __C.TRACKLET_GTBOX_LENGTH_SCALE = 1.6
 __C.PREDICT_SCORE_THRESHOLD = 0.5
+__C.TRACKLET_EXTRA_INFO = False
 
 # image crop config
 if __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE   ==  'test':
