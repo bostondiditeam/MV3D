@@ -64,6 +64,13 @@ class Task(object):
         run_task('python tracking.py -n %s -w "%s" -t %s -s %d' % (tag, weights ,self.fast_test,
                                                                           tracking_skip_frames))
 
+    def banchmark(self, tracking_skip_frames=100, tracking_range=range(1)):
+        tracking_range= tracking_range if self.fast_test==False else range(1)
+        for i in tracking_range:
+            run_task('python tracking.py -n benchmark_%s_%d -w "%s_%d" -t %s -s %d' %
+                     (tag,i, tag,i ,self.fast_test,tracking_skip_frames))
+
+
 def str2bool(v: str):
     if v.lower() in ('true'):
         return True
