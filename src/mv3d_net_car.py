@@ -106,7 +106,9 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
     with tf.variable_scope('feature-extract-resnet') as scope:
         print('build_resnet')
         block = ResnetBuilder.resnet_tiny_smaller_kernel(input)
+        feature = block
 
+        top_feature_stride = 4
         # resnet_input = resnet.get_layer('input_1').input
         # resnet_output = resnet.get_layer('add_7').output
         # resnet_f = Model(inputs=resnet_input, outputs=resnet_output)  # add_7
@@ -114,14 +116,13 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
         # block = resnet_f(input)
         block = upsample2d(block, factor=2, has_bias=True, trainable=True, name='upsampling')
 
-        stride = 2
-        feature = block
 
 
     with tf.variable_scope('predict') as scope:
         # block = upsample2d(block, factor=4, has_bias=True, trainable=True, name='1')
         # up     = block
         # kernel_size = config.cfg.TOP_CONV_KERNEL_SIZE
+        top_anchors_stride = 2
         block = conv2d_bn_relu(block, num_kernels=128, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',
                                name='2')
         scores = conv2d(block, num_kernels=2 * num_bases, kernel_size=(1, 1), stride=[1, 1, 1, 1], padding='SAME',name='score')
@@ -134,13 +135,13 @@ def top_feature_net_r(input, anchors, inds_inside, num_bases):
         img_scale = 1
         rois, roi_scores = tf_rpn_nms( probs, deltas, anchors, inds_inside,
                                        stride, img_width, img_height, img_scale,
-                                       nms_thresh=0.7, min_size=stride, nms_pre_topn=500, nms_post_topn=100,
+                                       nms_thresh=0.3, min_size=stride, nms_pre_topn=6000, nms_post_topn=100,
                                        name ='nms')
 
 
 
     print ('top: scale=%f, stride=%d'%(1./stride, stride))
-    return feature, scores, probs, deltas, rois, roi_scores, stride
+    return feature, scores, probs, deltas, rois, roi_scores, top_anchors_stride,top_feature_stride
 
 
 
@@ -488,7 +489,8 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
     with tf.variable_scope(top_view_rpn_name):
         # top feature
         if cfg.USE_RESNET_AS_TOP_BASENET==True:
-            top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
+            top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, \
+            top_anchors_stride, top_feature_stride = \
                 top_feature_net_r(top_view, top_anchors, top_inside_inds, len_bases)
         else:
             top_features, top_scores, top_probs, top_deltas, proposals, proposal_scores, top_feature_stride = \
@@ -595,7 +597,7 @@ def load(top_shape, front_shape, rgb_shape, num_class, len_bases):
         'fuse_scores':fuse_scores,
         'fuse_deltas':fuse_deltas,
 
-        'top_feature_stride':top_feature_stride
+        'top_feature_stride':top_anchors_stride
 
     }
 

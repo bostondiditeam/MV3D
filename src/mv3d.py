@@ -5,8 +5,14 @@ import tensorflow as tf
 # tf.set_random_seed(7)
 from sklearn.utils import shuffle
 import glob
+from config import cfg
+import config
 import net.utility.draw  as nud
-import mv3d_net
+if config.OBJ_TYPE == 'car':
+    import mv3d_net_car as mv3d_net
+else:
+    raise ValueError('unknown type :{}'.format(config.OBJ_TYPE))
+
 import net.blocks as blocks
 import data
 import net.processing.boxes3d  as box
@@ -17,8 +23,7 @@ from net.rcnn_nms_op    import rcnn_nms, draw_rcnn_nms, draw_rcnn,draw_box3d_on_
 from net.rpn_target_op  import draw_rpn_gt, draw_rpn_targets, draw_rpn_labels
 from net.rcnn_target_op import draw_rcnn_targets, draw_rcnn_labels
 import net.utility.file as utilfile
-from config import cfg
-import config
+
 from net.processing.boxes import non_max_suppress
 import utils.batch_loading as dataset
 from utils.timer import timer

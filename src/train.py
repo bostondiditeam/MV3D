@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     elif cfg.DATA_SETS_TYPE == 'kitti':
         train_n_val_dataset = [
-            '2011_09_26/2011_09_26_drive_0001_sync',
+            # '2011_09_26/2011_09_26_drive_0001_sync', # for tracking
             '2011_09_26/2011_09_26_drive_0002_sync',
             '2011_09_26/2011_09_26_drive_0005_sync',
             # '2011_09_26/2011_09_26_drive_0009_sync',

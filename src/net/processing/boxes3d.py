@@ -10,6 +10,7 @@ from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
 from config import cfg
 from numba import jit
 import config
+from config import *
 
 
 def heat_map_rgb(minimum, maximum, value):
