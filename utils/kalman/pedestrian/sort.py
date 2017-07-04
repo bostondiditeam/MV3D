@@ -11,6 +11,7 @@ import random, math
 from itertools import combinations
 from sklearn.utils.linear_assignment_ import linear_assignment
 from scipy.cluster.hierarchy import linkage, fcluster
+import config
 
 
 
@@ -198,7 +199,7 @@ def associate_detections_to_trackers(detections,trackers,iou_threshold):
 
     return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
 
-
+max_aaa= 0
 def merge_detections(dets, distance_threshold=2.):
     if len(dets)==0 :
         return dets
@@ -209,12 +210,27 @@ def merge_detections(dets, distance_threshold=2.):
     merged_dets = []
     clusters = fcluster(linkage(dets), 2, criterion='distance')
     for c in np.unique(clusters) :
-        indices = np.where(clusters==c)[0]
-        weights = 1- np.minimum(1, .5*(np.abs(dets[indices][:,4]-0.8)
-                                       +np.abs(dets[indices][:,5]-0.8))) 
-        x,y,z,h = np.average(dets[indices][:,0:4], axis=0, weights=weights)
-        r = max(0.4, (np.max(dets[indices][:,4])+ np.max(dets[indices][:,5]))/2 )
-        merged_dets.append(np.array([x,y,z,r,h]))      
+        try:
+            indices = np.where(clusters==c)[0]
+
+            # global max_aaa
+            # aaa = .5*(np.abs(dets[indices][:,4]-0.8)+np.abs(dets[indices][:,5]-0.8))
+            # max_aaa = max(max_aaa,aaa)
+            # print('max_aaa={}'.format(max_aaa))
+
+            if config.cfg.OBJ_TYPE == 'ped':
+                weights = 1.- np.minimum(1., .5*(np.abs(dets[indices][:,4]-0.8)
+                                               +np.abs(dets[indices][:,5]-0.8)))
+            elif config.cfg.OBJ_TYPE == 'car':
+                weights = 3.- np.minimum(3., .5*(np.abs(dets[indices][:,4]-0.8)
+                                               +np.abs(dets[indices][:,5]-0.8)))
+
+            x,y,z,h = np.average(dets[indices][:,0:4], axis=0, weights=weights)
+            r = max(0.4, (np.max(dets[indices][:,4])+ np.max(dets[indices][:,5]))/2 )
+            merged_dets.append(np.array([x,y,z,r,h]))
+        except:
+            pass
+
     return merged_dets
 
 

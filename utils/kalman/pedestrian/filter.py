@@ -7,6 +7,10 @@ from generate_tracklet import Tracklet, TrackletCollection
 from sort import Sort
 import os
 import argparse
+import pickle
+import config
+
+TYPE = 'car'
 
 if __name__ == "__main__" :
     # parser = argparse.ArgumentParser(description="filter poses")
@@ -22,25 +26,31 @@ if __name__ == "__main__" :
     # tracklet_file = os.path.join(tracklet_dir, tracklet_tag+'.xml')
     # new_tracklet_file = tracklet_tag+'_corrected.xml'
 
-
-    bag_file = '/hdd/data/didi_competition/didi_dataset/round2/Data/test_ped/ped_test.bag'
-    tracklet_dir = '/home/stu/didi/code/MV3D/log/tracking/exp_resnet_fuse_1/tracklet'
-    tracklet_file = os.path.join(tracklet_dir, 'ped_test.xml')
-    new_tracklet_file = os.path.join(tracklet_dir, 'ped_test_corrected.xml')
+    bag_name = 'ford01'
+    bag_file = os.path.join('/home/stu/competition_data/didi_dataset/round2/test_car',bag_name+'.bag')
+    tracklet_dir = './'
+    tracklet_file = os.path.join(tracklet_dir,'ori',bag_name+'.xml')
+    new_tracklet_file = os.path.join(tracklet_dir,'corrected', bag_name+'.xml')
 
 
     tracklets = parse_xml(tracklet_file)
-    bag = rosbag.Bag(bag_file)
-    print('Reading timestamps from bag ', bag_file)
-    n_stamps = bag.get_message_count(topic_filters=['/image_raw'])
-    timestamps= [t.to_sec() for _,_,t in bag.read_messages(topics=['/image_raw'])]
-    detections = [[] for i in range(n_stamps)]
+    if 0:
+        bag = rosbag.Bag(bag_file)
+        print('Reading timestamps from bag ', bag_file)
+        n_stamps = bag.get_message_count(topic_filters=['/image_raw'])
+        timestamps= [t.to_sec() for _,_,t in bag.read_messages(topics=['/image_raw'])]
+    else:
+        timestamps =  pickle.load(open('./timestamps'+'_'+bag_name,'rb'))
+    pickle.dump(timestamps,open('./timestamps'+'_'+bag_name,'wb'))
+    detections = [[] for i in range(len(timestamps))]
     for track in tracklets:
         detections[track.first_frame].append(
         np.concatenate((track.trans[0],track.size))) # (x,y,z,h,w,l)
 
-
-    mot_tracker = Sort(max_age=3, min_hits=5, iou_threshold=0.1, max_time_elapsed=2)
+    if config.cfg.OBJ_TYPE == 'ped':
+        mot_tracker = Sort(max_age=3, min_hits=5, iou_threshold=0.1, max_time_elapsed=2)
+    else:
+        mot_tracker = Sort(max_age=3, min_hits=5, iou_threshold=0.01, max_time_elapsed=2)
     collection = TrackletCollection()
 
 
