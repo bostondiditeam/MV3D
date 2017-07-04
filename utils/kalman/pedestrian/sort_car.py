@@ -10,7 +10,7 @@ from filterpy.kalman import KalmanFilter, MerweScaledSigmaPoints
 from filterpy.kalman import UnscentedKalmanFilter as UKF
 from filterpy.common import Q_discrete_white_noise
 from parse_tracklet import parse_xml
-from sync import generate_frame_map
+# from sync import generate_frame_map
 from generate_tracklet import Tracklet, TrackletCollection
 from shapely.geometry import Polygon
 import pandas as pd
@@ -22,8 +22,6 @@ from numba import jit
 from itertools import combinations
 from sklearn.utils.linear_assignment_ import linear_assignment
 from scipy.cluster.hierarchy import linkage, fcluster
-
-from __future__ import print_function, division
 
 
 def normalize_angle(x):
@@ -50,7 +48,7 @@ def h_lidar(x):
     return np.array([x[0], x[2], x[4], normalize_angle(x[5])])
 
 def h_radar(x):
-    offset = 2 #lidar-radar offset
+    offset = 0.5 #lidar-radar offset
     px,py,vx,vy = (x[0]-offset,x[2],x[1],x[3])
     r = (px**2 + py**2)
     if (r < 0.1) :
@@ -64,6 +62,7 @@ def h_radar(x):
 def residual_radar(x,y):
     res = np.subtract(x,y)
     res[1] = (res[1] + np.pi) % (2*np.pi) - np.pi
+    return res
 
 
 def intersect_bbox_with_yaw(box_a, box_b):
@@ -104,7 +103,7 @@ def iou_old(bbox_a,bbox_b):
     return vol_intersect / union
 
 def eucl_dist(x,y):
-    return math.sqrt((x[1]-x[2])**2 + (y[1]-y[2])**2)
+    return math.sqrt((x[1]-x[0])**2 + (y[1]-y[0])**2)
 
 def iou(bbox_a, bbox_b):
     xa,ya = bbox_a[:2]
@@ -152,7 +151,7 @@ class KalmanBoxTracker(object):
         dt_radar = 0.05  # default radar dt
 
         # sigma points
-        sigmas = MerweScaledSigmaPoints(6, alpha=.01, beta=2., kappa=-2.)
+        sigmas = MerweScaledSigmaPoints(6, alpha=.001, beta=2., kappa=-2.)
 
         # constant vx,vy and constant z,yaw model
         self.ukf_lidar = UKF(dim_x=6, dim_z=4, fx=f_cv,
@@ -165,12 +164,12 @@ class KalmanBoxTracker(object):
 
         # measurement noise
         std_x = std_y = 0.1  # detector error for x,y (in meters)
-        std_z = 0.2  # detector error for z (in meters)
+        std_z = 0.1  # detector error for z (in meters)
         std_yaw = 1  # error in yaw (in radians)
-        std_r = 2  # radar range error (in meters)
-        std_phi = 0.5  # radar angle error (in radians)
-        std_vel_r = 0.5  # radial vel error (in m/s)
-        std_vel_l = 1.5  # lateral vel error (in m/s)
+        std_r = 5  # radar range error (in meters)
+        std_phi = 0.6  # radar angle error (in radians)
+        std_vel_r = 0.01  # radial vel error (in m/s)
+        std_vel_l = 2.  # lateral vel error (in m/s)
 
         self.ukf_lidar.R = np.diag([std_x ** 2, std_y ** 2, std_z ** 2, std_yaw ** 2])
         self.ukf_radar.R = np.diag([std_r ** 2, std_phi ** 2, std_vel_r ** 2, std_vel_l ** 2])
@@ -197,7 +196,7 @@ class KalmanBoxTracker(object):
         Q[0:2, 0:2] = Q_discrete_white_noise(2, dt=dt, var=2.2)  # x-accel
         Q[2:4, 2:4] = Q_discrete_white_noise(2, dt=dt, var=2.2)  # y_accel
         Q[4, 4] = (1.5 * dt) ** 2  # z-vel
-        Q[5, 5] = (0.1 * dt) ** 2  # yaw-rate
+        Q[5, 5] = (0.6 * dt) ** 2  # yaw-rate
         self.ukf_lidar.Q = Q
         self.ukf_radar.Q = Q
 
@@ -247,71 +246,67 @@ class KalmanBoxTracker(object):
         """
         return convert_x_to_bbox(self.x, self.dims)
 
-
-
-def associate_detections_to_trackers(detections,trackers,iou_threshold):
+def associate_detections_to_trackers(detections, trackers, iou_threshold):
     """
     Assigns detections to tracked object (both represented as bounding boxes)
     Returns 3 lists of matches, unmatched_detections and unmatched_trackers
     """
-    if(len(trackers)==0):
-        return np.empty((0,2),dtype=int), np.arange(len(detections)), np.empty((0,7),dtype=int)
-    iou_matrix = np.zeros((len(detections),len(trackers)),dtype=np.float32)
+    if (len(trackers) == 0):
+        return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 7), dtype=int)
+    iou_matrix = np.zeros((len(detections), len(trackers)), dtype=np.float32)
 
-    for d,det in enumerate(detections):
-        for t,trk in enumerate(trackers):
-            iou_matrix[d,t] = iou(det,trk)
+    for d, det in enumerate(detections):
+        for t, trk in enumerate(trackers):
+            iou_matrix[d, t] = iou(det, trk)
     matched_indices = linear_assignment(-iou_matrix)
 
     unmatched_detections = []
-    for d,det in enumerate(detections):
-        if(d not in matched_indices[:,0]):
+    for d, det in enumerate(detections):
+        if (d not in matched_indices[:, 0]):
             unmatched_detections.append(d)
     unmatched_trackers = []
-    for t,trk in enumerate(trackers):
-        if(t not in matched_indices[:,1]):
+    for t, trk in enumerate(trackers):
+        if (t not in matched_indices[:, 1]):
             unmatched_trackers.append(t)
 
-    #filter out matched with low IOU
+    # filter out matched with low IOU
     matches = []
     for m in matched_indices:
-        if(iou_matrix[m[0],m[1]]<iou_threshold):
+        if (iou_matrix[m[0], m[1]] < iou_threshold):
             unmatched_detections.append(m[0])
             unmatched_trackers.append(m[1])
         else:
-            matches.append(m.reshape(1,2))
-    if(len(matches)==0):
-        matches = np.empty((0,2),dtype=int)
+            matches.append(m.reshape(1, 2))
+    if (len(matches) == 0):
+        matches = np.empty((0, 2), dtype=int)
     else:
-        matches = np.concatenate(matches,axis=0)
+        matches = np.concatenate(matches, axis=0)
 
     return matches, np.array(unmatched_detections), np.array(unmatched_trackers)
 
-
 def merge_detections(dets, distance_threshold=2.):
-    if len(dets)==0 :
+    if len(dets) == 0:
         return dets
-    if len(dets)==1 :
+    if len(dets) == 1:
         return np.array(dets)
     merged_dets = []
-    clusters = fcluster(linkage(dets[:,:2]), 2, criterion='distance')
-    for c in np.unique(clusters) :
-        indices = np.where(clusters==c)[0]
-        #if len(indices)==1 :
+    clusters = fcluster(linkage(dets[:, :2]), 2, criterion='distance')
+    for c in np.unique(clusters):
+        indices = np.where(clusters == c)[0]
+        # if len(indices)==1 :
         #    x,y,z,h = dets[indices, 0:4]
         #    r = max(0.4, (dets[indices, 4] + dets[indices, 5])/2 )
-        #else :
-        #weights = 1- np.minimum(1, .5*(np.abs(dets[indices][:,4]-0.8)+np.abs(dets[indices][:,5]-0.8)))
-        #x,y,z,h = np.average(dets[indices][:,0:4], axis=0, weights=weights)
-        #r = max(0.4, (np.max(dets[indices][:,4])+ np.max(dets[indices][:,5]))/2 )
-        x_min,y_min = np.minimum(dets[indices][:,0:2], axis=0)
-        x_max,y_max = np.maximum(dets[indices][:,0:2], axis=0)
-        x0,y0 = (x_min+x_max)/2., (y_min+y_max)/2.
+        # else :
+        # weights = 1- np.minimum(1, .5*(np.abs(dets[indices][:,4]-0.8)+np.abs(dets[indices][:,5]-0.8)))
+        # x,y,z,h = np.average(dets[indices][:,0:4], axis=0, weights=weights)
+        # r = max(0.4, (np.max(dets[indices][:,4])+ np.max(dets[indices][:,5]))/2 )
+        # x_min,y_min = np.minimum(dets[indices][0:2], axis=0)[0]
+        # x_max,y_max = np.maximum(dets[indices][0:2], axis=0)[0]
+        # x0,y0 = (x_min+x_max)/2., (y_min+y_max)/2.
         merged_det = np.average(dets[indices], axis=0)
-        merged_dets[0:2] = [x0,y0]
+        # merged_dets[0:2] = [x0,y0]
         merged_dets.append(merged_det)
     return merged_dets
-
 
 class Sort(object):
     def __init__(self, max_age=0.1, min_hits=3, iou_threshold=0.05, max_time_elapsed=0.1):
@@ -368,7 +363,8 @@ class Sort(object):
             if ((trk.time_since_update < self.max_time_elapsed)
                 and (trk.hit_streak >= self.min_hits - 1
                      or self.frame_count <= self.min_hits)):
-                ret.append(np.concatenate((d, [trk.id + 1])).reshape(1, -1))  # +1 as MOT benchmark requires positive
+                ret.append(
+                    np.concatenate((d, [trk.id + 1])).reshape(1, -1))  # +1 as MOT benchmark requires positive
             i -= 1
             # remove dead tracklet
             if (trk.time_since_update > self.max_age):
@@ -377,10 +373,13 @@ class Sort(object):
             return np.concatenate(ret)
         return np.empty((0, 8))
 
-    def radar_update(self, trk_id, radar_track):
+    def radar_update(self, timestamp, radar_tracks):
         # find the closest radar track
-        for radar_trk in current_radar_trks:
-            r = radar_trk.range
-            phi = radar_trk.angle
-            radar_pos = [r * math.cos(phi) + 2.5, -r * math.sin(phi)]
-            if eucl_dist(radar_pos, track[0:2]) < 3:
+        for radar_trk in radar_tracks:
+            r, phi = radar_trk[1:3]
+            radar_pos = [r * math.cos(phi) + 3, -r * math.sin(phi)]
+            for trk in self.trackers:
+                d = trk.get_state()
+                if eucl_dist(radar_pos, d[0:2]) < 5:
+                    trk.predict(timestamp)
+                    trk.update(timestamp, [r, phi, radar_trk[3], radar_trk[4]], sensor='radar')
