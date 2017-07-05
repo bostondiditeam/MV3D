@@ -8,8 +8,12 @@ import glob
 from config import cfg
 import config
 import net.utility.draw  as nud
-if config.OBJ_TYPE == 'car':
+if config.cfg.OBJ_TYPE == 'car':
     import mv3d_net_car as mv3d_net
+    print('import car model ok!')
+elif config.cfg.OBJ_TYPE == 'ped':
+    import mv3d_net_ped as mv3d_net
+    print('import ped model ok!')
 else:
     raise ValueError('unknown type :{}'.format(config.OBJ_TYPE))
 
