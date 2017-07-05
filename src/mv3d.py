@@ -8,6 +8,7 @@ import glob
 from config import cfg
 import config
 import net.utility.draw  as nud
+
 if config.cfg.OBJ_TYPE == 'car':
     import mv3d_net_car as mv3d_net
     print('import car model ok!')
@@ -132,8 +133,10 @@ class MV3D(object):
         # anchors
         self.top_stride=None
         self.num_class = data.preprocess.num_class  # incude background
-
-        ratios=np.array([0.5,1,2], dtype=np.float32)
+        if cfg.OBJ_TYPE == 'ped':
+            ratios=np.array([1], dtype=np.float32)
+        elif cfg.OBJ_TYPE == 'car':
+            ratios = np.array([0.5, 1, 2], dtype=np.float32)
         scales=np.array([1,2,3],   dtype=np.float32)
 
 
