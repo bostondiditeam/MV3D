@@ -68,8 +68,12 @@ def box_transform_inv(et_boxes, deltas):
 
     cxs = dxs * et_ws + et_cxs
     cys = dys * et_hs + et_cys
+    # print('value for et_ws: ', et_ws)
+    # print('value for dws: ', dws)
     ws  = np.exp(dws) * et_ws
     hs  = np.exp(dhs) * et_hs
+    # print('ws is here: ', ws)
+    # print('hs is here: ', hs)
 
     boxes[:, 0::4] = cxs - 0.5 * ws  # x1, y1,x2,y2
     boxes[:, 1::4] = cys - 0.5 * hs

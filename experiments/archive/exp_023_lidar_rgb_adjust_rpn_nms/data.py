@@ -23,7 +23,6 @@ import sys
 if config.cfg.USE_CLIDAR_TO_TOP:
     so_path = os.path.join(os.path.split(__file__)[0],
                            "lidar_data_preprocess/Python_to_C_Interface/ver3/LidarTopPreprocess.so")
-    print('here: ', so_path)
     assert (os.path.exists(so_path))
     SharedLib = ctypes.cdll.LoadLibrary(so_path)
 
@@ -84,7 +83,6 @@ class Preprocess(object):
     # project 3D points to camera plane
     def project_points(self, points):
         pp = box3d_to_rgb_box(points)
-        print(pp.shape)
         return pp
 
 
@@ -109,7 +107,6 @@ class Preprocess(object):
     def flip(self, rgb, top, boxes3d, axis=1):
         assert (axis == 0) or (axis == 1), "axis can be 0 or 1."
 
-        # rgb, top, _, labels, boxes3d, f_id = val.load()
         rgb = rgb.squeeze()
         tops = top.squeeze()
         bbox = boxes3d
@@ -124,6 +121,7 @@ class Preprocess(object):
         #     rgb_new = self.transform_image(rgb, bbox, bbox_new)
         #     # rgb_new = cv2.flip(rgb, axis)
         # else:
+        # rgb_new = None
         rgb_new = np.zeros(rgb.shape, dtype=np.int32)
         tops_new = cv2.flip(tops, axis)
         # self.display(tops_new, rgb_new, bbox_new)

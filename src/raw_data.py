@@ -225,7 +225,8 @@ if __name__ == '__main__':
     raw_tracklet = Tracklet()
     raw_lidar = Lidar()
 
-    tags = shuffle(raw_tracklet.get_tags())
+    # tags = shuffle(raw_tracklet.get_tags())
+    tags = raw_tracklet.get_tags()
 
 
     os.makedirs(os.path.join(config.cfg.LOG_DIR,'test','rgb') ,exist_ok=True)

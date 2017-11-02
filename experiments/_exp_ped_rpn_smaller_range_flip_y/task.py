@@ -37,7 +37,7 @@ class Task(object):
                  '-n %s -c True' % (iter(200), self.tag))
         run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, 100, tag, self.fast_test))
 
-        for i in range(iter(5)):
+        for i in range(iter(6)):
             run_task('python train.py -w "top_view_rpn" -t "top_view_rpn" -i %d '
                      ' -n %s -c True' % (iter(3000), tag))
             run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, i, tag, self.fast_test))
@@ -63,13 +63,6 @@ class Task(object):
         weights = self.tag if weights==None else weights
         run_task('python tracking.py -n %s -w "%s" -t %s -s %d' % (tag, weights ,self.fast_test,
                                                                           tracking_skip_frames))
-
-    def banchmark(self, tracking_skip_frames=100, tracking_range=range(1)):
-        tracking_range= tracking_range if self.fast_test==False else range(1)
-        for i in tracking_range:
-            run_task('python tracking.py -n benchmark_%s_%d -w "%s_%d" -t %s -s %d' %
-                     (tag,i, tag,i ,self.fast_test,tracking_skip_frames))
-
 
 def str2bool(v: str):
     if v.lower() in ('true'):

@@ -4,5 +4,5 @@
 # Licensed under The MIT License [see LICENSE for details]
 # Written by Ross Girshick
 # --------------------------------------------------------
-import roi_pooling_op
-import roi_pooling_op_grad
+import net.lib.roi_pooling_layer.roi_pooling_op
+import net.lib.roi_pooling_layer.roi_pooling_op_grad

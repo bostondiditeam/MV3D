@@ -212,6 +212,14 @@ def parse_xml(tracklet_file):
                                 elif poseInfo.tag == 'amt_border_kf':
                                     new_track.amt_borders[frame_idx, 2] = float(poseInfo.text)
                                     has_amt = True
+                                elif poseInfo.tag == 'score':
+                                    pass
+                                    # new_track.amt_borders[frame_idx, 2] = float(poseInfo.text)
+                                    # has_amt = True
+                                elif poseInfo.tag == 'bbox':
+                                    pass
+                                    # new_track.amt_borders[frame_idx, 2] = float(poseInfo.text)
+                                    # has_amt = True
                                 else:
                                     raise ValueError('Unexpected tag in poses item: {0}!'.format(poseInfo.tag))
                             frame_idx += 1

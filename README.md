@@ -144,7 +144,6 @@ It runs without error message and show　＂successfully opened CUDA library lib
 
 
 ```
-cd src
 source activate didi
 sudo chmod 755 ./make.sh
 ./make.sh

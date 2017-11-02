@@ -27,7 +27,7 @@ __C.TEST_KEY=11
 
 #['didi2', 'didi','kitti','test']
 # 'didi2' means configuration for round 2, 'didi' means configuration for round 1 data, 'kitti' means for kitti dataset.
-__C.DATA_SETS_TYPE='kitti'
+__C.DATA_SETS_TYPE='didi2'
 __C.SINGLE_CLASS_DETECTION = True
 __C.OBJ_TYPE = 'car' #'car' 'ped'
 
@@ -40,6 +40,8 @@ else:
     __C.DATA_SETS_DIR=osp.join(__C.ROOT_DIR, 'data')
 
 __C.RAW_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'raw', __C.DATA_SETS_TYPE)
+if os.environ.get("LiuFeng") != None and __C.DATA_SETS_TYPE=='didi2':
+    __C.RAW_DATA_SETS_DIR = "/ext2/round2_data/output"
 __C.PREPROCESSED_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessed', __C.DATA_SETS_TYPE)
 __C.PREPROCESSING_DATA_SETS_DIR = osp.join(__C.DATA_SETS_DIR, 'preprocessing', __C.DATA_SETS_TYPE)
 __C.PREDICTED_XML_DIR = osp.join(__C.DATA_SETS_DIR, 'predicted', __C.DATA_SETS_TYPE)
@@ -59,7 +61,6 @@ else:
 
 __C.TRACKLET_GTBOX_LENGTH_SCALE = 1.6
 __C.PREDICT_SCORE_THRESHOLD = 0.5
-__C.TRACKLET_EXTRA_INFO = False
 
 # image crop config
 if __C.DATA_SETS_TYPE ==  'didi' or __C.DATA_SETS_TYPE   ==  'test':
@@ -131,15 +132,15 @@ elif __C.DATA_SETS_TYPE == 'didi2':
         raise ValueError('unknown type:{}'.format(__C.OBJ_TYPE))
 
 elif __C.DATA_SETS_TYPE == 'kitti':
-    TOP_Y_MIN = -30
-    TOP_Y_MAX = +30
+    TOP_Y_MIN = -20
+    TOP_Y_MAX = +20
     TOP_X_MIN = 0
-    TOP_X_MAX = 100
-    TOP_Z_MIN = -3.5
-    TOP_Z_MAX = 0.6
+    TOP_X_MAX = 40
+    TOP_Z_MIN = -2.0
+    TOP_Z_MAX = 0.5
 
-    TOP_X_DIVISION = 0.2
-    TOP_Y_DIVISION = 0.2
+    TOP_X_DIVISION = 0.1
+    TOP_Y_DIVISION = 0.1
     TOP_Z_DIVISION = 0.3
 else:
     raise ValueError('unexpected type in cfg.DATA_SETS_TYPE item: {}!'.format(__C.DATA_SETS_TYPE))

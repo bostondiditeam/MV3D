@@ -233,7 +233,8 @@ def draw_rpn_labels(image, anchors, inds, labels):
     bg_label_inds = inds[np.where(labels == 0)[0]]
     num_pos_label = len(fg_label_inds)
     num_neg_label = len(bg_label_inds)
-    if is_print: print ('rpn label : num_pos=%d num_neg=%d,  all = %d'  %(num_pos_label, num_neg_label,num_pos_label+num_neg_label))
+    if is_print: print ('rpn label : num_pos=%d num_neg=%d,  all = %d'
+                        %(num_pos_label, num_neg_label,num_pos_label+num_neg_label))
 
     img_label = image.copy()
     for i in bg_label_inds:
@@ -273,128 +274,10 @@ def draw_rpn_targets(image, anchors, pos_inds, targets):
 
 
 
-###  <todo> this function has not been updated
-# def test_op():
-#
-#
-#     if 0:
-#         bases = make_bases(
-#             base_size = 16,
-#             #ratios=[0.5, 1, 2],
-#             #scales=2**np.arange(3, 6))
-#             ratios=[0.5, 1, 2],
-#             scales=2**np.arange(3, 4 ))
-#
-#         #(x1, y1, x2, y2, label)
-#         # gt_boxes = np.array([[
-#         #     150,100,300,340, 1
-#         # ]])
-#         num_bases = len(bases)
-#         stride = 16
-#         image_shape   = (480,640,3)
-#         feature_shape = (30,40,64)
-#
-#
-#     if 1:
-#         ratios=np.array([0.5,1,2], dtype=np.float32)
-#         scales=np.array([1,2,3],   dtype=np.int32)
-#         bases = make_bases(
-#             base_size = 16,
-#             ratios=ratios,
-#             scales=scales
-#         )
-#         num_bases = len(bases)
-#         stride = 16
-#         image_shape   = (400, 400, 3)
-#         feature_shape = (25, 25,  2*num_bases)
-#
-#
-#     if 1:
-#         gt_boxes  = np.load('/root/share/project/didi/data/kitti/dummy/one_frame/gt_boxes.npy')
-#         num_gts = len(gt_boxes)
-#
-#
-#     if 0:
-#         num_gts = 14
-#         np.random.seed(101)
-#         gt_boxes = np.zeros(shape=(num_gts,5),dtype=np.int)
-#         num_bases = len(bases)
-#         for n in range(num_gts):
-#             i = np.random.randint(0,num_bases)
-#             b = bases[i]
-#             w = b[2]-b[0]+1
-#             h = b[3]-b[1]+1
-#             height, width,_ = image_shape
-#
-#
-#             x1=np.random.randint(0,max(1,width -w))
-#             y1=np.random.randint(0,max(1,height-h))
-#             x2=x1+w
-#             y2=y1+h
-#             gt_boxes[n] = np.array([x1,y1,x2,y2,1])
-#
-#
-#     image = np.random.uniform(0,255,size=(1, *image_shape))
-#     for n in range(num_gts):
-#         b = gt_boxes[n]
-#         cv2.rectangle(image[0],(b[0],b[1]),(b[2],b[3]),(128,128,128 ),-1)
-#
-#
-#     feature = np.random.uniform(0,1,size=(1, *feature_shape))
-#     batch_size, img_height, img_width, _ = image.shape
-#
-#
-#     anchors, inside_inds =  make_anchors(bases, stride, image_shape, feature_shape)
-#
-#
-#     ##check python code without tf ------------------
-#     if 0:
-#         rpn_labels, rpn_box_targets, rpn_box_weights = rpn_target(gt_boxes, anchors, inside_inds)
-#
-#         #show
-#         print ('** without tf **')
-#         norm_feature = normalise(feature[0,:,:,0:3])
-#         norm_image = normalise(image[0,:,:,:])
-#         imshow('feature', norm_feature, resize=stride)
-#         draw_op_results(rpn_labels,rpn_box_targets,rpn_box_weights,anchors,norm_image,gt_boxes)
-#         cv2.waitKey(0)
-#         exit(0)
-#     ##-----------------------------------------------
-#
-#
-#     rpn_gt_boxes    = tf.placeholder(shape=[None, 5], dtype=tf.float32, name ='gt_boxes'   )  #gt_boxes
-#     rpn_anchors     = tf.placeholder(shape=[None, 4], dtype=tf.int32,   name ='anchors'    )  #anchors
-#     rpn_inside_inds = tf.placeholder(shape=[None   ], dtype=tf.int32,   name ='inside_inds')  #inside_inds
-#     rpn_target1 = tf_rpn_target (rpn_gt_boxes, rpn_anchors, rpn_inside_inds)
-#
-#
-#     with tf.Session()  as sess:
-#         sess.run(tf.global_variables_initializer(),{IS_TRAIN_PHASE:True})
-#         #summary_writer = tf.summary.FileWriter(out_dir, sess.graph)
-#
-#         fd = {
-#             rpn_gt_boxes:    gt_boxes,
-#             rpn_anchors :    anchors,
-#             rpn_inside_inds: inside_inds,
-#             IS_TRAIN_PHASE: True
-#         }
-#         rpn_labels, rpn_box_targets, rpn_box_weights = sess.run(rpn_target1,fd)
-#
-#
-#         #show
-#         print ('** tf **')
-#         norm_feature = normalise(feature[0,:,:,0:3])
-#         norm_image = normalise(image[0,:,:,:])
-#         imshow('feature', norm_feature, resize=stride)
-#         draw_op_results(rpn_labels,rpn_box_targets,rpn_box_weights,anchors,norm_image,gt_boxes)
-#         cv2.waitKey(0)
-#         exit(0)
-#
-#         pass
-
-
 ## main ##----------------------------------------------------------------
 if __name__ == '__main__':
-    print  ('\"%s\" running main function ...' % os.path.basename(__file__))
-
-    test_op()
+    import time
+    t = time.time()
+    a = make_bases()
+    print(time.time() - t)
+    print(a)

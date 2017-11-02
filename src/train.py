@@ -1,6 +1,8 @@
+import numpy as np
 import mv3d
 import mv3d_net
 import glob
+from sklearn.utils import shuffle
 from config import *
 # import utils.batch_loading as ub
 import argparse
@@ -9,16 +11,25 @@ from utils.training_validation_data_splitter import TrainingValDataSplitter
 from utils.batch_loading import BatchLoading2 as BatchLoading
 
 
+def str2bool(v):
+    if v.lower() in ('true'):
+        return True
+    elif v.lower() in ('false'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='training')
 
-    all= '%s,%s,%s' % (mv3d_net.top_view_rpn_name ,mv3d_net.imfeature_net_name,mv3d_net.fusion_net_name)
+    all = '%s,%s,%s' % (mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name)
 
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
-        help='use pre trained weights example: -w "%s" ' % (all))
+                        help='use pre trained weights example: -w "%s" ' % (all))
 
     parser.add_argument('-t', '--targets', type=str, nargs='?', default=all,
-        help='train targets example: -w "%s" ' % (all))
+                        help='train targets example: -w "%s" ' % (all))
 
     parser.add_argument('-i', '--max_iter', type=int, nargs='?', default=1000,
                         help='max count of train iter')
@@ -26,7 +37,7 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
                         help='set log tag')
 
-    parser.add_argument('-c', '--continue_train', type=bool, nargs='?', default=False,
+    parser.add_argument('-c', '--continue_train', type=str2bool, nargs='?', default=False,
                         help='set continue train flag')
     args = parser.parse_args()
 
@@ -34,53 +45,104 @@ if __name__ == '__main__':
     tag = args.tag
     if tag == 'unknown_tag':
         tag = input('Enter log tag : ')
-        print('\nSet log tag :"%s" ok !!\n' %tag)
+        print('\nSet log tag :"%s" ok !!\n' % tag)
 
     max_iter = args.max_iter
-    weights=[]
+    weights = []
     if args.weights != '':
         weights = args.weights.split(',')
 
-    targets=[]
+    targets = []
     if args.targets != '':
         targets = args.targets.split(',')
 
     dataset_dir = cfg.PREPROCESSED_DATA_SETS_DIR
 
     if cfg.DATA_SETS_TYPE == 'didi2':
+        assert cfg.OBJ_TYPE == 'car' or cfg.OBJ_TYPE == 'ped'
+        if cfg.OBJ_TYPE == 'car':
+            train_n_val_dataset=[
+            'suburu_pulling_up_to_it/suburu02',
+            'nissan_brief/nissan06',
+            # 'cmax_sitting_still/cmax01',
+            # 'suburu_pulling_to_right/suburu03_bak',
+            'nissan_pulling_up_to_it/nissan02',
+            # 'ped_train/ped_train',
+            # 'suburu_sitting_still/suburu01', # tracklet is very inaccurate.
+            'nissan_pulling_to_left/nissan03',
+            # 'bmw_sitting_still/bmw01',
+            'nissan_pulling_away/nissan05',
+            'suburu_pulling_to_left/suburu04',
+            'nissan_pulling_to_right/nissan04',
+            'suburu_driving_towards_it/suburu06',
+            'suburu_not_visible/suburu12',
+            'suburu_leading_front_left/suburu11',
+            # 'nissan_sitting_still/nissan01',
+            'suburu_driving_away/suburu05',
+            'nissan_driving_past_it/nissan07',
+            'suburu_driving_past_it/suburu07',
+            'suburu_driving_parallel/suburu10',
 
-        train_key_list = ['suburu_pulling_up_to_it',
-                          'nissan_brief',
-                          'cmax_sitting_still',
-                          'nissan_pulling_up_to_it',
-                          'suburu_sitting_still',
-                          'nissan_pulling_to_left',
-                          'bmw_sitting_still',
-                          'suburu_follows_capture',
-                          'nissan_pulling_away',
-                          'suburu_pulling_to_left',
-                          'bmw_following_long',
-                          'nissan_pulling_to_right',
-                          'suburu_driving_towards_it',
-                          'suburu_following_long',
-                          'suburu_not_visible',
-                          'suburu_leading_front_left',
-                          'nissan_sitting_still',
-                          'cmax_following_long',
-                          'nissan_following_long',
-                          'suburu_driving_away',
-                          'suburu_leading_at_distance',
-                          'nissan_driving_past_it',
-                          'suburu_driving_past_it',
-                          'suburu_driving_parallel',
-                          ]
+            'bmw_following_long_split/001',
+            'bmw_following_long_split/002',
+            'bmw_following_long_split/003',
+            'bmw_following_long_split/004',
+            'bmw_following_long_split/005',
+            'bmw_following_long_split/006',
+            'bmw_following_long_split/007',
+            'bmw_following_long_split/008',
+            'bmw_following_long_split/009',
+            'bmw_following_long_split/010',
+            'bmw_following_long_split/011',
 
-        train_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in train_key_list]
-        train_value_list = [os.listdir(value)[0] for value in train_key_full_path_list]
+            'cmax_following_long_split/001',
+            'cmax_following_long_split/002',
+            'cmax_following_long_split/003',
+            'cmax_following_long_split/004',
+            'cmax_following_long_split/005',
+            'cmax_following_long_split/006',
+            'cmax_following_long_split/007',
+            'cmax_following_long_split/008',
+            'cmax_following_long_split/009',
+            'cmax_following_long_split/010',
+            'cmax_following_long_split/011',
 
-        train_n_val_dataset = [k + '/' + v for k, v in zip(train_key_list, train_value_list)]
+            'nissan_following_long_split/001',
+            'nissan_following_long_split/002',
+            'nissan_following_long_split/003',
+            'nissan_following_long_split/004',
+            'nissan_following_long_split/005',
+            'nissan_following_long_split/006',
+            'nissan_following_long_split/007',
+            'nissan_following_long_split/008',
+            'nissan_following_long_split/009',
+            'nissan_following_long_split/010',
+            'nissan_following_long_split/011',
 
-        data_splitter = TrainingValDataSplitter(train_n_val_dataset)
+            'suburu_following_long_split/001',
+            'suburu_following_long_split/002',
+            'suburu_following_long_split/003',
+            'suburu_following_long_split/004',
+            'suburu_following_long_split/005',
+            'suburu_following_long_split/006',
+            'suburu_following_long_split/007',
+
+            'suburu_follows_capture_split/001',
+            'suburu_follows_capture_split/002',
+            'suburu_follows_capture_split/003',
+            'suburu_follows_capture_split/004',
+            'suburu_follows_capture_split/005',
+
+            'suburu_leading_at_distance_split/001',
+            'suburu_leading_at_distance_split/002',
+            'suburu_leading_at_distance_split/003',
+            'suburu_leading_at_distance_split/004',
+
+        ]
+        else:
+            train_n_val_dataset=[
+                'ped_train/ped_train',
+            ]
 
 
     elif cfg.DATA_SETS_TYPE == 'didi' or cfg.DATA_SETS_TYPE == 'test':
@@ -93,21 +155,63 @@ if __name__ == '__main__':
             '1': ['15']}
 
     elif cfg.DATA_SETS_TYPE == 'kitti':
-        training_dataset = {
-            '2011_09_26': ['0001', '0017', '0029', '0052', '0070', '0002', '0018', '0056',  '0019',
-                       '0036', '0005',
-                       '0057', '0084', '0020', '0039', '0086', '0011', '0023', '0046', '0060', '0091']}
+        train_n_val_dataset = [
+            # '2011_09_26/2011_09_26_drive_0001_sync', # for tracking
+            '2011_09_26/2011_09_26_drive_0002_sync',
+            '2011_09_26/2011_09_26_drive_0005_sync',
+            # '2011_09_26/2011_09_26_drive_0009_sync',
+            '2011_09_26/2011_09_26_drive_0011_sync',
+            '2011_09_26/2011_09_26_drive_0013_sync',
+            '2011_09_26/2011_09_26_drive_0014_sync',
+            '2011_09_26/2011_09_26_drive_0015_sync',
+            '2011_09_26/2011_09_26_drive_0017_sync',
+            '2011_09_26/2011_09_26_drive_0018_sync',
+            '2011_09_26/2011_09_26_drive_0019_sync',
+            '2011_09_26/2011_09_26_drive_0020_sync',
+            '2011_09_26/2011_09_26_drive_0022_sync',
+            '2011_09_26/2011_09_26_drive_0023_sync',
+            '2011_09_26/2011_09_26_drive_0027_sync',
+            '2011_09_26/2011_09_26_drive_0028_sync',
+            '2011_09_26/2011_09_26_drive_0029_sync',
+            '2011_09_26/2011_09_26_drive_0032_sync',
+            '2011_09_26/2011_09_26_drive_0035_sync',
+            '2011_09_26/2011_09_26_drive_0036_sync',
+            '2011_09_26/2011_09_26_drive_0039_sync',
+            '2011_09_26/2011_09_26_drive_0046_sync',
+            '2011_09_26/2011_09_26_drive_0048_sync',
+            '2011_09_26/2011_09_26_drive_0051_sync',
+            '2011_09_26/2011_09_26_drive_0052_sync',
+            '2011_09_26/2011_09_26_drive_0056_sync',
+            '2011_09_26/2011_09_26_drive_0057_sync',
+            '2011_09_26/2011_09_26_drive_0059_sync',
+            '2011_09_26/2011_09_26_drive_0060_sync',
+            '2011_09_26/2011_09_26_drive_0061_sync',
+            '2011_09_26/2011_09_26_drive_0064_sync',
+            '2011_09_26/2011_09_26_drive_0070_sync',
+            '2011_09_26/2011_09_26_drive_0079_sync',
+            '2011_09_26/2011_09_26_drive_0084_sync',
+            '2011_09_26/2011_09_26_drive_0086_sync',
+            '2011_09_26/2011_09_26_drive_0087_sync',
+            '2011_09_26/2011_09_26_drive_0091_sync',
+            # '2011_09_26/2011_09_26_drive_0093_sync',  #data size not same
+            # '2011_09_26/2011_09_26_drive_0095_sync',
+            # '2011_09_26/2011_09_26_drive_0096_sync',
+            # '2011_09_26/2011_09_26_drive_0104_sync',
+            # '2011_09_26/2011_09_26_drive_0106_sync',
+            # '2011_09_26/2011_09_26_drive_0113_sync',
+            # '2011_09_26/2011_09_26_drive_0117_sync',
+            '2011_09_26/2011_09_26_drive_0119_sync',
+        ]
 
-        validation_dataset = {
-            '2011_09_26': ['0013', '0027', '0048',
-                           '0061', '0015', '0028', '0051', '0064']
-        }
+    # shuffle bag list or same kind of bags will only be in training or validation set.
+    train_n_val_dataset = shuffle(train_n_val_dataset, random_state=666)
+    data_splitter = TrainingValDataSplitter(train_n_val_dataset)
 
-    with BatchLoading(data_splitter.training_bags, data_splitter.training_tags, require_shuffle=True) as training:
-        with BatchLoading(data_splitter.val_bags, data_splitter.val_tags,
-                          queue_size=1, require_shuffle=True) as validation:
-
+    with BatchLoading(tags=data_splitter.training_tags, require_shuffle=True, random_num=np.random.randint(100),
+                      is_flip=False) as training:
+        with BatchLoading(tags=data_splitter.val_tags, queue_size=1, require_shuffle=True,random_num=666) as validation:
             train = mv3d.Trainer(train_set=training, validation_set=validation,
                                  pre_trained_weights=weights, train_targets=targets, log_tag=tag,
-                                 continue_train = args.continue_train)
+                                 continue_train=args.continue_train,
+                                 fast_test_mode=True if max_iter == 1 else False)
             train(max_iter=max_iter)

@@ -26,3 +26,5 @@ bag_to_kitti/lidar/cmake-build-debug
 
 \.idea/
 \.project
+checkpoint
+log

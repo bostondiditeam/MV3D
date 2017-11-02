@@ -32,44 +32,28 @@ class Task(object):
         iter = lambda i: i if self.fast_test == False else 1
 
         run_task('python train.py -w "" -t "top_view_rpn" -i %d '
-                 '-n %s' % (iter(5000), self.tag))
-        run_task('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i %d '
-                 '-n %s -c True' % (iter(200), self.tag))
-        run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, 100, tag, self.fast_test))
+                 '-n %s' % (iter(500), self.tag))
 
-        for i in range(iter(5)):
+        for i in range(iter(3)):
             run_task('python train.py -w "top_view_rpn" -t "top_view_rpn" -i %d '
-                     ' -n %s -c True' % (iter(3000), tag))
-            run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, i, tag, self.fast_test))
+                     ' -n %s -c True' % (iter(2000), tag))
+            run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 10' % (tag, i, tag, self.fast_test))
 
 
 
-    def train_img_and_fusion(self, continue_train=False, init_train=4000,tracking_max=3,
-                             train_epoch=2500,tracking_skip_frames=0):
+    def train_img_and_fusion(self, continue_train=False, tracking_max=5, train_epoch=2500,tracking_skip_frames=0):
 
         iter = lambda i:  i if self.fast_test==False else 1
 
         if continue_train == False:
             run_task('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i %d '
-                     '-n %s' % (iter(init_train), self.tag))
+                     '-n %s' % (iter(train_epoch*2), self.tag))
 
         for i in range(iter(tracking_max)):
             run_task('python train.py -w "top_view_rpn,image_feature,fusion" -t "image_feature,fusion" -i %d '
                      ' -n %s -c True' %(iter(train_epoch), tag))
             run_task('python tracking.py -n %s_%d -w "%s" -t %s -s %d' % (tag,i,tag,self.fast_test,
                                                                           tracking_skip_frames))
-
-    def tracking(self, tracking_skip_frames=0,weights=None):
-        weights = self.tag if weights==None else weights
-        run_task('python tracking.py -n %s -w "%s" -t %s -s %d' % (tag, weights ,self.fast_test,
-                                                                          tracking_skip_frames))
-
-    def banchmark(self, tracking_skip_frames=100, tracking_range=range(1)):
-        tracking_range= tracking_range if self.fast_test==False else range(1)
-        for i in tracking_range:
-            run_task('python tracking.py -n benchmark_%s_%d -w "%s_%d" -t %s -s %d' %
-                     (tag,i, tag,i ,self.fast_test,tracking_skip_frames))
-
 
 def str2bool(v: str):
     if v.lower() in ('true'):
@@ -95,7 +79,5 @@ if __name__ == '__main__':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
 
-    # Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion(init_train=3000,
-    #                                                              train_epoch=5000,tracking_max=4)
-    #
-    Task(tag=tag, fast_test=args.fast_test).train_rpn()
+    Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion(train_epoch=3000,continue_train=False)
+    # Task(tag=tag, fast_test=args.fast_test).train_rpn()

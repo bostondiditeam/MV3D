@@ -1,13 +1,28 @@
 import math
 import numpy as np
 import cv2
+import sys
 import net.processing.projection as proj
-from shapely.geometry import Polygon
+if sys.version_info[0]>=3:
+    from shapely.geometry import Polygon
 from config import TOP_X_MAX,TOP_X_MIN,TOP_Y_MAX,TOP_Z_MIN,TOP_Z_MAX, \
     TOP_Y_MIN,TOP_X_DIVISION,TOP_Y_DIVISION,TOP_Z_DIVISION
 from config import cfg
+from numba import jit
+import config
+from config import *
+
+
+def heat_map_rgb(minimum, maximum, value):
+    minimum, maximum = float(minimum), float(maximum)
+    ratio = 2 * (value-minimum) / (maximum - minimum)
+    b = int(max(0, 255*(1 - ratio)))
+    r = int(max(0, 255*(ratio - 1)))
+    g = 255 - b - r
+    return (r, g, b)
 
 ##extension for 3d
+@jit
 def top_to_lidar_coords(xx,yy):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
@@ -16,7 +31,7 @@ def top_to_lidar_coords(xx,yy):
 
     return x,y
 
-
+@jit
 def lidar_to_top_coords(x,y,z=None):
     X0, Xn = 0, int((TOP_X_MAX-TOP_X_MIN)//TOP_X_DIVISION)+1
     Y0, Yn = 0, int((TOP_Y_MAX-TOP_Y_MIN)//TOP_Y_DIVISION)+1
@@ -25,7 +40,7 @@ def lidar_to_top_coords(x,y,z=None):
 
     return xx,yy
 
-
+@jit
 def top_box_to_box3d(boxes):
 
     num=len(boxes)
@@ -51,6 +66,7 @@ def box3d_in_top_view(boxes3d):
             return False
     return True
 
+@jit
 def box3d_to_top_box(boxes3d):
 
     num  = len(boxes3d)
@@ -81,6 +97,7 @@ def box3d_to_top_box(boxes3d):
 
     return boxes
 
+@jit
 def convert_points_to_croped_image(img_points):
     img_points=img_points.copy()
 
@@ -114,7 +131,7 @@ def convert_points_to_croped_image(img_points):
     return img_points,out_range_mask
 
 
-
+@jit
 def box3d_to_rgb_box(boxes3d, Mt=None, Kt=None):
     if (cfg.DATA_SETS_TYPE == 'kitti'):
         if Mt is None: Mt = np.array(MATRIX_Mt)
@@ -146,7 +163,7 @@ def box3d_to_rgb_box(boxes3d, Mt=None, Kt=None):
         return projections
 
 
-
+@jit
 def box3d_to_top_projections(boxes3d):
 
     num = len(boxes3d)
@@ -190,7 +207,7 @@ def draw_rgb_projections(image, projections, color=(255,0,255), thickness=2, dar
     return img
 
 
-def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1):
+def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1,scores=None):
 
     img = image.copy()
     num =len(boxes3d)
@@ -208,6 +225,7 @@ def draw_box3d_on_top(image, boxes3d,color=(255,255,255), thickness=1):
         u1,v1=lidar_to_top_coords(x1,y1)
         u2,v2=lidar_to_top_coords(x2,y2)
         u3,v3=lidar_to_top_coords(x3,y3)
+        color=heat_map_rgb(0.,1.,scores[n]) if scores is not None else 255
         cv2.line(img, (u0,v0), (u1,v1), color, thickness, cv2.LINE_AA)
         cv2.line(img, (u1,v1), (u2,v2), color, thickness, cv2.LINE_AA)
         cv2.line(img, (u2,v2), (u3,v3), color, thickness, cv2.LINE_AA)
@@ -244,6 +262,7 @@ def box3d_transform_inv0(et_boxes3d, deltas):
 
     return boxes3d
 
+@jit
 def box3d_transform(et_boxes3d, gt_boxes3d):
 
     num=len(et_boxes3d)
@@ -258,6 +277,7 @@ def box3d_transform(et_boxes3d, gt_boxes3d):
     return deltas
 
 
+@jit
 def box3d_transform_inv(et_boxes3d, deltas):
 
     num=len(et_boxes3d)
@@ -297,6 +317,7 @@ def regularise_box3d(boxes3d):
             b[j]=corners[k]+dis/2*np.array([0,0,1])
 
     return reg_boxes3d
+
 
 def boxes3d_decompose(boxes3d):
 
@@ -338,6 +359,7 @@ def boxes3d_decompose(boxes3d):
     return translation,size,rotation
 
 
+@jit
 def box3d_compose(translation,size,rotation):
     """
     only support compose one box
@@ -356,7 +378,7 @@ def box3d_compose(translation,size,rotation):
             [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
             [0.0, 0.0, 0.0, 0.0, h, h, h, h]])
     elif cfg.DATA_SETS_TYPE == 'didi2':
-        h, w = 1.5 * h, 1.7 * w
+        l, h, w = 1.1 * l, 1.2 * h, 1.1 * w
         trackletBox = np.array([
             [-l / 2, -l / 2, l / 2, l / 2, -l / 2, -l / 2, l / 2, l / 2], \
             [w / 2, -w / 2, -w / 2, w / 2, w / 2, -w / 2, -w / 2, w / 2], \
@@ -396,6 +418,9 @@ def project_point(point,cameraMat,cameraExtrinsicMat,distCoeff):
   v = cameraMat[1][1] * y2 + cameraMat[1][2]
   return [u,v]
 
+
+
+@jit
 def box3d_to_rgb_projection_cv2(points):
     ##http://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
 
@@ -416,10 +441,22 @@ def box3d_to_rgb_projection_cv2(points):
 
     #imagePoints, jacobia=cv2.projectPoints(points,rotVect,transVect,cameraMatrix,distCoeffs)
     #imagePoints=np.reshape(imagePoints,(8,2))
-    
-    projMat = np.matrix([[  6.24391515e+02,  -1.35999541e+03,  -3.47685065e+01,  -8.19238784e+02],
-                     [  5.20528665e+02,   1.80893752e+01,  -1.38839738e+03,  -1.17506110e+03],
-                     [  9.99547104e-01,   3.36246424e-03,  -2.99045429e-02,  -1.34871685e+00]])
+    if cfg.OBJ_TYPE == 'car':
+        # projMat = np.matrix([[  6.24391515e+02,  -1.35999541e+03,  -3.47685065e+01,  -8.19238784e+02],
+        #                  [  5.20528665e+02,   1.80893752e+01,  -1.38839738e+03,  -1.17506110e+03],
+        #                  [  9.99547104e-01,   3.36246424e-03,  -2.99045429e-02,  -1.34871685e+00]])
+        projMat = np.matrix([[6.22683238e+02,  -1.36093607e+03,  -2.79236972e+01, -7.43021551e+02],
+                            [5.23490385e+02,  1.17742119e+01,  -1.38735135e+03, -1.20545539e+03],
+                             [9.99611725e-01,   1.94139055e-03,  -2.77962374e-02, -1.29804894e+00]])
+
+
+    elif cfg.OBJ_TYPE == 'ped':
+        projMat = np.matrix([[4.62722387e+02,  -1.42100788e+03,  -8.53563678e+01, -8.47064132e+02],
+                             [4.57167576e+02,  -1.17801020e+01,  -1.41059690e+03, -9.51897491e+02],
+                             [9.91070422e-01,  -1.09415446e-01,  -7.62081253e-02, -9.41198803e-01]])
+    else:
+        raise ValueError('Unknown config.OBJ_TYPE: {}'.format(config.OBJ_TYPE))
+
     imagePoints=[] 
     for pt in points:
         X = projMat*np.matrix(list(pt)+[1]).T
@@ -459,7 +496,7 @@ def box3d_intersection(box_a, box_b):
     return z_intersection * xy_intersection
 
 
-def boxes3d_score_iou(gt_boxes3d: np.ndarray, pre_boxes3d: np.ndarray):
+def boxes3d_score_iou(gt_boxes3d, pre_boxes3d):
     n_pre_box = pre_boxes3d.shape[0]
     if n_pre_box ==0: return 0.
     n_gt_box = gt_boxes3d.shape[0]

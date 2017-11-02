@@ -32,15 +32,12 @@ class Task(object):
         iter = lambda i: i if self.fast_test == False else 1
 
         run_task('python train.py -w "" -t "top_view_rpn" -i %d '
-                 '-n %s' % (iter(5000), self.tag))
-        run_task('python train.py -w "top_view_rpn" -t "image_feature,fusion" -i %d '
-                 '-n %s -c True' % (iter(200), self.tag))
-        run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, 100, tag, self.fast_test))
+                 '-n %s' % (iter(500), self.tag))
 
-        for i in range(iter(5)):
+        for i in range(iter(3)):
             run_task('python train.py -w "top_view_rpn" -t "top_view_rpn" -i %d '
-                     ' -n %s -c True' % (iter(3000), tag))
-            run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 100' % (tag, i, tag, self.fast_test))
+                     ' -n %s -c True' % (iter(2000), tag))
+            run_task('python tracking.py -n %s_%d -w "%s" -t %s -s 10' % (tag, i, tag, self.fast_test))
 
 
 
@@ -95,7 +92,9 @@ if __name__ == '__main__':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' %tag)
 
-    # Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion(init_train=3000,
-    #                                                              train_epoch=5000,tracking_max=4)
-    #
-    Task(tag=tag, fast_test=args.fast_test).train_rpn()
+    # Task(tag=tag, fast_test=args.fast_test).train_img_and_fusion(init_train=8000,
+    #                                                              train_epoch=2000,tracking_max=5,
+    #                                                              tracking_skip_frames=100)
+
+    Task(tag=tag, fast_test=args.fast_test).banchmark(tracking_skip_frames=0,tracking_range=range(3))
+    # Task(tag=tag, fast_test=args.fast_test).train_rpn()

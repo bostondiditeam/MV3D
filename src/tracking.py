@@ -17,73 +17,74 @@ from utils.timer import timer
 from time import localtime, strftime
 from utils.batch_loading import BatchLoading2 as BatchLoading
 from utils.training_validation_data_splitter import get_test_tags
+from collections import deque
 
-log_subdir = os.path.join('tracking', strftime("%Y_%m_%d_%H_%M_%S", localtime()))
-log_dir = os.path.join(cfg.LOG_DIR, log_subdir)
+log_dir = None
 
 fast_test = False
 
 
-def pred_and_save(tracklet_pred_dir, dataset, generate_video=False,
-                  frame_offset=16, log_tag=None, weights_tag=None):
-    # Tracklet_saver will check whether the file already exists.
-    tracklet = Tracklet_saver(tracklet_pred_dir)
-    os.makedirs(os.path.join(log_dir, 'image'), exist_ok=True)
-
+def pred_and_save(tracklet_pred_dir, dataset,frame_offset=0, log_tag=None, weights_tag=None):
     top_shape, front_shape, rgb_shape = dataset.get_shape()
     predict = mv3d.Predictor(top_shape, front_shape, rgb_shape, log_tag=log_tag, weights_tag=weights_tag)
 
-    if generate_video:
-        vid_in = skvideo.io.FFmpegWriter(os.path.join(log_dir, 'output.mp4'))
+    queue = deque(maxlen=1)
 
     # timer
     timer_step = 100
     if cfg.TRACKING_TIMER:
         time_it = timer()
 
-    frame_num = 0
-    for i in range(dataset.size if fast_test == False else frame_offset + 1):
+    # dataset.size - 1 for in dataset.get_shape(), a frame is used. So it'll omit first frame for prediction,
+    # fix this if has more time
+    for i in range(dataset.size-1 if fast_test == False else frame_offset + 1):
 
-        rgb, top, front, _, _, _ = dataset.load()
+        rgb, top, front, _, _, frame_id = dataset.load()
 
-        frame_num = i - frame_offset
-        if frame_num < 0:
-            continue
+        # handling multiple bags.
+        current_bag = frame_id.split('/')[1]
+        current_frame_num = int(frame_id.split('/')[2])
+        if i == 0:
+            prev_tag_bag = None
+        else:
+            prev_tag_bag = queue[0]
+        if current_bag != prev_tag_bag:
+            # print('current bag name: ', current_bag, '. previous bag name ', prev_tag_bag)
+            if i != 0:
+                tracklet.write_tracklet()
+            tracklet = Tracklet_saver(tracklet_pred_dir, current_bag,exist_ok=True)
+            # print('frame counter reset to 0. ')
+        queue.append(current_bag)
 
+        # frame_num = i - frame_offset
+        # if frame_num < 0:
+        #     continue
+
+        # detection
         boxes3d, probs = predict(top, front, rgb)
-        predict.dump_log(log_subdir=log_subdir, n_frame=i)
+        # predict.dump_log(log_subdir=os.path.join('tracking',log_tag), n_frame=i, frame_tag=frame_id)
 
         # time timer_step iterations. Turn it on/off in config.py
         if cfg.TRACKING_TIMER and i % timer_step == 0 and i != 0:
             predict.track_log.write('It takes %0.2f secs for inferring %d frames. \n' % \
                                     (time_it.time_diff_per_n_loops(), timer_step))
 
-        # for debugging: save image and show image.
-        top_image = draw_top_image(top[0])
-        rgb_image = rgb[0]
-
         if len(boxes3d) != 0:
-            top_image = draw_box3d_on_top(top_image, boxes3d[:, :, :], color=(80, 80, 0), thickness=3)
-            rgb_image = draw_box3d_on_camera(rgb_image, boxes3d[:, :, :], color=(0, 0, 80), thickness=3)
             translation, size, rotation = boxes3d_decompose(boxes3d[:, :, :])
-            # todo: remove it after gtbox is ok
-            size[:, 1:3] = size[:, 1:3] / cfg.TRACKLET_GTBOX_LENGTH_SCALE
-
+            # print(translation)
+            # print(len(translation))
+            # add to tracklets
             for j in range(len(translation)):
-                if 0 < translation[j, 1] < 8:
-                    tracklet.add_tracklet(frame_num, size[j], translation[j], rotation[j])
-        resize_scale = top_image.shape[0] / rgb_image.shape[0]
-        rgb_image = cv2.resize(rgb_image, (int(rgb_image.shape[1] * resize_scale), top_image.shape[0]))
-        rgb_image = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2RGB)
-        new_image = np.concatenate((top_image, rgb_image), axis=1)
-        cv2.imwrite(os.path.join(log_dir, 'image', '%5d_image.jpg' % i), new_image)
+                # if 0 < translation[j, 1] < 8:
+                # print('pose wrote. '
+                tracklet.add_tracklet(current_frame_num, size[j], translation[j], rotation[j], probs[j],boxes3d[j])
 
-        if generate_video:
-            vid_in.writeFrame(new_image)
-            vid_in.close()
+        # print('frame_counter is here: ', current_frame_num, ' and i is here: ', i, 'frame id is here: ', frame_id)
+
+
 
     tracklet.write_tracklet()
-    predict.dump_weigths(os.path.join(log_dir, 'pretrained_model'))
+    predict.save_weights(dir=os.path.join(log_dir, 'pretrained_model'))
 
     if cfg.TRACKING_TIMER:
         predict.log_msg.write('It takes %0.2f secs for inferring the whole test dataset. \n' % \
@@ -110,88 +111,96 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--tag', type=str, nargs='?', default='unknown_tag',
                         help='set log tag')
     parser.add_argument('-w', '--weights', type=str, nargs='?', default='',
-                        help='set weigths tag name')
+                        help='set weights tag name')
     parser.add_argument('-t', '--fast_test', type=str2bool, nargs='?', default=False,
                         help='set fast_test model')
+    parser.add_argument('-s', '--n_skip_frames', type=int, nargs='?', default=0,
+                        help='set number of skip frames')
     args = parser.parse_args()
 
     print('\n\n{}\n\n'.format(args))
     tag = args.tag
-    if tag == 'unknow_tag':
+    if tag == 'unknown_tag':
         tag = input('Enter log tag : ')
         print('\nSet log tag :"%s" ok !!\n' % tag)
     weights_tag = args.weights if args.weights != '' else None
 
     fast_test = args.fast_test
+    n_skip_frames = args.n_skip_frames
+
+    #log dir
+    log_dir = os.path.join(config.cfg.LOG_DIR,'tracking', tag)
+
 
     tracklet_pred_dir = os.path.join(log_dir, 'tracklet')
     os.makedirs(tracklet_pred_dir, exist_ok=True)
 
-    # Set true if you want score after export predicted tracklet xml
-    # set false if you just want to export tracklet xml
+
     frame_offset = 0
     dataset_loader = None
+    gt_tracklet_file = None
+
+    # Set true if you want score after export predicted tracklet xml
+    # set false if you just want to export tracklet xml
+    if_score =False
 
     if config.cfg.DATA_SETS_TYPE == 'didi2':
-        if_score = False
-        if 1:
-            dataset = {'nissan_brief': ['nissan06']}
-
+        assert cfg.OBJ_TYPE == 'car' or cfg.OBJ_TYPE == 'ped'
+        if cfg.OBJ_TYPE == 'car':
+            test_bags = [
+                # 'test_car/ford01',
+                'test_car/ford02',
+                'test_car/ford03',
+                'test_car/ford04',
+                'test_car/ford05',
+                'test_car/ford06',
+                'test_car/ford07',
+                'test_car/mustang01'
+            ]
         else:
-            car = '3'
-            data = '7'
-            dataset = {
-                car: [data]
-            }
-
-            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-            #  fits you needs.
-            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
-
-        test_key_list = ['nissan_pulling_away',
-                          'nissan_pulling_up_to_it']
-
-        test_key_full_path_list = [os.path.join(cfg.RAW_DATA_SETS_DIR, key) for key in test_key_list]
-        test_value_list = [os.listdir(value)[0] for value in test_key_full_path_list]
-
-        test_bags = [k + '/' + v for k, v in zip(test_key_list, test_value_list)]
-
+            test_bags = [
+                'test_ped/ped_test',
+            ]
 
     elif config.cfg.DATA_SETS_TYPE == 'didi':
-        if_score = True
-        if 1:
-            dataset = {'Round1Test': ['19_f2']}
-
-        else:
-            car = '3'
-            data = '7'
-            dataset = {
-                car: [data]
-            }
-
-            # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-            #  fits you needs.
-            gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
+        pass #todo
+        # if_score = True
+        # if 1:
+        #     dataset = {'Round1Test': ['19_f2']}
+        #
+        # else:
+        #     car = '3'
+        #     data = '7'
+        #     dataset = {
+        #         car: [data]
+        #     }
+        #
+        #     # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+        #     #  fits you needs.
+        #     gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, data, 'tracklet_labels.xml')
 
     elif config.cfg.DATA_SETS_TYPE == 'kitti':
-        if_score = False
-        car = '2011_09_26'
-        data = '0013'
-        dataset = {
-            car: [data]
-        }
+        pass #todo
+        # if_score = False
+        # car = '2011_09_26'
+        # data = '0013'
+        # dataset = {
+        #     car: [data]
+        # }
+        #
+        # # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
+        # #  fits you needs.
+        # gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
+        #                                 'tracklet_labels.xml')
 
-        # compare newly generated tracklet_label_pred.xml with tracklet_labels_gt.xml. Change the path accordingly to
-        #  fits you needs.
-        gt_tracklet_file = os.path.join(cfg.RAW_DATA_SETS_DIR, car, car + '_drive_' + data + '_sync',
-                                        'tracklet_labels.xml')
 
+    ## detecting
     test_tags = get_test_tags(test_bags)
-
-    with BatchLoading(test_bags, test_tags, require_shuffle=False, is_testset=True) as dataset_loader:
+    with BatchLoading(test_tags, require_shuffle=False, is_testset=True,
+                      n_skip_frames=0 if fast_test else n_skip_frames) as dataset_loader:
 
         # dataset_loader = ub.batch_loading(cfg.PREPROCESSED_DATA_SETS_DIR, dataset, is_testset=True)
-    
+
         print("tracklet_pred_dir: " + tracklet_pred_dir)
         pred_file = pred_and_save(tracklet_pred_dir, dataset_loader,
                                   frame_offset=0, log_tag=tag, weights_tag=weights_tag)

@@ -13,6 +13,7 @@ from parse_tracklet import parse_xml
 from sort import Sort
 import argparse
 import math
+import time
 
 pi = math.pi
 
@@ -60,7 +61,7 @@ class Tracker:
         self.timestamp_map = extract_bag_timestamps(bag_file)
         self.frame_map = generate_frame_map(tracklets)
         
-        #TODO : detector should publish BBoxArray : 
+        #TODO : detector should publish BBoxArray:
         # below I just read bboxes from tracklet (see handle_img_msg function)
         self.detect_pub = rospy.Publisher("bbox/detections", BboxArray, queue_size=1)
         self.n_skip = 25 # to simulate delay by MV3D, skip detections (about 1 sec)
@@ -76,6 +77,7 @@ class Tracker:
                                 max_time_elapsed=2)
         self.min_detections = 7
         self.track_count = {}
+        self.is_busy = False
    
  
     def startlistening(self):
@@ -83,7 +85,7 @@ class Tracker:
         rospy.Subscriber('/image_raw', Image, self.handle_image_msg) #TODO : just for time keeping (to be removed) 
         rospy.Subscriber("bbox/detections", BboxArray, self.handle_bbox_msg)
         print('tracker node initialzed')
-        rospy.Timer(rospy.Duration(0.01), self.publish_predictions)
+        rospy.Timer(rospy.Duration(0.1), self.publish_predictions)
         rospy.spin()
 
 
@@ -95,13 +97,15 @@ class Tracker:
         self.detected_bboxes = bbox_msg 
 
 
-    def publish_predictions(self, event) :
+    def publish_predictions(self, event):
         # wait until first detection
+        # print('enter here? ', time.time())
+
         if (not self.latest_detection_time) or (not self.detected_bboxes):
             return
 
         # if no new detections since last call :
-        if self.latest_detection_time < event.last_real :
+        if self.latest_detection_time < event.last_real:
             # predict tracks without update 
             for track in self.mot_tracker.trackers:
                 t = rospy.get_rostime().to_nsec()
@@ -118,6 +122,7 @@ class Tracker:
 
         # publish all tracks
         print(tracks)
+
         bboxArray = BboxArray()
         bboxArray.header.stamp = rospy.get_rostime()
         for track in tracks:
@@ -133,19 +138,19 @@ class Tracker:
             bbox.h = track[4]
             bbox.w =  bbox.l = 2*track[3]
             bbox.yaw = 0 # TODO : needs to be changed for cars
-            bboxArray.bboxes.append(bbox) 
-        self.predict_pub.publish(bboxArray) 
+            bboxArray.bboxes.append(bbox)
+        # rospy.logerr('here: ', bboxArray)
+        rospy.logerr('bboxArray={} '.format(bboxArray))
+        self.predict_pub.publish(bboxArray)
+
 
     #------------------------------------------------------------
     #TODO : used here for publishing bbox (to be removed)
     #------------------------------------------------------------
     def handle_image_msg(self, img_msg):
-        # simulate network delay
-        if self.skip_count < self.n_skip :
-            self.skip_count += 1
+        if self.is_busy:
             return
-        self.skip_count = 0
-
+        self.is_busy = True
         now = rospy.get_rostime()
         bboxArray = BboxArray()
         bboxArray.header.stamp = now
@@ -156,12 +161,12 @@ class Tracker:
             bbox.x, bbox.y, bbox.z = f.trans
             bbox.h, bbox.w, bbox.l = f.size
             bbox.score=1.
-            bboxArray.bboxes.append(bbox) 
+            bboxArray.bboxes.append(bbox)
+        time.sleep(0.3) #simulate MV3D  delay
         self.detect_pub.publish(bboxArray)
+        rospy.logerr('detect_pub bboxArray={} '.format(bboxArray))
+        self.is_busy=False
     #------------------------------------------------------------
-
-
-
 
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="tracker")

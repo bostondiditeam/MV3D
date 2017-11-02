@@ -1,6 +1,6 @@
 """ Tracklet XML file generation
 """
-
+from config import cfg
 
 def writeln(f, string, tab_count, tab_as_space=False):
     tab_spaces = 4
@@ -48,6 +48,9 @@ class Tracklet(object):
             writeln(f, '<rx>{:.16f}</rx>'.format(p['rx']), tab_level)
             writeln(f, '<ry>{:.16f}</ry>'.format(p['ry']), tab_level)
             writeln(f, '<rz>{:.16f}</rz>'.format(p['rz']), tab_level)
+            if cfg.TRACKLET_EXTRA_INFO:
+                writeln(f, '<score>{:.16f}</score>'.format(p['score']), tab_level)
+                writeln(f, '<bbox>{}</bbox>'.format(p['bbox']), tab_level)
             writeln(f, '<state>1</state>', tab_level)  # INTERP = 1
             writeln(f, '<occlusion>-1</occlusion>', tab_level) # UNSET = -1
             writeln(f, '<occlusion_kf>-1</occlusion_kf>', tab_level)

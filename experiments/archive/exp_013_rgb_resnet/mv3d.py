@@ -5,8 +5,6 @@ import tensorflow as tf
 # tf.set_random_seed(7)
 from sklearn.utils import shuffle
 import glob
-from config import cfg
-import config
 import net.utility.draw  as nud
 import mv3d_net
 import net.blocks as blocks
@@ -19,7 +17,8 @@ from net.rcnn_nms_op    import rcnn_nms, draw_rcnn_nms, draw_rcnn,draw_box3d_on_
 from net.rpn_target_op  import draw_rpn_gt, draw_rpn_targets, draw_rpn_labels
 from net.rcnn_target_op import draw_rcnn_targets, draw_rcnn_labels
 import net.utility.file as utilfile
-
+from config import cfg
+import config
 from net.processing.boxes import non_max_suppress
 import utils.batch_loading as dataset
 from utils.timer import timer
@@ -69,7 +68,6 @@ def  project_to_front_roi(rois3d):
     rois = np.zeros((num,5),dtype=np.int32)
 
     return rois
-
 
 
 
@@ -123,11 +121,9 @@ class MV3D(object):
 
         # anchors
         self.top_stride=None
-        self.num_class = data.preprocess.num_class  # incude background
-        if cfg.OBJ_TYPE == 'ped':
-            ratios=np.array([1], dtype=np.float32)
-        elif cfg.OBJ_TYPE == 'car':
-            ratios = np.array([0.5, 1, 2], dtype=np.float32)
+        self.num_class = 2  # incude background
+
+        ratios=np.array([0.5,1,2], dtype=np.float32)
         scales=np.array([1,2,3],   dtype=np.float32)
 
 
@@ -198,11 +194,11 @@ class MV3D(object):
     def predict(self, top_view, front_view, rgb_image):
         self.lables = []  # todo add lables output
 
-        self.batch_top_view = top_view
-        self.batch_rgb_images = rgb_image
-        self.batch_front_view = front_view
+        self.top_view = top_view
+        self.rgb_image = rgb_image
+        self.front_view = front_view
         fd1 = {
-            self.net['top_view']: self.batch_top_view,
+            self.net['top_view']: self.top_view,
             self.net['top_anchors']: self.top_view_anchors,
             self.net['top_inside_inds']: self.anchors_inside_inds,
             blocks.IS_TRAIN_PHASE: False,
@@ -222,8 +218,8 @@ class MV3D(object):
 
         fd2 = {
             **fd1,
-            self.net['front_view']: self.batch_front_view,
-            self.net['rgb_images']: self.batch_rgb_images,
+            self.net['front_view']: self.front_view,
+            self.net['rgb_images']: self.rgb_image,
 
             self.net['top_rois']: self.top_rois,
             self.net['front_rois']: self.front_rois,
@@ -238,7 +234,7 @@ class MV3D(object):
                                             self.rois3d,
                                             score_threshold=config.cfg.PREDICT_SCORE_THRESHOLD)
 
-        return self.boxes3d, self.probs
+        return self.boxes3d, self.lables
 
 
     def predict_log(self, log_subdir, log_rpn=False, step=None, scope_name='',loss:tuple =None,
@@ -249,14 +245,14 @@ class MV3D(object):
         self.log_fusion_net_detail(log_subdir, self.fuse_probs, self.fuse_deltas)
 
         # origin top view
-        self.top_image = data.draw_top_image(self.batch_top_view[0])
+        self.top_image = data.draw_top_image(self.top_view[0])
         top_view_log = self.top_image.copy()
 
         # add text on origin
         text = frame_tag
         cv2.putText(top_view_log, text, text_pos, font, 0.5, (0, 255, 100), 0, cv2.LINE_AA)
         if log_rpn:
-            rpn_img = self.log_rpn(step=step, scope_name=scope_name, tensor_board=False,draw_rpn_target=False)
+            rpn_img = self.log_rpn(step=step, scope_name=scope_name, is_train_mode=is_train_mode, tensor_board=False)
             top_view_log = np.concatenate((top_view_log, rpn_img), 1)
 
         # all prediction on top
@@ -277,7 +273,7 @@ class MV3D(object):
 
         # prediction on rgb
         text_lables = ['No.%d class:1 prob: %.4f' % (i, prob) for i, prob in enumerate(self.probs)]
-        prediction_on_rgb = nud.draw_box3d_on_camera(self.batch_rgb_images[0], self.boxes3d,
+        prediction_on_rgb = nud.draw_box3d_on_camera(self.rgb_image[0], self.boxes3d,
                                                           text_lables=text_lables)
         self.summary_image(prediction_on_rgb, scope_name + '/prediction_on_rgb', step=step)
 
@@ -358,7 +354,7 @@ class MV3D(object):
         return np.concatenate((top_image, np.zeros_like(top_image)*255,np.zeros_like(top_image)*255), 1)
 
 
-    def log_rpn(self, step=None, scope_name='', loss=None, tensor_board=True, draw_rpn_target=False):
+    def log_rpn(self,step=None, scope_name='',loss=None, tensor_board=True, is_train_mode=True):
 
         top_image = self.top_image
         subdir = self.log_subdir
@@ -370,20 +366,16 @@ class MV3D(object):
         proposal_scores = self.batch_proposal_scores
         gt_top_boxes = self.batch_gt_top_boxes
         gt_labels = self.batch_gt_labels
-        
         total_img = None
-        if gt_top_boxes is not None:
-            total_img = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
-        # nud.imsave('img_rpn_gt', img_gt, subdir)
-
-        if draw_rpn_target:
+        if is_train_mode:
+            img_gt = draw_rpn_gt(top_image, gt_top_boxes, gt_labels)
+            # nud.imsave('img_rpn_gt', img_gt, subdir)
             img_label = draw_rpn_labels(top_image, self.top_view_anchors, top_inds, top_labels)
             # nud.imsave('img_rpn_label', img_label, subdir)
-            total_img = np.concatenate((total_img, img_label), 1) if total_img is not None else img_label
+            total_img = np.concatenate((img_gt, img_label), 1)
             img_target = draw_rpn_targets(top_image, self.top_view_anchors, top_pos_inds, top_targets)
             # nud.imsave('img_rpn_target', img_target, subdir)
             total_img = np.concatenate((total_img, img_target), 1)
-
         if proposals is not None:
             rpn_proposal = draw_rpn_proposal(top_image, proposals, proposal_scores)
             if loss != None:
@@ -501,7 +493,7 @@ class Trainer(MV3D):
         self.iter_debug = 600
         self.n_global_step = 0
         self.validation_step = 40
-        self.ckpt_save_step = 2000
+        self.ckpt_save_step = 200
         self.log_image_count=0
         self.n_iter=0
         self.fast_test_mode = fast_test_mode
@@ -553,10 +545,7 @@ class Trainer(MV3D):
                     targets_loss = 1. * self.top_cls_loss + 0.005 * self.top_reg_loss
 
                 elif set([mv3d_net.imfeature_net_name]) == set(train_targets):
-                    targets_loss = 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
-
-                elif set([mv3d_net.fusion_net_name]) == set(train_targets):
-                    targets_loss = 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
+                    targets_loss = 1. * self.fuse_cls_loss + 0.05 * self.fuse_reg_loss
 
                 elif set([mv3d_net.imfeature_net_name, mv3d_net.fusion_net_name]) == set(train_targets):
                     targets_loss = 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
@@ -564,7 +553,7 @@ class Trainer(MV3D):
                 elif set([mv3d_net.top_view_rpn_name, mv3d_net.imfeature_net_name,mv3d_net.fusion_net_name])\
                         == set(train_targets):
                     targets_loss = 1. * (1. * self.top_cls_loss + 0.05 * self.top_reg_loss) + \
-                                 1. * self.fuse_cls_loss + 1. * self.fuse_reg_loss
+                                 1. * self.fuse_cls_loss + 0.1 * self.fuse_reg_loss
                 else:
                     ValueError('unknow train_target set')
 
@@ -628,7 +617,7 @@ class Trainer(MV3D):
         img_rgb_rois = box.draw_boxes(rgb, self.batch_rgb_rois[np.where(self.batch_fuse_labels == 0), 1:5][0],
                                       color=(0, 0, 255), thickness=1)
         img_rgb_rois = box.draw_boxes(img_rgb_rois,
-                                      self.batch_rgb_rois[np.where(self.batch_fuse_labels != 0), 1:5][0],
+                                      self.batch_rgb_rois[np.where(self.batch_fuse_labels == 1), 1:5][0],
                                       color=(255, 255, 255), thickness=3)
         # nud.imsave('img_rgb_rois', img_rgb_rois, subdir)
         self.summary_image(img_rgb_rois, scope_name+'/img_rgb_rois', step=self.n_global_step)
@@ -761,19 +750,16 @@ class Trainer(MV3D):
                     self.save_weights(self.train_target)
                     self.save_progress()
 
-                if (iter+1)%200==0:
+
                     if cfg.TRAINING_TIMER:
                         self.log_msg.write('It takes %0.2f secs to train %d iterations. \n' % \
-                                           (time_it.time_diff_per_n_loops(), 200))
+                                           (time_it.time_diff_per_n_loops(), self.ckpt_save_step))
                 self.n_global_step += 1
 
 
             if cfg.TRAINING_TIMER:
                 self.log_msg.write('It takes %0.2f secs to train the dataset. \n' % \
                                    (time_it.total_time()))
-
-            self.save_weights(self.train_target)
-            self.save_progress()
 
 
 
@@ -910,34 +896,33 @@ class Trainer(MV3D):
 
             boxes3d, lables = self.predict(self.batch_top_view, self.batch_front_view, self.batch_rgb_images)
 
-            if 0 and set(self.train_target) !=set(mv3d_net.top_view_rpn_name):
-                # get iou
-                iou = -1
-                inds = np.where(self.batch_gt_labels[0] != 0)
-                try:
-                    iou = box.boxes3d_score_iou(self.batch_gt_boxes3d[0][inds], boxes3d)
-                    if iou_statistic: self.iou_store.append(iou)
-                    if summary_iou:
-                        iou_aver = sum(self.iou_store)/len(self.iou_store)
-                        self.iou_store=[]
-                        tag = os.path.join('IOU')
-                        self.summary_scalar(value=iou_aver, tag=tag, step=self.n_global_step)
-                        self.log_msg.write('\n %s iou average: %.5f\n' % (self.step_name, iou_aver))
-                except ValueError:
-                    # print("waring :", sys.exc_info()[0])
-                    pass
+            # get iou
+            iou = -1
+            inds = np.where(self.batch_gt_labels[0] != 0)
+            try:
+                iou = box.boxes3d_score_iou(self.batch_gt_boxes3d[0][inds], boxes3d)
+                if iou_statistic: self.iou_store.append(iou)
+                if summary_iou:
+                    iou_aver = sum(self.iou_store)/len(self.iou_store)
+                    self.iou_store=[]
+                    tag = os.path.join('IOU')
+                    self.summary_scalar(value=iou_aver, tag=tag, step=self.n_global_step)
+                    self.log_msg.write('\n %s iou average: %.5f\n' % (self.step_name, iou_aver))
+            except ValueError:
+                # print("waring :", sys.exc_info()[0])
+                pass
 
-                #set scope name
-                if iou == -1:
-                    scope_name = os.path.join(scope_name, 'iou_error'.format(range(5, 8)))
-                else:
-                    for iou_range in self.log_iou_range:
-                        if int(iou*100) in iou_range:
-                            scope_name = os.path.join(scope_name , 'iou_{}'.format (iou_range))
+            #set scope name
+            if iou == -1:
+                scope_name = os.path.join(scope_name, 'iou_error'.format(range(5, 8)))
+            else:
+                for iou_range in self.log_iou_range:
+                    if int(iou*100) in iou_range:
+                        scope_name = os.path.join(scope_name , 'iou_{}'.format (iou_range))
 
-                # print('Summary log image, scope name: {}'.format(scope_name))
+            # print('Summary log image, scope name: {}'.format(scope_name))
 
-                self.log_fusion_net_target(self.batch_rgb_images[0], scope_name=scope_name)
+            self.log_fusion_net_target(self.batch_rgb_images[0], scope_name=scope_name)
             log_info_str = 'frame info: ' + self.frame_info + '\n'
             log_info_str += self.anchors_details()
             log_info_str += self.rpn_poposal_details()

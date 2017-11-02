@@ -1,0 +1,21 @@
+<launch>
+    <arg name="data_DIR" default="/hdd/data/didi_competition/didi_dataset/round2/Data" />
+    <arg name="bag_group" />
+    <arg name="bag" />
+    <arg name="tracklet_DIR" default="/hdd3/raw_split"/>
+    <arg name="rate" default="0.1" />
+    <arg name="offset" default="0" />
+    <param name="use_sim_time" value="true" />
+    <node name="rosbag" pkg="rosbag" type="play" args="-r $(arg rate) -l --clock $(arg data_DIR)/$(arg bag_group)/$(arg bag).bag"/>
+	<node name="velodyne" pkg="velodyne_pointcloud" type="cloud_node" args="">
+        <param name="calibration" value="$(find velodyne_pointcloud)/params/32db.yaml" />
+    </node>
+	<node name="projection" pkg="projection" type="visualize_tracklet_2_tracklets.py"
+	args="$(arg data_DIR)/$(arg bag_group)/$(arg bag).bag
+	$(arg tracklet_DIR)/$(arg bag_group)/$(arg bag)/tracklet_labels.xml
+	$(arg tracklet_DIR)/$(arg bag_group)/$(arg bag)/tracklet_labels_corrected.xml
+	$(find projection)/scripts/ost_ped.yaml
+    --offset $(arg offset)"/>
+    <include file="$(find didi_pipeline)/launch/tf.launch"/>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find projection)/launch/tracklet_config.rviz"  />
+</launch>
