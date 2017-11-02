@@ -1,0 +1,9 @@
+Requirements:
+ctypes Python library
+np Python library
+
+To Compile:
+make
+
+To Run the Python Example:
+python samplePython.py

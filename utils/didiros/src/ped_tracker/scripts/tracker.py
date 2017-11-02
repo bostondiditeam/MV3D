@@ -100,6 +100,7 @@ class Tracker:
     def publish_predictions(self, event):
         # wait until first detection
         # print('enter here? ', time.time())
+
         if (not self.latest_detection_time) or (not self.detected_bboxes):
             return
 
@@ -166,11 +167,6 @@ class Tracker:
         rospy.logerr('detect_pub bboxArray={} '.format(bboxArray))
         self.is_busy=False
     #------------------------------------------------------------
-
-
-
-
-
 
 if __name__ == "__main__" :
     parser = argparse.ArgumentParser(description="tracker")
