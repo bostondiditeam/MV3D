@@ -28,7 +28,7 @@ Please refer to [here](https://drive.google.com/file/d/0B47OwD8fbxJNWWFmVUJ4OUV4
 - A Nvidia GPU card with computation capability > 3
 - CUDA
 - Python3.5 for MV3D related code
-- Tensorflow-GPU(version>1.0)
+- Tensorflow-GPU (version>1.0)
 - Python2.7 for ROS related script
 
 # File Structure
@@ -117,7 +117,7 @@ Please refer to [here](https://drive.google.com/file/d/0B47OwD8fbxJNWWFmVUJ4OUV4
 
 # Modification needed to run
 *After Tensorflow-GPU could work*
-If you are not using Nvidia K520 GPU, you need to change "arch=sm_30" to other value in src/net/lib/setup.py and src/lib/make.sh in order to compiler *.so file right. 
+If you are not using Nvidia K520 GPU, you need to change "arch=sm_30" to other value in `src/net/lib/setup.py` and `src/lib/make.sh` in order to compiler `*.so` file right. 
 Here is  short list for arch values for different architecture. 
 
 ```
@@ -140,7 +140,7 @@ import tensorflow as tf
 sess = tf.Session()
 print(tf.__version__) # version more than v1. 
 ```
-It runs without error message and show　＂successfully opened CUDA library libcublas.so.8.0 locally＂, then it is in CUDA successfully.
+It runs without error message and show＂successfully opened CUDA library libcublas.so.8.0 locally＂, then it is in CUDA successfully.
 
 
 ```
@@ -161,9 +161,9 @@ python train.py # training the network.
 # Issue
 - Not related to this repo, but if you are using Amazon CarND AWS AMI (Ubuntu 16.04 and with tensorflow-gpu 0.12 
 installed),
- pip install --upgrade tensorflow **won't** work and will introduce driver/software conflict. Because CarND AMI has a
+ `pip install --upgrade tensorflow` **won't** work and will introduce driver/software conflict. Because CarND AMI has a
   nvidia 367 driver, but after running above line, it will install 375 driver. I think in this case, tensorflow-gpu
   (version >1.0)
   need to compiled from source code. 
 - If you already have a Tensorflow-GPU > 1, then the above `./make.sh` works.
-- If you see error message "tensorflow.python.framework.errors_impl.NotFoundError: YOUR_FOLDER/roi_pooling.so: undefined symbol: _ZN10tensorflow7strings6StrCatB5cxx11ERKNS0_8AlphaNumES3_", it is related to compilation of roi_pooling layer. A simple fix will be changing "GLIBCXX_USE_CXX11_ABI=1" to "GLIBCXX_USE_CXX11_ABI=0" in "src/net/lib/make.sh" (line 17)
+- If you see error message `tensorflow.python.framework.errors_impl.NotFoundError: YOUR_FOLDER/roi_pooling.so: undefined symbol: _ZN10tensorflow7strings6StrCatB5cxx11ERKNS0_8AlphaNumES3_`, it is related to compilation of roi_pooling layer. A simple fix will be changing `GLIBCXX_USE_CXX11_ABI=1` to `GLIBCXX_USE_CXX11_ABI=0` in `src/net/lib/make.sh` (line 17)
