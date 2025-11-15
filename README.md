@@ -1,4 +1,4 @@
-* This repo is for implementing MV3D from this paper: https://arxiv.org/abs/1611.07759 * 
+* This repo is for implementing MV3D from this paper: https://arxiv.org/abs/1611.07759 
 
 * The MV3D implementation progress report can be found [here](https://docs.google.com/document/d/1V-Go2kCxD58CIXKz3yk34pWeOnLca-0gqOw1JmfchrA/edit?usp=sharing) 
 
